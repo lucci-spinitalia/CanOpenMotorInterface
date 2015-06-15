@@ -1,0 +1,1 @@
+/home/luca/CanFestival-3-7740ac6fdedc/objdictgen/objdictedit.py

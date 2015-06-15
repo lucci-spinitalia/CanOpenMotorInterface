@@ -1,0 +1,401 @@
+/**
+ * Le funzioni per la gestione delle risposte sdo e pdo.
+ * =====================================================
+ *
+ * Tutte le funzioni che lavorano con gli oggetti sdo e pdo utilizzano dei thread separati per le risposte.
+ * Per questo motivo sono scritte come macchine a stati le quali vengono richiamate per la prima volta
+ * dal thread principale, mentre sono eseguite in modo iterativo per ogni valore ottenuto dalla funzione
+ * di callback.
+ *
+ *   (thread principale)
+ *       func()->inoltro richiesta/comando ed avvio thread secondario per la risposta
+ *
+ *   (thread secondario)
+ *       ricezione della risposta
+ *       func()->avanzamento della macchina a stati con una nuova richiesta/comando o fine
+ *
+ * Di seguito si propone un esempio:
+ *
+ *
+ *   void CheckHeartWrite(CO_Data* d, UNS8 nodeid)
+ *   {
+ *     UNS32 abortCode;
+ *
+ *      if(getWriteResultNetworkDict(CANOpenShellOD_Data, nodeid, &abortCode) != SDO_FINISHED)
+ *        printf("\nResult : Failed in getting information for slave %2.2x, AbortCode :%4.4x \n", nodeid, abortCode);
+ *      else
+ *        printf("\nHeartbeat changed for node %d\n", nodeid);
+ *
+ *      fflush(stdout);
+ *
+ *      closeSDOtransfer(CANOpenShellOD_Data, nodeid, SDO_CLIENT);
+ *
+ *      _start_heart(d, nodeid);
+ *   }
+ *
+ *   void _start_heart(CO_Data *d, UNS8 nodeId)
+ *   {
+ *     pthread_mutex_lock(&machine_mux);
+ *
+ *     switch(machine_state++)
+ *     {
+ *       case 0:
+ *         writeNetworkDictCallBack(d, nodeId, 0x1017, 0x0, 2, 0, &time_ms, CheckHeartWrite, 0);
+ *         break;
+ *
+ *       case 1:
+ *         machine_state = -1;
+ *         break;
+ *
+ *       case -1:
+ *        fflush(stdout);
+ *        machine_state = -1;
+ *        break;
+ *     }
+ *
+ *     pthread_mutex_unlock(&machine_mux);
+ *
+ *   }
+ *
+ *
+ *   void StartHeart(char* sdo)
+ *   {
+ *     int ret=0;
+ *     int nodeid;
+ *     int time_ms;
+ *
+ *     ret = sscanf(sdo, "shrt#%2x,%4x", &nodeid, &time_ms);
+ *     if (ret == 2)
+ *     {
+ *       if(machine_state != -1)
+ *       {
+ *         printf("Error: complex command in progress.\n");
+ *         return;
+ *       }
+ *
+ *       machine_state = 0;
+ *      _start_heart(CANOpenShellOD_Data, nodeid);
+ *     }
+ *     else
+ *       printf("Wrong command  : %s\n", sdo);
+ *   }
+ *
+ * Tutto parte dalla funzione StartHeart() che prende come parametri una stringa con il comando da
+ * processare. Se il comando rientra nelle attese, si richiama la funzione per la sua esecuzione
+ * _start_heart(). Tutto questo avviene nel thread principale.
+ * La funzione _start_heart() esegue una scrittura tramite sdo e specifica come funzione di callback
+ * CheckHeartWrite().
+ * Quando la libreria riceve una risposta, viene eseguita la suddetta funzione su un thread diverso,
+ * quindi in modo asincrono dal quello principale. A questo punto viene chiamata di nuovo la funzione
+ * _start_heart() per eseguire l'istruzione successiva nella macchina a stati, fino a quando si arriva
+ * all'ultimo caso che non produce più nessuna richiesta e che, quindi, non attiverà più CheckHeartWrite().
+ *
+ * Nell'esempio precedente, come indice dello stato della macchina, viene utilizzata la variabile globale
+ * machine_state, la quale è inizializzata a -1 , lo stesso valore che deve assumere alla fine di ogni
+ * macchina a stati. Da notare che, prima di richiamare la funzione _start_heart, si controlla che la
+ * suddetta variabile contenga il suo valore di default per poi inizializzarla a 0. Questa è la condizione
+ * per poter avviare una macchina a stati senza problemi di sovrapposizione.
+ *
+ * Le funzioni di callback
+ * -----------------------
+ * Ben presto, quando si cerca di implementare funzioni più complesse o si cerca di eseguirne in sequenza,
+ * ci si rende conto che si ha bisogno di qualche strumento in più per metterle in fila. Visto che, dopo
+ * la prima chiamata alla prima funzione, il controllo passa ad un thread esterno, ci si deve portare
+ * dietro la lista delle funzioni da eseguire passo passo. Invece di creare una macchina a stato ad hoc per
+ * ogni caso, è stato introdotto l'array delle funzioni di callback, che contiene i puntatori alle
+ * funzioni da eseguire in cascata.
+ * Ogni macchina a stati prevede, arrivata alla sua conclusione, l'esecuzione dell'ultima funzione valida
+ * presente nell'array dei callback. Nel caso che l'array sia NULL, allora la macchina a stati terminerà
+ * normalmente. Ovviamente, oltre all'array, si deve tener traccia del numero di elementi presenti tramite
+ * un altro parametro chiamato callback_num.
+ * Visto che la funzione con la macchina a stati viene chiamata recursivatemente e non volendo l'array
+ * di callback essere una variabile globale, i parametri riguardanti i callback vengono memorizzati al
+ * primo ingresso alla funzione in variabili statiche. Questo consente di poter richiamare le funzioni
+ * anche dai thread secondari passando come argomenti NULL e 0 rispettivamente.
+ *
+ * Di seguito si mostra un esempio:
+ *
+ *   void _start_heart(CO_Data *d, UNS8 nodeId, void* callback[], int callback_num)
+ *   {
+ *     static long next_func_len = 0;
+ *     static void **next_func = NULL;
+ *
+ *     // Se è la prima volta che entro in questa funzione...
+ *     if((next_func_len == 0) && (callback_num !=0))
+ *     {
+ *       next_func = (void *)malloc(callback_num * sizeof(void *));
+ *       next_func_len = callback_num;
+ *
+ *       memcpy(next_func, callback, callback_num * sizeof(void *));
+ *     }
+ *
+ *     pthread_mutex_lock(&machine_mux);
+ *
+ *     switch(machine_state++)
+ *     {
+ *       case 0:
+ *         writeNetworkDictCallBack(d, nodeId, 0x1017, 0x0, 2, 0, &time_ms, CheckHeartWrite, 0);
+ *         break;
+ *
+ *       case 1:
+ *         if((next_func != NULL) && (next_func_len > 0))
+ *           machine_state = 0;
+ *         else
+ *           machine_state = -1;
+ *         break;
+ *
+ *       case -1:
+ *         fflush(stdout);
+ *         machine_state = -1;
+ *         break;
+ *     }
+ *
+ *     pthread_mutex_unlock(&machine_mux);
+ *
+ *     if(machine_state == 0)
+ *     {
+ *       UserCallback_t function = next_func[next_func_len-1];
+ *       function(d, nodeId, next_func, --next_func_len);
+ *       free(next_func);
+ *
+ *       next_func = NULL;
+ *       next_func_len = 0;
+ *     }
+ *     else if(machine_state == -1)
+ *     {
+ *       next_func = NULL;
+ *       next_func_len = 0;
+ *     }
+ *   }
+ *
+ *
+ *   void CheckHeartWrite(CO_Data* d, UNS8 nodeid)
+ *   {
+ *     UNS32 abortCode;
+ *
+ *     if(getWriteResultNetworkDict(CANOpenShellOD_Data, nodeid, &abortCode) != SDO_FINISHED)
+ *       printf("\nResult : Failed in getting information for slave %2.2x, AbortCode :%4.4x \n", nodeid, abortCode);
+ *     else
+ *       printf("\nHeartbeat changed for node %d\n", nodeid);
+ *
+ *     fflush(stdout);
+ *
+ *     closeSDOtransfer(CANOpenShellOD_Data, nodeid, SDO_CLIENT);
+ *
+ *     _start_heart(d, nodeid, NULL, 0);
+ *   }
+ *
+ * void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
+ * {
+ *   void *function[] = {&_smart_start, &_map_pdo};
+ *
+ *   if(machine_state != -1)
+ *   {
+ *     printf("Error: complex command in progress.\n");
+ *     return;
+ *   }
+ *
+ *   machine_state = 0;
+ *   _start_heart(d, nodeid, function, 2);
+ *  }
+ *
+ * L'esempio parte dalla funzione ConfigureSlaveNode(), la quale richiama _start_heart() in prima esecuzione.
+ * Lo scopo è quello di eseguire in cascata le funzioni _start_heart(), _map_pdo() e _smart_start() e per questo
+ * viene precaricato l'array dei callback function[] con i relativi metodi.
+ *
+ * @attention: Da notare che questo array viene scaricato partendo dall'elemento più esterno fino al primo.
+ *
+ * Per avviare la macchina a stati _start_heart si inizializza la variabile globale machine_state a 0 e si richiama
+ * la relativa funzione. Dopo la prima iterazione, l'array dei callback e la sua lunghezza vengono memorizzati
+ * nella variabile statiche locati e, successivamente,_start_heart viene richiamata in modo consecutivo dalla sua
+ * funzione di risposta CheckHeartWrite(). Arrivati alla conclusione della macchina, si verifica che l'array se
+ * callback contiene dei puntatori a delle funzioni validi e, in caso affermativo, si richiama la successiva
+ * macchina a stati avendo cura di resettare la variabile machine_state(). Quest'ultima avrà la stessa logica
+ * della prima e richiamerà la successiva funzione di callback presente nell'array finchè quest'ultimo non si sarà
+ * svuotato. Il contatore di elementi presente nell'array dei callback viene decrementato ad ogni macchina a stati
+ * per tenere traccia delle funzioni già eseguite.
+ *
+ *
+ * Le callback con i parametri
+ * ----------------------------
+ * Presto si sente la mancanza dei parametri da passare alle funzioni di callback. La difficoltà risiede nel fatto
+ * che, a parte di termini in comune, ogni funzione può accettare un numero di parametri variabile. Per ovviare
+ * a questo problema si utilizza l'operatore (...) presente nella libreria stdarg.h, avendo cura di passare anche
+ * il numero di elementi aggiuntivi.
+ * Tutto funziona fino a quando si prova a richiamare una funzione a parametri variabili da una che ha parametri
+ * variabili a sua volta. Per passarli da una funzione all'altra bisogna prima memorizzare questi parametri nella
+ * struttura va_list, la quale sarà passata a sua volta alla funzione desiderata.
+ * Quindi, per ogni macchina a stati, si avranno due funzioni: una che prende in modo esplicito i parametri variabili
+ * attraverso l'operatore (...), mentre un'altra che prende come parametri la struttura va_list. Ovviamente la prima
+ * richiamerà la seconda. Per semplicità, alla seconda si apporrà una "v" davanti al nome per riconoscerla
+ * dalla prima.
+ * Tornando al caso dell'array dei callback: quando si chiama direttamente una macchina a stati si utiilzzerà la
+ * variante con l'operatore (...), mentre, per nell'array si memorizzeranno i puntatori a quelle con il
+ * parametro va_list. Nel primo caso si dovranno specificare tutti i parametri che serviranno anche alle funzioni
+ * successive mantenendo l'ordine di chiamata.
+ *
+ * @attention: assicurarsi che il tipo passato nella funzione di callaback rispecchi quello atteso dalla funzione.
+ *
+ * Di seguito si riportano gli scheletri delle funzioni da utilizzare come base per la creazione di altre macchine
+ * a stati
+ *
+ *
+void _vNomeMacchina(CO_Data *d, UNS8 nodeId, void* callback[], int callback_num, int var_count, va_list args)
+{
+  static long next_func_len = 0;
+  static void **next_func = NULL;
+  static int next_var_count = 0;
+  static va_list next_args;
+
+  ///////////////////////////////////////////////////////////////
+  //// Inserisci qui le variabili specifiche per la funzione ////
+  ///////////////////////////////////////////////////////////////
+  int time_ms;
+
+  // Se è la prima volta che entro in questa funzione...
+  if((next_func_len == 0) && (callback_num !=0))
+  {
+    next_func = (void *)malloc(callback_num * sizeof(void *));
+    next_func_len = callback_num;
+
+    memcpy(next_func, callback, callback_num * sizeof(void *));
+
+    // Memorizzo il vettore con le prossime funzioni da eseguire
+    next_var_count = var_count;
+    next_args = args;
+  }
+
+  pthread_mutex_lock(&machine_mux);
+
+  switch(machine_state++)
+  {
+    case 0:
+      ////////////////////////////////////////////////////////////////
+      //// Cambia la condizione con il numero di parametri attesi ////
+      ////////////////////////////////////////////////////////////////
+
+      // Verifico che ci siano tutti gli argomenti che mi aspetto.
+      // Memorizzo anche gli altri che serviranno alle funzioni successive
+      if(next_var_count < 1)
+      {
+        printf("Errore[%d]: argomento mancante in _vNomeMacchina\n", InternalError);
+        machine_state = -1;
+        break;
+      }
+
+      ////////////////////////////////////////////////////////////////////////////////////
+      //// Leggi la variabile tramite la funzione va_argg(). Per ogni variabile letta ////
+      //// decrementare next_var_count.                                               ////
+      ////////////////////////////////////////////////////////////////////////////////////
+      next_var_count--;
+      time_ms = va_arg(args, int);
+
+      ////////////////////////////////////////
+      //// Eseguire la chimaata sdo o pdo ////
+      ////////////////////////////////////////
+      writeNetworkDictCallBack(d, nodeId, 0x1017, 0x0, 2, 0, &time_ms, _check_NomeMacchina, 0);
+      break;
+
+    //////////////////////////////////////////////////////
+    //// L'ultimo case deve concludere in questo modo ////
+    //////////////////////////////////////////////////////
+    case 1:
+      if((next_func != NULL) && (next_func_len > 0))
+        machine_state = 0;
+      else
+        machine_state = -1;
+      break;
+
+    case -1:
+      printf("Error[%d on node %x]: Cannot initialize heartbeat (Canopen abort code %d)\n", CANOpenError, nodeId, canopen_abort_code);
+      fflush(stdout);
+      machine_state = -1;
+      break;
+  }
+
+  pthread_mutex_unlock(&machine_mux);
+
+  if(machine_state == 0)
+  {
+    UserCallback_t function = next_func[next_func_len-1];
+    function(d, nodeId, next_func, --next_func_len, next_var_count, next_args);
+    free(next_func);
+
+    next_func = NULL;
+    next_func_len = 0;
+    next_var_count = 0;
+  }
+  else if(machine_state == -1)
+  {
+    next_func = NULL;
+    next_func_len = 0;
+    next_var_count = 0;
+  }
+}
+
+void _NomeMacchina(CO_Data *d, UNS8 nodeId, void* callback[], int callback_num, int var_count, ...)
+{
+  va_list args;
+  va_start(args, var_count);
+  _vNomeMacchina(d, nodeId, callback, callback_num, var_count, args);
+  va_end(args);
+}
+
+void CheckNomeMacchina(CO_Data* d, UNS8 nodeid)
+{
+  pthread_mutex_lock(&machine_mux);
+
+  if(getWriteResultNetworkDict(d, nodeid, &canopen_abort_code) != SDO_FINISHED)
+    machine_state = -1;
+
+  /* Finalize last SDO transfer with this node */
+  closeSDOtransfer(d, nodeid, SDO_CLIENT);
+  pthread_mutex_unlock(&machine_mux);
+
+  _Nomemacchina(d, nodeid, NULL, 0, 0);
+}
+
+ *
+ * Considerando NomeMacchina=start_heart, nel caso si volesse richiamare soltanto la singola macchina a stati:
+ *
+ *  void StartHeart(char* sdo)
+ *  {
+ *    int ret=0;
+ *    int nodeid;
+ *    int time_ms;
+ *
+ *    ret = sscanf(sdo, "shrt#%2x,%4x", &nodeid, &time_ms);
+ *    if (ret == 2)
+ *    {
+ *      if(machine_state != -1)
+ *      {
+ *        printf("Error: complex command in progress.\n");
+ *        return;
+ *      }
+ *
+ *       machine_state = 0;
+ *      _start_heart(CANOpenShellOD_Data, nodeid, NULL, 0, 1, time_ms);
+ *    }
+ *    else
+ *      printf("Wrong command  : %s\n", sdo);
+ *  }
+ *
+ *  mentre, nel caso si volessero accodare altre macchine a stati
+ *
+ *
+ *   void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
+ *   {
+ *     void *function[] = {&_vsmart_start, &_vmap_pdo};
+ *
+ *     if(machine_state != -1)
+ *     {
+ *       printf("Error: complex command in progress.\n");
+ *       return;
+ *     }
+ *
+ *
+ *     machine_state = 0;
+ *     _start_heart(d, nodeid, function, 2, 1, 100);
+ *   }
+ *
+ */

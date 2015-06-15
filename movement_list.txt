@@ -1,0 +1,12 @@
+EIGN(2) 	'Disable Left Limit
+
+  EIGN(3) 	'Disable Right Limit
+ZS 		'Reset errors
+    ADT=100 	'Set Target Acceleration
+VT=100000 	'Set Target Velocity
+PT=300000 	'Set Target Position
+G 		'Go, Starts the move
+TWAIT 		'Wait for move to complete
+PT=0 		'Set buffered move back to home
+G 		'Start motion
+END 		'End program
