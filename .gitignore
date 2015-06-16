@@ -3,4 +3,4 @@
 .project
 .settings
 Debug
-Makefile*
+*.o

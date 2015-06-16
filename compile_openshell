@@ -1,5 +1,0 @@
-#!/bin/bash
-
-CANFESTIVAL_PATH="/home/luca/CanFestival-3-7740ac6fdedc"
-
-gcc -O2 -I$CANFESTIVAL_PATH/include -I$CANFESTIVAL_PATH/include/unix -I$CANFESTIVAL_PATH/include/can_socket -I$CANFESTIVAL_PATH/include/timers_unix -o CANOpenShell.o -c CANOpenShell.c
