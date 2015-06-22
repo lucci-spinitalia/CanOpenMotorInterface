@@ -18,7 +18,7 @@ UNS32 *next_args[CANOPEN_NODE_NUMBER];
 
 int machine_state_index[CANOPEN_NODE_NUMBER];
 int machine_state_param_index[CANOPEN_NODE_NUMBER];
-int motor_started[CANOPEN_NODE_NUMBER];
+volatile int motor_started[CANOPEN_NODE_NUMBER];
 
 MachineCallback_t callback_user[CANOPEN_NODE_NUMBER];
 
@@ -430,8 +430,10 @@ char *init_interpolation_error[2] =
     };
 
 struct state_machine_struct init_interpolation_machine =
-    {init_interpolation_function, 9, init_interpolation_param, 45,
-        init_interpolation_error};
+    {
+        init_interpolation_function, 9, init_interpolation_param, 45,
+        init_interpolation_error
+    };
 
 void *start_interpolation_function[1] =
     {
@@ -467,7 +469,7 @@ UNS32 stop_interpolation_param[15] =
 
 char *stop_interpolation_error[2] =
     {
-        "smartmotor interpolation mode stop",
+        "smartmotor interpolation mode end",
         "Cannot stop smartmotor in interpolation mode"
     };
 
@@ -531,7 +533,7 @@ void _machine_init()
   pthread_mutexattr_t Attr;
 
   pthread_mutexattr_init(&Attr);
-  pthread_mutexattr_settype(&Attr, PTHREAD_MUTEX_ERRORCHECK);
+  //pthread_mutexattr_settype(&Attr, PTHREAD_MUTEX_ERRORCHECK);
 
   for(i = 0; i < CANOPEN_NODE_NUMBER; i++)
   {
@@ -643,49 +645,19 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 
   if(callback_num != 0) // se la funzione non è stata richiamata dal callback
   {
-    // Blocca la funzione finchè non ottiene il mutex. Però, se la macchina è già stata avviata
-    // da un altro thread, allora rilascia il mutex e prova a riprenderlo.
-    // Se è lo stesso thread a richiedere il mutex, allora continuo con il resto della funzione.
-    // Questo comportamento è dovuto alle proprietà del mutex impostante nella _machine_init
-    //if(nodeId == 0x77)
-    //  printf("Mutex entry 1\n");
-
     lock_value = pthread_mutex_lock(&machine_mux[nodeId]);
 
     if(machine_run[nodeId] == 1)
     {
       printf(
-          "ERR[%d on node %x state %d]: Operazione in corso (machine_run)\n",
-          InternalError,
-          nodeId, machine_state_index[nodeId]);
+          "ERR[%d on node %x state %d]: %s (Operazione in corso)\n",
+          InternalError, nodeId, machine_state_index[nodeId],
+          next_machine[nodeId][0]->error[1]);
 
       lock_value = pthread_mutex_unlock(&machine_mux[nodeId]);
 
       return 1;
     }
-
-    /*lock_value = pthread_mutex_lock(&machine_mux[nodeId]);
-
-     if(((lock_value != EDEADLK) && (lock_value != 0))
-     || ((lock_value == 0) && (machine_run[nodeId] == 1)))
-     {
-     printf("ERR[%d on node %x state %d]: Operazione in corso (lock %d)\n",
-     InternalError,
-     nodeId, machine_state_index[nodeId], lock_value);
-     fflush(stdout);
-
-     lock_value = pthread_mutex_unlock(&machine_mux[nodeId]);
-     //if(nodeId == 0x77)
-     //  printf("Mutex exit 1\n");
-
-     if(lock_value != 0)
-     printf(
-     "ERR[%d on node %x state %d]: Impossibile sbloccare il mutex 1: %d\n",
-     InternalError,
-     nodeId, machine_state_index[nodeId], lock_value);
-
-     return 1;
-     }*/
 
     if(machine_state_index[nodeId] > 0)
     {
@@ -699,6 +671,14 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
     {
       machine_run[nodeId] = 1;
       callback_user[nodeId] = machine_callback;
+    }
+    else
+    {
+      for(i = 1; i < CANOPEN_NODE_NUMBER; i++)
+      {
+        if(motor_active[i] > 0)
+          callback_user[i] = machine_callback;
+      }
     }
 
     lock_value = pthread_mutex_unlock(&machine_mux[nodeId]);
@@ -903,21 +883,6 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
   }
   else // if(callback_num != 0) // se la funzione non è stata richiamata dal callback
   {
-    // riprendo il mutex rientrando da un callback
-    //if(nodeId == 0x77)
-    //  printf("Mutex entry 2\n");
-
-    /*lock_value = pthread_mutex_lock(&machine_mux[nodeId]);
-
-     if(lock_value != 0)
-     {
-     printf(
-     "ERR[%d on node %x state %d]: impossibile bloccare il mutex dopo un callback (err %d)\n",
-     InternalError, nodeId, machine_state_index[nodeId], lock_value);
-
-     fflush(stdout);
-     }*/
-
     // Se al ritorno della callback l'indice è zero, vuol dire che è
     // stato resettato tutto
     if(machine_state_index[nodeId] <= 0)
@@ -925,21 +890,6 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
       printf("ERR[%d on node %x state %d]: Errore al ritorno dal callback\n",
           InternalError,
           nodeId, machine_state_index[nodeId]);
-
-      /*lock_value = pthread_mutex_unlock(&machine_mux[nodeId]);
-
-       //if(nodeId == 0x77)
-       //  printf("Mutex exit err\n");
-
-       if(lock_value != 0)
-       {
-       printf(
-       "ERR[%d on node %x state %d]: Impossibile sbloccare il mutex 2: %d\n",
-       InternalError,
-       nodeId, machine_state_index[nodeId], lock_value);
-
-       fflush(stdout);
-       }*/
 
       return 1;
     }
@@ -973,192 +923,246 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
     if(machine_state_index[nodeId] != 0)
     {
       int sdo_result;
+      UNS8 line;
 
-      if(next_machine[nodeId][0]->function[machine_state_index[nodeId] - 1]
-          == &writeNetworkDictCallBack)
+      UNS8 i;
+
+      for(i = 0; i < SDO_MAX_SIMULTANEOUS_TRANSFERS; i++)
       {
-        function_call_number[nodeId]--;
-        last_function = &writeNetworkDictCallBack;
-
-        sdo_result = getWriteResultNetworkDict(d, nodeId, &canopen_abort_code);
-        switch(sdo_result)
+        if((d->transfers[i].state != SDO_RESET) &&
+            (d->transfers[i].CliServNbr == nodeId))
         {
-          case SDO_DOWNLOAD_IN_PROGRESS:
-            case SDO_UPLOAD_IN_PROGRESS:
-            while((sdo_result = getWriteResultNetworkDict(d, nodeId,
-                &canopen_abort_code)) != SDO_DOWNLOAD_IN_PROGRESS)
-              printf("Download in progress\n");
-            ;
-            break;
-
-          case SDO_FINISHED:
-            sdo_result = closeSDOtransfer(d, nodeId, SDO_CLIENT);
-            if((sdo_result != 0) && (sdo_result != 0xFF))
-            {
-              printf("ERR[%d on node %x state %d]: %s (SDO close error %d)\n",
-                  InternalError, nodeId, machine_state_index[nodeId],
-                  next_machine[nodeId][0]->error[1], sdo_result);
-            }
-
-            if(canopen_abort_code > 0)
-            {
-              printf(
-                  "ERR[%d on node %x state %d]: %s (Canopen abort code %x)\n",
-                  CANOpenError, nodeId, machine_state_index[nodeId],
-                  next_machine[nodeId][0]->error[1], canopen_abort_code);
-
-              result_value = 1;
-              goto finalize;
-            }
-            break;
-
-          case SDO_ABORTED_RCV:
-          case SDO_ABORTED_INTERNAL:
-            printf(
-                "ERR[%d on node %x state %d]: %s (SDO getWriteResult error %d)\n",
-                InternalError, nodeId, machine_state_index[nodeId],
-                next_machine[nodeId][0]->error[1], sdo_result);
-
-            sdo_result = closeSDOtransfer(d, nodeId, SDO_CLIENT);
-            if((sdo_result != 0) && (sdo_result != 0xFF))
-            {
-              printf("ERR[%d on node %x state %d]: %s (SDO close error %d)\n",
-                  InternalError, nodeId, machine_state_index[nodeId],
-                  next_machine[nodeId][0]->error[1], sdo_result);
-            }
-
-            machine_state_index[nodeId]--; // provo a rieseguire la stessa funzione
-            machine_state_param_index[nodeId] -= 5;
-            break;
-
-          case SDO_RESET:
-            printf(
-                "ERR[%d on node %x state %d]: %s (SDO getWriteResult error %d)\n",
-                InternalError, nodeId, machine_state_index[nodeId],
-                next_machine[nodeId][0]->error[1], sdo_result);
-
-            printf("Il numero di chiamate a questa funzione è: %d\n",
-                function_call_number[nodeId]);
-
-            return 1;
-            break;
-
-          default:
-            printf(
-                "ERR[%d on node %x state %d]: %s (SDO getWriteResult error %d)\n",
-                InternalError, nodeId, machine_state_index[nodeId],
-                next_machine[nodeId][0]->error[1], sdo_result);
-
-            printf("Il numero 2 di chiamate a questa funzione è: %d\n",
-                function_call_number[nodeId]);
-
-            sdo_result = closeSDOtransfer(d, nodeId, SDO_CLIENT);
-            if((sdo_result != 0) && (sdo_result != 0xFF))
-            {
-              printf("ERR[%d on node %x state %d]: %s (SDO close error %d)\n",
-                  InternalError, nodeId, machine_state_index[nodeId],
-                  next_machine[nodeId][0]->error[1], sdo_result);
-            }
-
-            result_value = 1;
-            goto finalize;
-            break;
+          line = i;
+          break;
         }
       }
-      else if(next_machine[nodeId][0]->function[machine_state_index[nodeId] - 1]
-          == &readNetworkDictCallback)
+
+      switch(d->transfers[line].state)
       {
-        function_call_number[nodeId]--;
-        last_function = &readNetworkDictCallback;
+        case SDO_ABORTED_INTERNAL:
+          printf(
+              "ERR[%d on node %x state %d]: %s (Aborted internal code: %x)\n",
+              InternalError, nodeId, machine_state_index[nodeId],
+              next_machine[nodeId][0]->error[1], d->transfers[line].abortCode);
 
-        UNS32 data = 0;
-        UNS32 size = 64;
-
-        sdo_result = getReadResultNetworkDict(d, nodeId, &data, &size,
-            &canopen_abort_code);
-
-        switch(sdo_result)
-        {
-          case SDO_DOWNLOAD_IN_PROGRESS:
-            case SDO_UPLOAD_IN_PROGRESS:
-            while((sdo_result = getReadResultNetworkDict(d, nodeId, &data,
-                &size,
-                &canopen_abort_code)) != SDO_DOWNLOAD_IN_PROGRESS)
-              printf("Download in progress\n");
-            ;
-            break;
-
-          case SDO_FINISHED:
-            sdo_result = closeSDOtransfer(d, nodeId, SDO_CLIENT);
-
-            if((sdo_result != 0) && (sdo_result != 0xFF))
-            {
-              printf("ERR[%d on node %x state %d]: %s (SDO close error %d)\n",
-                  InternalError, nodeId, machine_state_index[nodeId],
-                  next_machine[nodeId][0]->error[1], sdo_result);
-            }
-
-            if(canopen_abort_code > 0)
-            {
-              printf(
-                  "ERR[%d on node %x state %d]: %s (Canopen abort code %x)\n",
-                  CANOpenError, nodeId, machine_state_index[nodeId],
-                  next_machine[nodeId][0]->error[1], canopen_abort_code);
-
-              result_value = 1;
-              goto finalize;
-            }
-
-            if(callback_user[nodeId] != NULL)
-            {
-              callback_user[nodeId](d, nodeId, machine_state_index[nodeId],
-                  data);
-            }
-            else
-            {
-              printf(
-                  "WARN[%d on node %x state %d]: Lettura senza funzione di callback \n",
-                  InternalError, nodeId, machine_state_index[nodeId]);
-            }
-
-            break;
-
-          case SDO_ABORTED_RCV:
-            sdo_result = closeSDOtransfer(d, nodeId, SDO_CLIENT);
-            if((sdo_result != 0) && (sdo_result != 0xFF))
-            {
-              printf("ERR[%d on node %x state %d]: %s (SDO close error %d)\n",
-                  InternalError, nodeId, machine_state_index[nodeId],
-                  next_machine[nodeId][0]->error[1], sdo_result);
-            }
-
-            printf(
-                "ERR[%d on node %x state %d]: %s (SDO getReadResult error %d)\n",
+          sdo_result = closeSDOtransfer(d, nodeId, SDO_CLIENT);
+          if((sdo_result != 0) && (sdo_result != 0xFF))
+          {
+            printf("ERR[%d on node %x state %d]: %s (SDO close error %d)\n",
                 InternalError, nodeId, machine_state_index[nodeId],
                 next_machine[nodeId][0]->error[1], sdo_result);
+          }
 
-            machine_state_index[nodeId]--; // provo a rieseguire la stessa funzione
-            machine_state_param_index[nodeId] -= 5;
-            break;
+          result_value = 1;
+          goto finalize;
+          break;
 
-          default:
-            printf(
-                "ERR[%d on node %x state %d]: %s (SDO getReadResult error %d)\n",
-                InternalError, nodeId, machine_state_index[nodeId],
-                next_machine[nodeId][0]->error[1], sdo_result);
+        default:
+          if(next_machine[nodeId][0]->function[machine_state_index[nodeId] - 1]
+              == &writeNetworkDictCallBack)
+          {
+            function_call_number[nodeId]--;
+            last_function = &writeNetworkDictCallBack;
 
-            sdo_result = closeSDOtransfer(d, nodeId, SDO_CLIENT);
-            if((sdo_result != 0) && (sdo_result != 0xFF))
+            sdo_result = getWriteResultNetworkDict(d, nodeId,
+                &canopen_abort_code);
+            switch(sdo_result)
             {
-              printf("ERR[%d on node %x state %d]: %s (SDO close error %d)\n",
-                  InternalError, nodeId, machine_state_index[nodeId],
-                  next_machine[nodeId][0]->error[1], sdo_result);
-            }
+              case SDO_DOWNLOAD_IN_PROGRESS:
+                case SDO_UPLOAD_IN_PROGRESS:
+                while((sdo_result = getWriteResultNetworkDict(d, nodeId,
+                    &canopen_abort_code)) != SDO_DOWNLOAD_IN_PROGRESS)
+                  printf("Download in progress\n");
+                ;
+                break;
 
-            result_value = 1;
-            goto finalize;
-            break;
-        }
+              case SDO_FINISHED:
+                sdo_result = closeSDOtransfer(d, nodeId, SDO_CLIENT);
+                if((sdo_result != 0) && (sdo_result != 0xFF))
+                {
+                  printf(
+                      "ERR[%d on node %x state %d]: %s (SDO close error %d)\n",
+                      InternalError, nodeId, machine_state_index[nodeId],
+                      next_machine[nodeId][0]->error[1], sdo_result);
+                }
+
+                if(canopen_abort_code > 0)
+                {
+                  printf(
+                      "ERR[%d on node %x state %d]: %s (Canopen abort code %x)\n",
+                      CANOpenError, nodeId, machine_state_index[nodeId],
+                      next_machine[nodeId][0]->error[1], canopen_abort_code);
+
+                  result_value = 1;
+                  goto finalize;
+                }
+                break;
+
+              case SDO_ABORTED_INTERNAL:
+                sdo_result = closeSDOtransfer(d, nodeId, SDO_CLIENT);
+                if((sdo_result != 0) && (sdo_result != 0xFF))
+                {
+                  printf(
+                      "ERR[%d on node %x state %d]: %s (SDO close error %d)\n",
+                      InternalError, nodeId, machine_state_index[nodeId],
+                      next_machine[nodeId][0]->error[1], sdo_result);
+                }
+                break;
+
+              case SDO_ABORTED_RCV:
+                printf(
+                    "ERR[%d on node %x state %d]: %s (SDO getWriteResult error %d)\n",
+                    InternalError, nodeId, machine_state_index[nodeId],
+                    next_machine[nodeId][0]->error[1], sdo_result);
+
+                sdo_result = closeSDOtransfer(d, nodeId, SDO_CLIENT);
+                if((sdo_result != 0) && (sdo_result != 0xFF))
+                {
+                  printf(
+                      "ERR[%d on node %x state %d]: %s (SDO close error %d)\n",
+                      InternalError, nodeId, machine_state_index[nodeId],
+                      next_machine[nodeId][0]->error[1], sdo_result);
+                }
+
+                machine_state_index[nodeId]--; // provo a rieseguire la stessa funzione
+                machine_state_param_index[nodeId] -= 5;
+                break;
+
+              case SDO_RESET:
+                printf(
+                    "ERR[%d on node %x state %d]: %s (SDO getWriteResult error %d)\n",
+                    InternalError, nodeId, machine_state_index[nodeId],
+                    next_machine[nodeId][0]->error[1], sdo_result);
+
+                printf("Il numero di chiamate a questa funzione è: %d\n",
+                    function_call_number[nodeId]);
+
+                return 1;
+                break;
+
+              default:
+                printf(
+                    "ERR[%d on node %x state %d]: %s (SDO getWriteResult error %d)\n",
+                    InternalError, nodeId, machine_state_index[nodeId],
+                    next_machine[nodeId][0]->error[1], sdo_result);
+
+                printf("Il numero 2 di chiamate a questa funzione è: %d\n",
+                    function_call_number[nodeId]);
+
+                sdo_result = closeSDOtransfer(d, nodeId, SDO_CLIENT);
+                if((sdo_result != 0) && (sdo_result != 0xFF))
+                {
+                  printf(
+                      "ERR[%d on node %x state %d]: %s (SDO close error %d)\n",
+                      InternalError, nodeId, machine_state_index[nodeId],
+                      next_machine[nodeId][0]->error[1], sdo_result);
+                }
+
+                result_value = 1;
+                goto finalize;
+                break;
+            }
+          }
+          else if(next_machine[nodeId][0]->function[machine_state_index[nodeId]
+              - 1]
+              == &readNetworkDictCallback)
+          {
+            function_call_number[nodeId]--;
+            last_function = &readNetworkDictCallback;
+
+            UNS32 data = 0;
+            UNS32 size = 64;
+
+            sdo_result = getReadResultNetworkDict(d, nodeId, &data, &size,
+                &canopen_abort_code);
+
+            switch(sdo_result)
+            {
+              case SDO_DOWNLOAD_IN_PROGRESS:
+                case SDO_UPLOAD_IN_PROGRESS:
+                while((sdo_result = getReadResultNetworkDict(d, nodeId, &data,
+                    &size,
+                    &canopen_abort_code)) != SDO_DOWNLOAD_IN_PROGRESS)
+                  printf("Download in progress\n");
+                ;
+                break;
+
+              case SDO_FINISHED:
+                sdo_result = closeSDOtransfer(d, nodeId, SDO_CLIENT);
+
+                if((sdo_result != 0) && (sdo_result != 0xFF))
+                {
+                  printf(
+                      "ERR[%d on node %x state %d]: %s (SDO close error %d)\n",
+                      InternalError, nodeId, machine_state_index[nodeId],
+                      next_machine[nodeId][0]->error[1], sdo_result);
+                }
+
+                if(canopen_abort_code > 0)
+                {
+                  printf(
+                      "ERR[%d on node %x state %d]: %s (Canopen abort code %x)\n",
+                      CANOpenError, nodeId, machine_state_index[nodeId],
+                      next_machine[nodeId][0]->error[1], canopen_abort_code);
+
+                  result_value = 1;
+                  goto finalize;
+                }
+
+                if(callback_user[nodeId] != NULL)
+                {
+                  callback_user[nodeId](d, nodeId, machine_state_index[nodeId],
+                      data);
+                }
+                else
+                {
+                  printf(
+                      "WARN[%d on node %x state %d]: Lettura senza funzione di callback \n",
+                      InternalError, nodeId, machine_state_index[nodeId]);
+                }
+
+                break;
+
+              case SDO_ABORTED_RCV:
+                sdo_result = closeSDOtransfer(d, nodeId, SDO_CLIENT);
+                if((sdo_result != 0) && (sdo_result != 0xFF))
+                {
+                  printf(
+                      "ERR[%d on node %x state %d]: %s (SDO close error %d)\n",
+                      InternalError, nodeId, machine_state_index[nodeId],
+                      next_machine[nodeId][0]->error[1], sdo_result);
+                }
+
+                printf(
+                    "ERR[%d on node %x state %d]: %s (SDO getReadResult error %d)\n",
+                    InternalError, nodeId, machine_state_index[nodeId],
+                    next_machine[nodeId][0]->error[1], sdo_result);
+
+                machine_state_index[nodeId]--; // provo a rieseguire la stessa funzione
+                machine_state_param_index[nodeId] -= 5;
+                break;
+
+              default:
+                printf(
+                    "ERR[%d on node %x state %d]: %s (SDO getReadResult error %d)\n",
+                    InternalError, nodeId, machine_state_index[nodeId],
+                    next_machine[nodeId][0]->error[1], sdo_result);
+
+                sdo_result = closeSDOtransfer(d, nodeId, SDO_CLIENT);
+                if((sdo_result != 0) && (sdo_result != 0xFF))
+                {
+                  printf(
+                      "ERR[%d on node %x state %d]: %s (SDO close error %d)\n",
+                      InternalError, nodeId, machine_state_index[nodeId],
+                      next_machine[nodeId][0]->error[1], sdo_result);
+                }
+
+                result_value = 1;
+                goto finalize;
+                break;
+            }
+          }
+          break;
       }
     }
     else
@@ -1185,9 +1189,6 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
       // chimao EnterMutex e LeaveMutex solo se non sono in un callback
       if(!from_callback)
       {
-        //if(nodeId == 0x77)
-        //  printf("EnterMutex\n");
-
         EnterMutex();
       }
 
@@ -1197,8 +1198,6 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
       // chimao EnterMutex e LeaveMutex solo se non sono in un callback
       if(!from_callback)
       {
-        //if(nodeId == 0x77)
-        //  printf("LeaveMutex\n");
         LeaveMutex();
       }
 
@@ -1304,19 +1303,6 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                 InternalError, nodeId, machine_state_index[nodeId]);
           }
 
-          // prima di richiamare la funzione che prevede un callback, rilascio il mutex, in quanto
-          // la funzione _machine_exe verrà eseguita da un altro thread.
-          /*lock_value = pthread_mutex_unlock(&machine_mux[nodeId]);
-
-           //if(nodeId == 0x77)
-           //  printf("Mutex exit 2\n");
-
-           if(lock_value != 0)
-           printf(
-           "ERR[%d on node %x state %d]: Impossibile sbloccare il mutex 3: %d\n",
-           InternalError,
-           nodeId, machine_state_index[nodeId], lock_value);*/
-
           return 0;
         }
         else
@@ -1345,8 +1331,6 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 
             if(!from_callback)
             {
-              //if(nodeId == 0x77)
-              //  printf("EnterMutex\n");
               EnterMutex();
             }
 
@@ -1362,8 +1346,6 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 
             if(!from_callback)
             {
-              //if(nodeId == 0x77)
-              //  printf("LeaveMutex\n");
               LeaveMutex();
             }
 
@@ -1465,15 +1447,6 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                 "WARN[%d on node %x state %d]: Qualcuno uscito senza salutare...\n",
                 InternalError, nodeId, machine_state_index[nodeId]);
           }
-          // prima di richiamare la funzione che prevede un callback, rilascio il mutex, in quanto
-          // la funzione _machine_exe verrà eseguita da un altro thread.
-          /*lock_value = pthread_mutex_unlock(&machine_mux[nodeId]);
-
-           if(lock_value != 0)
-           printf(
-           "ERR[%d on node %x state %d]: Impossibile sbloccare il mutex 3a: %d\n",
-           InternalError,
-           nodeId, machine_state_index[nodeId], lock_value);*/
 
           return 0;
         }
@@ -1533,17 +1506,6 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
         }
         function_call_number[nodeId]++;
 
-        /*lock_value = pthread_mutex_unlock(&machine_mux[nodeId]);
-
-         //if(nodeId == 0x77)
-         //  printf("Mutex exit 3\n");
-
-         if(lock_value != 0)
-         printf(
-         "ERR[%d on node %x state %d]: Impossibile sbloccare il mutex 4: %d\n",
-         InternalError,
-         nodeId, machine_state_index[nodeId], lock_value);*/
-
         machine_function(d, nodeId, next_machine[nodeId][0]->param,
             next_machine[nodeId][0]->param_size);
 
@@ -1576,7 +1538,6 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
       printf("SUCC[node %x]: %s\n", nodeId,
           next_machine[nodeId][0]->error[0]);
 
-    machine_state_index[nodeId] = 0;
     machine_state_param_index[nodeId] = 0;
 
     next_machine_size[nodeId]--;
@@ -1584,31 +1545,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
     // se è accodata un'altra macchina, allora l'avvio
     if((next_machine[nodeId] != NULL) && (next_machine_size[nodeId] > 0))
     {
-      /*struct state_machine_struct **machine = NULL;
-       machine = malloc(
-       next_machine_size[nodeId] * sizeof(struct state_machine_struct *));
-
-       if(machine == NULL)
-       {
-       printf(
-       "ERR[%d on node %x state %d]: %s (memoria finita per allocare machine)\n",
-       InternalError, nodeId, machine_state_index[nodeId],
-       next_machine[nodeId][0]->error[1]);
-
-       result_value = 1;
-       goto finalize;
-       }
-
-       for(i = 0; i < next_machine_size[nodeId]; i++)
-       machine[i] = next_machine[nodeId][i + 1];
-
-       // non c'è bisogno di sbloccare il mutex, in quanto, essendo lo stesso processo
-       // a richiamare la funzione _machine_exe, il pthread_mutex_lock non sarà bloccante
-       _machine_exe(d, nodeId, callback_user[nodeId], machine,
-       next_machine_size[nodeId], from_callback, 0);
-
-       free(machine);
-       machine = NULL;*/
+      machine_state_index[nodeId] = 0;
 
       for(i = 0; i < next_machine_size[nodeId]; i++)
         next_machine[nodeId][i] = next_machine[nodeId][i + 1];
@@ -1686,6 +1623,11 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
   }
   else
   {
+    // Call Callback function
+    if((callback_user[nodeId] != NULL) && (nodeId != 0))
+      callback_user[nodeId](d, nodeId, machine_state_index[nodeId],
+          result_value);
+
     next_machine_size[nodeId] = 0;
     next_var_count[nodeId] = 0;
     var_count_total[nodeId] = 0;
@@ -1717,11 +1659,6 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
           "ERR[%d on node %x state %d]: Impossibile sbloccare il mutex 7: %d\n",
           InternalError,
           nodeId, machine_state_index[nodeId], lock_value);
-
-    // Call Callback function
-    if((callback_user[nodeId] != NULL) && (nodeId != 0))
-      callback_user[nodeId](d, nodeId, machine_state_index[nodeId],
-          result_value);
   }
 
   return result_value;

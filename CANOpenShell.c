@@ -44,10 +44,14 @@
 #include "CANOpenShellMasterOD.h"
 #include "CANOpenShellStateMachine.h"
 #include "CANOpenShellMasterError.h"
+#include "file_parser.h"
 
 //****************************************************************************
 // DEFINES
 #define MAX_NODES 127
+#define MOTOR_INDEX_FIRST 0x77
+
+#define TABLE_MAX_NUM 6
 #define cst_str4(c1, c2, c3, c4) ((((unsigned int)0 | \
     (char)c4 << 8) | \
     (char)c3) << 8 | \
@@ -60,17 +64,19 @@
 void CheckReadRaw(CO_Data* d, UNS8 nodeid);
 void CheckReadStringRaw(CO_Data* d, UNS8 nodeid);
 void CheckWriteRaw(CO_Data* d, UNS8 nodeid);
-int WriteRaw(CO_Data* d, UNS8 nodeid);
+int SmartWriteRaw(CO_Data* d, UNS8 nodeid);
 
 void CheckWriteProgram(CO_Data* d, UNS8 nodeid);
 void CheckReadProgram(CO_Data* d, UNS8 nodeid);
-
-UNS32 OnSinUpdate(CO_Data* d, const indextable * indextable_curr,
+UNS32 OnInterpUpdate(CO_Data* d, const indextable * indextable_curr,
     UNS8 bSubindex);
 void SmartStop(UNS8 nodeid, int from_callback);
 void SmartSin1Stop(UNS8 nodeid);
+void SimulationStop(UNS8 nodeid);
 void SmartSin1(CO_Data* d, UNS8 nodeid, int angle_step_grad, long amplitude,
     int point_number, int from_callback);
+void SimulationTableUpdate(CO_Data* d, UNS8 nodeid, int point_number,
+    int from_callback);
 
 //****************************************************************************
 // GLOBALS
@@ -81,7 +87,7 @@ s_BOARD Board =
     {BoardBusName, BoardBaudRate};
 CO_Data* CANOpenShellOD_Data;
 
-pthread_mutex_t sinwave_mux;
+pthread_mutex_t sinwave_mux[CANOPEN_NODE_NUMBER];
 volatile int sinwave_busy[CANOPEN_NODE_NUMBER];
 
 int raw_response = -1;
@@ -95,102 +101,16 @@ char LibraryPath[512];
 e_nodeState node_state;
 
 int machine_state = -1;
-/**
- * Ad ogni chiamata a questa funzione viene letta una nuova riga del file indicato
- * restituendo il comando letto e la realtiva descizione.
- *
- * @param file_path: nome del file da scansire
- * @param command: stringa dove verrà memorizzato il comando letto dal file
- * @param description: stringa dove verrà memmorizzata la descrizione del comando (se presente)
- * @param max_description_size: dimensione massima della descrizione da copiare
- * @return >= 0: letta una nuova riga; -1: errore; -2: raggiunta la fine del file
- * nell'apertura del file.
- *
- * @remark: La funzione deve essere letta in modo ricorsivo per ottenere i comandi da
- * inviare ai motori. Tra il comando ed un eventuale commento, possono essere presenti
- * i seguenti caratteri: " ", "\t", "'". Il carattere "\n" rappresenta la fine della
- * riga.
- * Se non interessa prendere l'eventuale commento presente nel file, impostare la
- * variabile description a NULL. Se la dimensione della stringa description, indicata dal parametro
- * max_description_size, è troppo piccola per farci entrare la descrizione, quest'ultima verrà
- * troncata.
- */
-int movement_file_read(const char *file_path, char *command, char *description,
-    int max_description_size)
-{
-  FILE *file = NULL;
-  char *line = NULL;
-  size_t len = 0;
-  ssize_t read;
-  static int cursor_position = 0;
+float angle_actual_rad[CANOPEN_NODE_NUMBER];
+float angle_step_rad[CANOPEN_NODE_NUMBER];
 
-  char *token;
-  char line_copy[256];
-
-  command[0] = '\0';
-  description[0] = '\0';
-
-  file = fopen(file_path, "r");
-
-  if(file == NULL)
-    return -1;
-
-  if(fseek(file, cursor_position, SEEK_SET) == -1)
-  {
-    fclose(file);
-    return -1;
-  }
-
-  // I caratteri che determinano la fine della stringa sono: " ", "\t", "\n", "'", "\r", "\a"
-  if((read = getline(&line, &len, file)) != -1)
-  {
-    if(len < sizeof(line_copy))
-      strcpy(line_copy, line);
-    else
-      strncpy(line_copy, line, sizeof(line_copy) - 1);
-
-    // copio il comando
-    token = strtok(line_copy, " ,\n\t'\r\a");
-    if(token != NULL)
-      strcpy(command, token);
-
-    // copio la descrizione
-    if(description != NULL)
-    {
-      token = strchr(line, '\'');
-
-      if(token != NULL)
-      {
-        if(strlen(token) < max_description_size)
-          strcpy(description, token);
-        else
-          strncpy(description, token, max_description_size - 1);
-      }
-      else
-        description = "\0";
-    }
-
-    cursor_position += read;
-  }
-  else
-  {
-    cursor_position = 0;
-    free(line);
-    fclose(file);
-    return -2;
-  }
-
-  free(line);
-  fclose(file);
-
-  return strlen(command);
-}
+struct table_data motor_table[TABLE_MAX_NUM];
 
 /**
  * @return: -1: errore, chunk_size: ok, <chunk_size: ultimi byte e fine del file
  */
-int
-program_file_read(const char *file_path, char *program_chunk, int chunk_size)
+int program_file_read(const char *file_path, char *program_chunk,
+    int chunk_size)
 {
   FILE *file = NULL;
   ssize_t read;
@@ -217,27 +137,18 @@ program_file_read(const char *file_path, char *program_chunk, int chunk_size)
 
   return read;
 }
+UNS32 OnInterVarUpdate(CO_Data* d, const indextable * indextable_curr,
+    UNS8 bSubindex)
+{
+  printf("urra\n");
+
+  return 0;
+}
 
 UNS32 OnStatusUpdate(CO_Data* d, const indextable * indextable_curr,
     UNS8 bSubindex)
 {
   int write_result = 0;
-
-  //static UNS32 smart_motor_status[CANOPEN_NODE_NUMBER];
-
-  /*if((Statusword & 0b0000000001001111) == 0b0000000001000000)
-   printf("INFO[%d on node %x]: Switch on disabled\n", SmartMotorError,
-   NodeId);
-
-   if((Statusword & 0b0000000001101111) == 0b0000000000100001)
-   printf("INFO[%d on node %x]: Ready to switch on\n", SmartMotorError,
-   NodeId);
-
-   if((Statusword & 0b0000000001101111) == 0b0000000000100011)
-   printf("INFO[%d on node %x]: Switched on\n", SmartMotorError, NodeId);
-
-   if((Statusword & 0b0000000001101111) == 0b0000000000100111)
-   printf("INFO[%d on node %x]: Switched on\n", SmartMotorError, NodeId);*/
 
   /** Fault management **/
   if((Statusword & 0b0000000001001111) == 0b0000000000001000)
@@ -265,7 +176,8 @@ UNS32 OnStatusUpdate(CO_Data* d, const indextable * indextable_curr,
       UNS32 data = 0x00;
 
       // set position origin
-      write_result = writeNetworkDictCallBack(d, NodeId, 0x2202, 0x0, 4, 0, &data,
+      write_result = writeNetworkDictCallBack(d, NodeId, 0x2202, 0x0, 4, 0,
+          &data,
           &CheckWriteSDO, 0);
 
       if(write_result != 0)
@@ -285,8 +197,8 @@ UNS32 OnStatusUpdate(CO_Data* d, const indextable * indextable_curr,
         &CheckWriteSDO, 0);
 
     if(write_result != 0)
-          printf("ERR[%d on node %x]: writeNetwork error on OnStatusUpdate\n",
-              InternalError, NodeId);
+      printf("ERR[%d on node %x]: writeNetwork error on OnStatusUpdate\n",
+          InternalError, NodeId);
 
     printf("ERR[%d on node %x]: Move error\n", SmartMotorError, NodeId);
 
@@ -317,26 +229,25 @@ UNS32 OnStatusUpdate(CO_Data* d, const indextable * indextable_curr,
     printf("ERR[%d on node %x]: Invalid position increment (IP mode)\n",
         SmartMotorError, NodeId);
 
+  if((Interpolation_Mode_Status & 0b0000100000000000) > 0)
+    printf("ERR[%d on node %x]: Invalid position increment error (IP mode)\n",
+        SmartMotorError,
+        NodeId);
+
+  if((Interpolation_Mode_Status & 0b0100000000000000) > 0)
+    printf("ERR[%d on node %x]: FIFO underflow (IP mode)\n", SmartMotorError,
+        NodeId);
+
   if((Interpolation_Mode_Status & 0b0010000000000000) > 0)
     printf("ERR[%d on node %x]: FIFO overflow (IP mode)\n", SmartMotorError,
         NodeId);
   else
-    OnSinUpdate(d, indextable_curr, bSubindex);
+    OnInterpUpdate(d, indextable_curr, bSubindex);
 
   return 0;
 }
 
-/* Sleep for n seconds */
-void SleepFunction(int second)
-{
-#ifdef USE_RTAI
-  sleep(second);
-#else
-  SLEEP(second);
-#endif
-}
-
-UNS32 OnSinUpdate(CO_Data* d, const indextable * indextable_curr,
+UNS32 OnInterpUpdate(CO_Data* d, const indextable * indextable_curr,
     UNS8 bSubindex)
 {
   static UNS32 smart_motor_status[CANOPEN_NODE_NUMBER];
@@ -355,7 +266,8 @@ UNS32 OnSinUpdate(CO_Data* d, const indextable * indextable_curr,
 
       smart_motor_status[NodeId] = Interpolation_Mode_Status;
 
-      SmartSin1Stop(NodeId);
+      //SmartSin1Stop(NodeId);
+      SimulationStop(NodeId);
 
       return 0;
     }
@@ -363,17 +275,174 @@ UNS32 OnSinUpdate(CO_Data* d, const indextable * indextable_curr,
 
   smart_motor_status[NodeId] = Interpolation_Mode_Status;
 
-  if((Interpolation_Mode_Status & 0x3F) > 0x16)
-    SmartSin1(d, NodeId, 0, 0, Interpolation_Mode_Status & 0x3F, 1);
+  if((motor_started[NodeId] == 1)
+      && ((Interpolation_Mode_Status & 0x3F) > 0x16))
+  {
+    //SmartSin1(d, NodeId, 0, 0, Interpolation_Mode_Status & 0x3F, 1);
+    SimulationTableUpdate(d, NodeId, Interpolation_Mode_Status & 0x3F, 1);
+  }
 
   return 0;
 }
 
-void SmartSin1Callback(CO_Data* d, UNS8 nodeid, int machine_state, UNS32 return_value)
+void SmartUpdateSin1Callback(CO_Data* d, UNS8 nodeid, int machine_state,
+    UNS32 return_value)
 {
-  pthread_mutex_lock(&sinwave_mux);
+  int i;
+  pthread_mutex_lock(&sinwave_mux[nodeid]);
+  for(i = 0; i < machine_state; i++)
+  {
+    angle_actual_rad[nodeid] += angle_step_rad[nodeid];
+    angle_actual_rad[nodeid] = fmod(angle_actual_rad[nodeid], 2 * M_PI);
+  }
+
   sinwave_busy[nodeid] = 0;
-  pthread_mutex_unlock(&sinwave_mux);
+  pthread_mutex_unlock(&sinwave_mux[nodeid]);
+}
+
+void SmartSin1Callback(CO_Data* d, UNS8 nodeid, int machine_state,
+    UNS32 return_value)
+{
+  pthread_mutex_lock(&sinwave_mux[nodeid]);
+  sinwave_busy[nodeid] = 0;
+  pthread_mutex_unlock(&sinwave_mux[nodeid]);
+}
+
+int MotorTableIndexFromNodeId(UNS8 nodeId)
+{
+  int i;
+
+  for(i = 0; i < TABLE_MAX_NUM; i++)
+  {
+    if(motor_table[i].nodeId == nodeId)
+    {
+      return i;
+    }
+  }
+
+  return -1;
+}
+
+void SimulationInitCallback(CO_Data* d, UNS8 nodeid, int machine_state,
+    UNS32 return_value)
+{
+  motor_started[nodeid] = 1;
+}
+
+/**
+ * param:
+ *   angle_step_grad
+ *   point number
+ */
+void SimulationTableUpdate(CO_Data* d, UNS8 nodeid, int point_number,
+    int from_callback)
+{
+  int motor_table_index = MotorTableIndexFromNodeId(nodeid);
+
+  if(motor_table_index < 0)
+  {
+    printf("ERR[%d on node %x]: Impossibile trovare la tabella associata. \n",
+        InternalError, nodeid);
+
+    return;
+  }
+
+  if(motor_active[nodeid] == 0)
+  {
+    return;
+  }
+
+  pthread_mutex_lock(&motor_table[motor_table_index].table_mutex);
+  pthread_mutex_lock(&sinwave_mux[nodeid]);
+  if((sinwave_busy[nodeid] == 0) && (point_number > 0))
+    sinwave_busy[nodeid] = 1;
+  else
+  {
+    if(sinwave_busy[nodeid] == 1)
+      printf("sinwave busy %d\n", nodeid);
+
+    pthread_mutex_unlock(&sinwave_mux[nodeid]);
+    pthread_mutex_unlock(&motor_table[motor_table_index].table_mutex);
+
+    return;
+  }
+
+  pthread_mutex_unlock(&sinwave_mux[nodeid]);
+
+  int i;
+  int point_to_send;
+
+  if(point_number > motor_table[motor_table_index].count)
+    point_to_send = motor_table[motor_table_index].count;
+  else
+    point_to_send = point_number - 1; // mi riservo uno spazio per l'eventuale uscata dall'ip mode
+
+  for(i = 0; i < point_to_send; i++)
+  {
+    InterpolationTimePeriod[nodeid - MOTOR_INDEX_FIRST] = -3;
+
+    while(motor_table[motor_table_index].time_ms[motor_table[motor_table_index].read_pointer
+        + i] > 256)
+    {
+      motor_table[motor_table_index].time_ms[motor_table[motor_table_index].read_pointer
+          + i] =
+          motor_table[motor_table_index].time_ms[motor_table[motor_table_index].read_pointer
+              + i] / 10;
+
+      InterpolationTimePeriod[nodeid - MOTOR_INDEX_FIRST]++;
+    }
+
+    InterpolationTimeValue[nodeid - MOTOR_INDEX_FIRST] =
+        motor_table[motor_table_index].time_ms[motor_table[motor_table_index].read_pointer
+            + i];
+
+    InterpolationData[nodeid - MOTOR_INDEX_FIRST] =
+        motor_table[motor_table_index].position[motor_table[motor_table_index].read_pointer
+            + i];
+
+    sendPDOevent(d);
+  }
+
+  // per uscire dalla modalità ip mode devo impostare l'unità temporale a zero
+  // e scrivere l'ultimo valore nella tabella.
+  // Devo utilizzare l'sdo perchè altrimenti il dato non partirebbe in quanto è uguale
+  // a quello precendente
+
+  if((motor_started[nodeid] == 1)
+      && ((Interpolation_Mode_Status & 0b1000000000000000) == 0))
+  {
+    struct state_machine_struct *interpolation_machine[] =
+        {&start_interpolation_machine};
+
+    _machine_exe(CANOpenShellOD_Data, nodeid, NULL,
+        interpolation_machine, 1, 1, 0);
+  }
+
+  pthread_mutex_unlock(&motor_table[motor_table_index].table_mutex);
+
+  // Se il motore sta elaborando la tabella, il numero di punti disponibili ha raggiunto il valore massimo
+  // e il riempitore di tabella ha finito i punti, significa che posso bloccare il movimento
+  if(((Interpolation_Mode_Status & 0b1000000000000000) > 0)
+   && ((Interpolation_Mode_Status & 0x3F) == 45)
+   && (motor_table[motor_table_index].end_reached == 1))
+  {
+    struct state_machine_struct *interpolation_machine[] =
+        {&stop_interpolation_machine};
+
+    _machine_exe(CANOpenShellOD_Data, nodeid, NULL,
+        interpolation_machine, 1, 1, 1,
+        InterpolationData[nodeid - MOTOR_INDEX_FIRST] =
+            motor_table[motor_table_index].position[motor_table[motor_table_index].read_pointer
+                + i]);
+  }
+
+
+  QueueUpdate(&motor_table[motor_table_index], point_to_send);
+
+  pthread_mutex_lock(&sinwave_mux[nodeid]);
+  sinwave_busy[nodeid] = 0;
+  pthread_mutex_unlock(&sinwave_mux[nodeid]);
+
 }
 
 /**
@@ -384,10 +453,11 @@ void SmartSin1Callback(CO_Data* d, UNS8 nodeid, int machine_state, UNS32 return_
 void SmartSin1(CO_Data* d, UNS8 nodeid, int angle_step_grad, long amplitude,
     int point_number, int from_callback)
 {
-  static float angle_actual_rad[CANOPEN_NODE_NUMBER];
+  static struct timeval start_delay[CANOPEN_NODE_NUMBER],
+      stop_delay[CANOPEN_NODE_NUMBER];
 
   static long int position_max = 0;
-  static float angle_step_rad[CANOPEN_NODE_NUMBER];
+  float current_angle = 0;
 
   if(((motor_started[nodeid] == 0) && (angle_step_grad == 0))
       || (motor_active[nodeid] == 0))
@@ -402,25 +472,52 @@ void SmartSin1(CO_Data* d, UNS8 nodeid, int angle_step_grad, long amplitude,
     return;
   }
 
-  //if(nodeid == 0x77)
-  //  printf("INFO[%d on node %x]: Dati da aggiornare: %d\n",
-  //          InternalError, NodeId, Interpolation_Mode_Status & 0x3F);
-
-  pthread_mutex_lock(&sinwave_mux);
+  pthread_mutex_lock(&sinwave_mux[nodeid]);
   if((sinwave_busy[nodeid] == 0) && (point_number > 0))
     sinwave_busy[nodeid] = 1;
   else
   {
-    pthread_mutex_unlock(&sinwave_mux);
+    pthread_mutex_unlock(&sinwave_mux[nodeid]);
+    if(sinwave_busy[nodeid] == 1)
+    {
+      if(start_delay[nodeid].tv_usec == 0)
+      {
+        if(gettimeofday(&start_delay[nodeid], NULL))
+        {
+          perror("gettimeofday()");
+        }
+      }
+
+      printf("sinwave busy %d\n", nodeid);
+    }
+
     return;
   }
-  pthread_mutex_unlock(&sinwave_mux);
+
+  if(start_delay[nodeid].tv_usec != 0)
+  {
+    if(gettimeofday(&stop_delay[nodeid], NULL))
+    {
+      perror("gettimeofday()");
+    }
+
+    printf("Time elapsed: %li us\n",
+        (stop_delay[nodeid].tv_sec - start_delay[nodeid].tv_sec) * 1000000
+            + stop_delay[nodeid].tv_usec
+            - start_delay[nodeid].tv_usec);
+
+    start_delay[nodeid].tv_usec = 0;
+  }
+
+  pthread_mutex_unlock(&sinwave_mux[nodeid]);
 
   if(angle_step_grad != 0)
   {
     angle_step_rad[nodeid] = angle_step_grad * M_PI / 180;
     angle_actual_rad[nodeid] = 0;
   }
+
+  current_angle = angle_actual_rad[nodeid];
 
   if(amplitude != 0)
     position_max = amplitude;
@@ -441,54 +538,82 @@ void SmartSin1(CO_Data* d, UNS8 nodeid, int angle_step_grad, long amplitude,
 
   if(point_number)
   {
-    sin_interpolation_function = malloc(point_number * sizeof(void *));
-    sin_interpolation_param = malloc(point_number * 5 * sizeof(UNS32));
+    /*sin_interpolation_function = malloc(point_number * sizeof(void *));
+     sin_interpolation_param = malloc(point_number * 5 * sizeof(UNS32));
 
-    for(i = 0; i < point_number; i++)
-    {
-      sin_interpolation_function[i] = &writeNetworkDictCallBack; // Write data point
-      sin_interpolation_param[i * 5] = 0x60C1;
-      sin_interpolation_param[i * 5 + 1] = 0x1;
-      sin_interpolation_param[i * 5 + 2] = 4;
-      sin_interpolation_param[i * 5 + 3] = 0;
-      sin_interpolation_param[i * 5 + 4] = (long) (position_max
-          * sin(angle_actual_rad[nodeid]));
+     for(i = 0; i < point_number; i++)
+     {
+     sin_interpolation_function[i] = &writeNetworkDictCallBack; // Write data point
+     sin_interpolation_param[i * 5] = 0x60C1;
+     sin_interpolation_param[i * 5 + 1] = 0x1;
+     sin_interpolation_param[i * 5 + 2] = 4;
+     sin_interpolation_param[i * 5 + 3] = 0;
+     sin_interpolation_param[i * 5 + 4] = (long) (position_max
+     * sin(current_angle));
 
-      angle_actual_rad[nodeid] += angle_step_rad[nodeid];
-      angle_actual_rad[nodeid] = fmod(angle_actual_rad[nodeid], 2 * M_PI);
-    }
+     current_angle += angle_step_rad[nodeid];
+     current_angle = fmod(current_angle, 2 * M_PI);
+     }
 
-    sin_interpolation_machine.function = sin_interpolation_function;
-    sin_interpolation_machine.function_size = point_number;
-    sin_interpolation_machine.param = sin_interpolation_param;
-    sin_interpolation_machine.param_size = point_number * 5;
+     sin_interpolation_machine.function = sin_interpolation_function;
+     sin_interpolation_machine.function_size = point_number;
+     sin_interpolation_machine.param = sin_interpolation_param;
+     sin_interpolation_machine.param_size = point_number * 5;*/
 
     if(motor_started[nodeid] == 0)
     {
       struct state_machine_struct *interpolation_machine[] =
-          {&init_interpolation_machine, &sin_interpolation_machine};
+          {&init_interpolation_machine};
 
       if(_machine_exe(CANOpenShellOD_Data, nodeid, &SmartSin1Callback,
-          interpolation_machine, 2, from_callback, 0) == 0)
+          interpolation_machine, 1, from_callback, 0) == 0)
         motor_started[nodeid] = 1;
     }
     else
     {
-      struct state_machine_struct *interpolation_machine[] =
-          {&sin_interpolation_machine};
+      /*struct state_machine_struct *interpolation_machine[] =
+       {&sin_interpolation_machine};
 
-      if(_machine_exe(CANOpenShellOD_Data, nodeid, &SmartSin1Callback,
-          interpolation_machine, 1, from_callback, 0) == 1)
-        SmartSin1Stop(nodeid);
+       if(_machine_exe(CANOpenShellOD_Data, nodeid, &SmartUpdateSin1Callback,
+       interpolation_machine, 1, from_callback, 0) == 1)
+       SmartSin1Stop(nodeid);*/
+
+      for(i = 0; i < point_number; i++)
+      {
+        InterpolationData[nodeid - MOTOR_INDEX_FIRST] = (long) (position_max
+            * sin(angle_actual_rad[nodeid]));
+
+        sendPDOevent(d);
+
+        angle_actual_rad[nodeid] += angle_step_rad[nodeid];
+        angle_actual_rad[nodeid] = fmod(angle_actual_rad[nodeid], 2 * M_PI);
+      }
+
+      sinwave_busy[nodeid] = 0;
     }
   }
 }
 
+void SimulationStop(UNS8 nodeid)
+{
+  int motor_table_index = MotorTableIndexFromNodeId(nodeid);
+
+  QueueInit(nodeid, &motor_table[motor_table_index]);
+
+  pthread_mutex_lock(&motor_table[motor_table_index].table_mutex);
+  sinwave_busy[nodeid] = 0;
+  pthread_mutex_unlock(&motor_table[motor_table_index].table_mutex);
+
+  motor_started[nodeid] = 0;
+
+  SmartStop(nodeid, 1);
+}
+
 void SmartSin1Stop(UNS8 nodeid)
 {
-  pthread_mutex_lock(&sinwave_mux);
+  pthread_mutex_lock(&sinwave_mux[nodeid]);
   sinwave_busy[nodeid] = 0;
-  pthread_mutex_unlock(&sinwave_mux);
+  pthread_mutex_unlock(&sinwave_mux[nodeid]);
 
   motor_started[nodeid] = 0;
 }
@@ -507,6 +632,13 @@ void SinFunction(char *sdo)
 
   if(ret >= 4)
   {
+    // Inizializzo i mutex
+    int i;
+    for(i = 0; i < CANOPEN_NODE_NUMBER; i++)
+    {
+      pthread_mutex_init(&sinwave_mux[i], NULL);
+    }
+
     SmartSin1(CANOpenShellOD_Data, nodeid, angle_step_grad, amplitude,
         point_number, 0);
   }
@@ -515,7 +647,7 @@ void SinFunction(char *sdo)
 
 }
 
-void Home(char *sdo)
+void SmartHome(char *sdo)
 {
   int ret;
 
@@ -559,6 +691,13 @@ void SmartIntTest1(UNS8 nodeid)
   _machine_exe(CANOpenShellOD_Data, nodeid, NULL, &machine, 1, 0, 0);
 }
 
+void SimulationStart(UNS8 nodeid)
+{
+  struct state_machine_struct *machine = &init_interpolation_machine;
+  _machine_exe(CANOpenShellOD_Data, nodeid, &SimulationInitCallback, &machine,
+      1, 0, 0);
+}
+
 void SmartIntStart(UNS8 nodeid)
 {
   struct state_machine_struct *machine = &start_interpolation_machine;
@@ -569,6 +708,204 @@ void SmartOrigin(UNS8 nodeid)
 {
   struct state_machine_struct *machine = &smart_position_zero_machine;
   _machine_exe(CANOpenShellOD_Data, nodeid, NULL, &machine, 1, 0, 0);
+}
+
+void SmartStop(UNS8 nodeid, int from_callback)
+{
+  struct state_machine_struct *machine = &smart_stop_machine;
+  _machine_exe(CANOpenShellOD_Data, nodeid, NULL, &machine, 1, from_callback,
+      0);
+}
+
+/* Start heartbeat producer on smartmotor */
+void StartHeart(char* sdo)
+{
+  int ret = 0;
+  int nodeid;
+  int time_ms;
+
+  ret = sscanf(sdo, "shrt#%2x,%4x", &nodeid, &time_ms);
+  if(ret == 2)
+  {
+    struct state_machine_struct *machine = &heart_start_machine;
+    _machine_exe(CANOpenShellOD_Data, nodeid, NULL, &machine, 1, 0, 1, time_ms);
+  }
+  else
+    printf("Wrong command  : %s\n", sdo);
+}
+
+int SmartProgram(CO_Data* d, UNS8 nodeid)
+{
+  //pthread_mutex_lock(&machine_mux[nodeid]);
+  char command[32];
+  int count = 0;
+  int bytes_read;
+
+  switch(machine_state)
+  {
+    case 0:
+      printf("Sending LOAD command. . .\n");
+      sprintf(command, "LOAD\r");
+      writeNetworkDictCallBack(d, nodeid, 0x2500, 0x01, strlen(command),
+          visible_string, command, CheckWriteProgram, 0);
+      break;
+
+    case 1:
+      // Check that the command in progress bit (bit 0) is 0
+      if((raw_response != -1) && ((raw_response & 0x1) == 0))
+      {
+        raw_response = -1;
+        machine_state++;
+        printf("Motor ready!\n");
+        printf("Start programming. . .\n");
+      }
+      else
+      {
+        printf("Checking for green light. . .\n");
+        readNetworkDictCallback(d, nodeid, 0x2500, 0x03, 0, CheckReadProgram,
+            0);
+        break;
+      }
+
+    case 2:
+      // Write program 32 bytes of data
+      bytes_read = program_file_read(program_file_path, command, 32);
+
+      if(bytes_read == -1)
+      {
+        printf("Errore [%s]. Errore inaspettato nella lettura del file.\n",
+            strerror(errno));
+        machine_state = -1;
+        break;
+      }
+      else if(bytes_read > 0)
+      {
+        machine_state -= 2;
+
+        for(count = 0; count < bytes_read; count++)
+          printf("%x", command[count]);
+
+        writeNetworkDictCallBack(d, nodeid, 0x2500, 0x01, bytes_read,
+            visible_string, command, CheckWriteProgram, 0);
+        break;
+      }
+      else
+        machine_state++;
+
+    case 3:
+      // End transmission
+      printf("Ending transmission. . .\n");
+      command[0] = 0xff;
+      command[1] = 0xff;
+      command[2] = 0x20;
+
+      for(count = 0; count < 3; count++)
+        printf("%x", command[count]);
+
+      writeNetworkDictCallBack(d, nodeid, 0x2500, 0x01, 3, visible_string,
+          command, CheckWriteProgram, 0);
+      break;
+
+    case 4:
+      printf("Program complete\n");
+
+      machine_state = -1;
+      break;
+
+    case -1:
+      printf("Impossibile inviare il comando al nodo %d\n", nodeid);
+      machine_state = -1;
+      break;
+  }
+
+  //pthread_mutex_unlock(&machine_mux[nodeid]);
+
+  return 0;
+}
+
+int SmartWriteRaw(CO_Data* d, UNS8 nodeid)
+{
+  switch(machine_state)
+  {
+    case 0:
+      // Check that the command in progress bit (bit 0) is 0
+      if(raw_response != -1)
+      {
+        if((raw_response & 0x1) == 0)
+        {
+          raw_response = -1;
+          machine_state++;
+          printf("Motor ready!\n");
+        }
+        else
+        {
+          printf("Errore: altro comando in esecuzione\n");
+          raw_response = -1;
+          machine_state = 0;
+          break;
+        }
+      }
+      else
+      {
+        printf("Checking for green light. . .\n");
+        readNetworkDictCallback(d, nodeid, 0x2500, 0x03, 0, CheckReadRaw, 0);
+        break;
+      }
+
+    case 1:
+      printf("Sending command. . .\n");
+      writeNetworkDictCallBack(d, nodeid, 0x2500, 0x01, strlen(raw_cmd),
+          visible_string, raw_cmd, CheckWriteRaw, 0);
+      break;
+
+    case 2:
+      // Check that the command complete bit (bit 1) is 1
+      if((raw_response != -1) && (raw_response & 0x2) == 2)
+      {
+        printf("Command received\n");
+        raw_response = -1;
+        machine_state++;
+      }
+      else
+      {
+        printf("Checking for rececption. . .\n");
+        readNetworkDictCallback(d, nodeid, 0x2500, 0x03, 0, CheckReadRaw, 0);
+        break;
+      }
+
+    case 3:
+      if(raw_report_flag == 1)
+      {
+        if(raw_response == -1)
+        {
+          printf("Read response\n");
+          readNetworkDictCallback(d, nodeid, 0x2500, 0x02, visible_string,
+              CheckReadStringRaw, 0);
+          break;
+        }
+        else
+        {
+          printf("\nResult : %s\n", raw_report);
+          raw_response = -1;
+          machine_state++;
+        }
+      }
+
+    case 4:
+      printf("Comando inviato correttamente\n");
+
+      machine_state = -1;
+      break;
+
+    case -1:
+      printf("Impossibile inviare il comando al nodo %d\n", nodeid);
+      machine_state = -1;
+      break;
+  }
+
+  //pthread_mutex_unlock(&machine_mux[nodeid]);
+
+  return 0;
 }
 
 void Map1TPDO(char *sdo)
@@ -636,12 +973,6 @@ void StartNode(UNS8 nodeid)
 {
   struct state_machine_struct *machine = &smart_start_machine;
   _machine_exe(CANOpenShellOD_Data, nodeid, NULL, &machine, 1, 0, 0);
-}
-
-void SmartStop(UNS8 nodeid, int from_callback)
-{
-  struct state_machine_struct *machine = &smart_stop_machine;
-  _machine_exe(CANOpenShellOD_Data, nodeid, NULL, &machine, 1, from_callback, 0);
 }
 
 /* Ask a slave node to reset */
@@ -740,42 +1071,6 @@ void GetSlaveNodeInfo(UNS8 nodeid)
   }
 }
 
-/* Callback function that check the read SDO demand */
-void CheckReadSDO(CO_Data* d, UNS8 nodeid)
-{
-  UNS32 abortCode;
-  UNS32 data = 0;
-  UNS32 size = 64;
-
-  if(getReadResultNetworkDict(CANOpenShellOD_Data, nodeid, &data, &size,
-      &abortCode) != SDO_FINISHED)
-    printf(
-        "\nResult : Failed in getting information for slave %2.2x, AbortCode :%4.4x \n",
-        nodeid, abortCode);
-  else
-    printf("\nResult : %x\n", data);
-
-  /* Finalize last SDO transfer with this node */
-  closeSDOtransfer(CANOpenShellOD_Data, nodeid, SDO_CLIENT);
-}
-
-/* Start heartbeat producer on smartmotor */
-void StartHeart(char* sdo)
-{
-  int ret = 0;
-  int nodeid;
-  int time_ms;
-
-  ret = sscanf(sdo, "shrt#%2x,%4x", &nodeid, &time_ms);
-  if(ret == 2)
-  {
-    struct state_machine_struct *machine = &heart_start_machine;
-    _machine_exe(CANOpenShellOD_Data, nodeid, NULL, &machine, 1, 0, 1, time_ms);
-  }
-  else
-    printf("Wrong command  : %s\n", sdo);
-}
-
 /* Read a slave node object dictionary entry */
 void ReadDeviceEntry(char* sdo)
 {
@@ -800,6 +1095,25 @@ void ReadDeviceEntry(char* sdo)
   }
   else
     printf("Wrong command  : %s\n", sdo);
+}
+
+/* Callback function that check the read SDO demand */
+void CheckReadSDO(CO_Data* d, UNS8 nodeid)
+{
+  UNS32 abortCode;
+  UNS32 data = 0;
+  UNS32 size = 64;
+
+  if(getReadResultNetworkDict(CANOpenShellOD_Data, nodeid, &data, &size,
+      &abortCode) != SDO_FINISHED)
+    printf(
+        "\nResult : Failed in getting information for slave %2.2x, AbortCode :%4.4x \n",
+        nodeid, abortCode);
+  else
+    printf("\nResult : %x\n", data);
+
+  /* Finalize last SDO transfer with this node */
+  closeSDOtransfer(CANOpenShellOD_Data, nodeid, SDO_CLIENT);
 }
 
 /* Callback function that check the write SDO demand */
@@ -849,182 +1163,6 @@ void WriteDeviceEntry(char* sdo)
     printf("Wrong command  : %s\n", sdo);
 }
 
-int WriteRaw(CO_Data* d, UNS8 nodeid)
-{
-  //pthread_mutex_lock(&machine_mux[nodeid]);
-
-  switch(machine_state)
-  {
-    case 0:
-      // Check that the command in progress bit (bit 0) is 0
-      if(raw_response != -1)
-      {
-        if((raw_response & 0x1) == 0)
-        {
-          raw_response = -1;
-          machine_state++;
-          printf("Motor ready!\n");
-        }
-        else
-        {
-          printf("Errore: altro comando in esecuzione\n");
-          raw_response = -1;
-          machine_state = 0;
-          break;
-        }
-      }
-      else
-      {
-        printf("Checking for green light. . .\n");
-        readNetworkDictCallback(d, nodeid, 0x2500, 0x03, 0, CheckReadRaw, 0);
-        break;
-      }
-
-    case 1:
-      printf("Sending command. . .\n");
-      writeNetworkDictCallBack(d, nodeid, 0x2500, 0x01, strlen(raw_cmd),
-          visible_string, raw_cmd, CheckWriteRaw, 0);
-      break;
-
-    case 2:
-      // Check that the command complete bit (bit 1) is 1
-      if((raw_response != -1) && (raw_response & 0x2) == 2)
-      {
-        printf("Command received\n");
-        raw_response = -1;
-        machine_state++;
-      }
-      else
-      {
-        printf("Checking for rececption. . .\n");
-        readNetworkDictCallback(d, nodeid, 0x2500, 0x03, 0, CheckReadRaw, 0);
-        break;
-      }
-
-    case 3:
-      if(raw_report_flag == 1)
-      {
-        if(raw_response == -1)
-        {
-          printf("Read response\n");
-          readNetworkDictCallback(d, nodeid, 0x2500, 0x02, visible_string,
-              CheckReadStringRaw, 0);
-          break;
-        }
-        else
-        {
-          printf("\nResult : %s\n", raw_report);
-          raw_response = -1;
-          machine_state++;
-        }
-      }
-
-    case 4:
-      printf("Comando inviato correttamente\n");
-
-      machine_state = -1;
-      break;
-
-    case -1:
-      printf("Impossibile inviare il comando al nodo %d\n", nodeid);
-      machine_state = -1;
-      break;
-  }
-
-  //pthread_mutex_unlock(&machine_mux[nodeid]);
-
-  return 0;
-}
-
-int Program(CO_Data* d, UNS8 nodeid)
-{
-  //pthread_mutex_lock(&machine_mux[nodeid]);
-  char command[32];
-  int count = 0;
-  int bytes_read;
-
-  switch(machine_state)
-  {
-    case 0:
-      printf("Sending LOAD command. . .\n");
-      sprintf(command, "LOAD\r");
-      writeNetworkDictCallBack(d, nodeid, 0x2500, 0x01, strlen(command),
-          visible_string, command, CheckWriteProgram, 0);
-      break;
-
-    case 1:
-      // Check that the command in progress bit (bit 0) is 0
-      if((raw_response != -1) && ((raw_response & 0x1) == 0))
-      {
-        raw_response = -1;
-        machine_state++;
-        printf("Motor ready!\n");
-        printf("Start programming. . .\n");
-      }
-      else
-      {
-        printf("Checking for green light. . .\n");
-        readNetworkDictCallback(d, nodeid, 0x2500, 0x03, 0, CheckReadProgram,
-            0);
-        break;
-      }
-
-    case 2:
-      // Write program 32 bytes of data
-      bytes_read = program_file_read(program_file_path, command, 32);
-
-      if(bytes_read == -1)
-      {
-        printf("Errore [%s]. Errore inaspettato nella lettura del file.\n",
-            strerror(errno));
-        machine_state = -1;
-        break;
-      }
-      else if(bytes_read > 0)
-      {
-        machine_state -= 2;
-
-        for(count = 0; count < bytes_read; count++)
-          printf("%x", command[count]);
-
-        writeNetworkDictCallBack(d, nodeid, 0x2500, 0x01, bytes_read,
-            visible_string, command, CheckWriteProgram, 0);
-        break;
-      }
-      else
-        machine_state++;
-
-    case 3:
-      // End transmission
-      printf("Ending transmission. . .\n");
-      command[0] = 0xff;
-      command[1] = 0xff;
-      command[2] = 0x20;
-
-      for(count = 0; count < 3; count++)
-        printf("%x", command[count]);
-
-      writeNetworkDictCallBack(d, nodeid, 0x2500, 0x01, 3, visible_string,
-          command, CheckWriteProgram, 0);
-      break;
-
-    case 4:
-      printf("Program complete\n");
-
-      machine_state = -1;
-      break;
-
-    case -1:
-      printf("Impossibile inviare il comando al nodo %d\n", nodeid);
-      machine_state = -1;
-      break;
-  }
-
-  //pthread_mutex_unlock(&machine_mux[nodeid]);
-
-  return 0;
-}
-
 /* Write a raw command to motor */
 void RawCmdMotor(char* sdo)
 {
@@ -1048,15 +1186,14 @@ void RawCmdMotor(char* sdo)
     printf("Command  : %s\n", raw_cmd);
 
     machine_state = 0;
-    WriteRaw(CANOpenShellOD_Data, nodeid);
+    SmartWriteRaw(CANOpenShellOD_Data, nodeid);
   }
   else
     printf("Wrong command  : %s\n", sdo);
 }
 
 /* Write a raw command to motor */
-void
-DownloadToMotor(char* sdo)
+void DownloadToMotor(char* sdo)
 {
   int ret = 0;
   int nodeid;
@@ -1078,71 +1215,7 @@ DownloadToMotor(char* sdo)
     printf("File  : %s\n", program_file_path);
 
     machine_state = 0;
-    Program(CANOpenShellOD_Data, nodeid);
-  }
-  else
-    printf("Wrong command  : %s\n", sdo);
-}
-
-void
-ReadFileCmd(CO_Data* d, UNS8 nodeid, char* motor_cmd_file_name)
-{
-  int command_bytes_read = 0;
-  char description[256];
-
-  do
-  {
-    if(machine_state == -1)
-    {
-      do
-      {
-        command_bytes_read = movement_file_read(motor_cmd_file_name,
-            raw_cmd, description, sizeof(description));
-      }
-      while(command_bytes_read == 0);
-
-      if(command_bytes_read > 0)
-      {
-        printf("Command:  %s\tDescription:  %s\n", raw_cmd, description);
-        strcat(raw_cmd, "\r");
-        machine_state = 0;
-        raw_report_flag = 0;
-        WriteRaw(d, nodeid);
-      }
-      else if(command_bytes_read == -1)
-        printf("Errore [%s]. Errore inaspettato nella lettura del file.\n",
-            strerror(errno));
-      else
-        printf("---------------> FINE FILE <---------------------\n");
-    }
-  }
-  while(command_bytes_read > 0);
-}
-
-/* Write a raw command to motor */
-void FileCmdMotor(char* sdo)
-{
-  int ret = 0;
-  int nodeid;
-  char motor_cmd_file_name[100];
-
-  if(machine_state != -1)
-  {
-    printf("Error: complex command in progress.\n");
-    return;
-  }
-
-  ret = sscanf(sdo, "runf#%2x,%s", &nodeid, motor_cmd_file_name);
-
-  if(ret == 2)
-  {
-    printf("##################################\n");
-    printf("#### Command from file        ####\n");
-    printf("##################################\n");
-    printf("NodeId   : %2.2x\n", nodeid);
-    printf("File  : %s\n", motor_cmd_file_name);
-
-    ReadFileCmd(CANOpenShellOD_Data, nodeid, motor_cmd_file_name);
+    SmartProgram(CANOpenShellOD_Data, nodeid);
   }
   else
     printf("Wrong command  : %s\n", sdo);
@@ -1175,72 +1248,112 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
 
   motor_active[nodeid] = 1;
 
-  if(nodeid == 0x77)
+  if(nodeid == MOTOR_INDEX_FIRST)
   {
     // CONFIGURE HEARTBEAT TO 100 ms
-    // MAP TPDO 1 (COB-ID 182) to transmit "node id" (8-bit), "status word" (16-bit), "interpolation mode status" (16-bit)
-    // MAP TPDO 2 (COB-ID 184) to transmit "node id" (8-bit), "position actual value" (32-bit)
-    // MAP TPDO 3 (COB-ID 183) to trasmit high resolusion timestamp
+    // MAP TPDO 1 (COB-ID 180) to transmit "node id" (8-bit), "status word" (16-bit), "interpolation mode status" (16-bit)
+    // MAP TPDO 2 (COB-ID 280) to transmit "node id" (8-bit), "position actual value" (32-bit)
+    // MAP TPDO 3 (COB-ID 380) to receive high resolution timestamp
+
+    // MAP RPDO 1 (COB-ID 200 + nodeid) to receive "Interpolation Time Index" (8-bit)" (0x06c2 sub2)
+    // MAP RPDO 2 (COB-ID 300 + nodeid) to receive "Interpolation Time Units" (8-bit)" (0x06c2 sub1)
+    // MAP RPDO 3 (COB-ID 400 + nodeid) to receive "Interpolation Data" (32-bit)" (0x06c1 sub1)
+
     struct state_machine_struct *configure_pdo_machine[] =
         {
             &heart_start_machine, &map3_pdo_machine, &map2_pdo_machine,
+            &map1_pdo_machine, &map1_pdo_machine, &map1_pdo_machine,
             &map1_pdo_machine, &smart_start_machine
         };
 
-    _machine_exe(d, nodeid, NULL, configure_pdo_machine, 5, 1, 43,
+    _machine_exe(d, nodeid, NULL, configure_pdo_machine, 8, 1, 79,
         100,
 
-        0x1800, 0xC0000182, 0x1A00, 0x1A00, 0x20000008, 0x1A00, 0x60410010,
-        0x1A00, 0x24000010, 0x1A00, 0x1800, 0x40000182, 0x1800, 0xFE, 0x1800,
-        0xa,
+        0x1800, 0xC0000180, 0x1A00, 0x1A00, 0x20000008, 0x1A00, 0x60410010,
+        0x1A00, 0x24000010, 0x1A00, 0x1800, 0x40000180, 0x1800, 0xFE, 0x1800,
+        0x32,
 
-        0x1801, 0xC0000184, 0x1A01, 0x1A01, 0x20000008, 0x1A01, 0x60640020,
-        0x1A01, 0x1801,
-        0x40000184, 0x1801, 0xFE, 0x1801, 0xa,
+        0x1801, 0xC0000280, 0x1A01, 0x1A01, 0x20000008, 0x1A01, 0x60630020,
+        0x1A01, 0x1801, 0x40000280, 0x1801, 0xFE, 0x1801, 0xa,
 
-        0x1802, 0xC0000183, 0x1A02, 0x1A02, 0x10130020, 0x1A02, 0x1802,
-        0x40000183, 0x1802, 10, 0x1802, 0);
+        0x1802, 0xC0000380, 0x1A02, 0x1A02, 0x10130020, 0x1A02, 0x1802,
+        0x40000380, 0x1802, 10, 0x1802, 0,
+
+        0x1400, 0xC0000200 + nodeid, 0x1600, 0x1600, 0x60c20208, 0x1600, 0x1400,
+        0x40000200 + nodeid, 0x1400, 0xFE, 0x1400, 0,
+
+        0x1401, 0xC0000300 + nodeid, 0x1601, 0x1601, 0x60c20108, 0x1601, 0x1401,
+        0x40000300 + nodeid, 0x1401, 0xFE, 0x1401, 0,
+
+        0x1402, 0xC0000400 + nodeid, 0x1602, 0x1602, 0x60c10120, 0x1602, 0x1402,
+        0x40000400 + nodeid, 0x1402, 0xFE, 0x1402, 0
+
+        );
+
+    canopen_abort_code = RegisterSetODentryCallBack(d, 0x2400, 0,
+        &OnStatusUpdate);
+
+    if(canopen_abort_code)
+      printf(
+          "Error[%d on node %x]: Impossibile registrare il callback per l'oggetto 0x2400 (Canopen abort code %x)\n",
+          CANOpenError, nodeid, canopen_abort_code);
+
+    if(canopen_abort_code)
+      printf(
+          "Error[%d on node %x]: Impossibile registrare il callback per l'oggetto 0x2400 (Canopen abort code %x)\n",
+          CANOpenError, nodeid, canopen_abort_code);
+
+    fflush(stdout);
   }
   else
   {
     // CONFIGURE HEARTBEAT TO 100 ms
-    // MAP TPDO 1 (COB-ID 182) to transmit "node id" (8-bit), "status word" (16-bit), "interpolation mode status" (16-bit)
-    // MAP TPDO 2 (COB-ID 184) to transmit "node id" (8-bit), "position actual value" (32-bit)
-    // MAP RPDO 1 (COB-ID 183) to receive high resolution timestamp
+    // MAP TPDO 1 (COB-ID 180) to transmit "node id" (8-bit), "status word" (16-bit), "interpolation mode status" (16-bit)
+    // MAP TPDO 2 (COB-ID 280) to transmit "node id" (8-bit), "position actual value" (32-bit)
+
+    // MAP RPDO 1 (COB-ID 200 + nodeid) to receive "Interpolation Time Index" (8-bit)" (0x06c2 sub2)
+    // MAP RPDO 2 (COB-ID 300 + nodeid) to receive "Interpolation Time Units" (8-bit)" (0x06c2 sub1)
+    // MAP RPDO 3 (COB-ID 400 + nodeid) to receive "Interpolation Data" (32-bit)" (0x06c1 sub1)
+    // MAP RPDO 4 (COB-ID 380) to receive high resolution timestamp
     struct state_machine_struct *configure_slave_machine[] =
         {
             &heart_start_machine, &map3_pdo_machine, &map2_pdo_machine,
+            &map1_pdo_machine, &map1_pdo_machine, &map1_pdo_machine,
             &map1_pdo_machine, &smart_start_machine
         };
 
-    _machine_exe(d, nodeid, NULL, configure_slave_machine, 5, 1, 43, 100,
-        0x1800, 0xC0000182, 0x1A00, 0x1A00, 0x20000008, 0x1A00, 0x60410010,
-        0x1A00, 0x24000010, 0x1A00, 0x1800, 0x40000182, 0x1800, 0xFE, 0x1800,
-        0x64,
+    _machine_exe(d, nodeid, NULL, configure_slave_machine, 8, 1, 79,
+        100,
 
-        0x1801, 0xC0000184, 0x1A01, 0x1A01, 0x20000008, 0x1A01, 0x60640020,
-        0x1A01, 0x1801,
-        0x40000184, 0x1801, 0xFE, 0x1801, 0xa,
+        0x1800, 0xC0000180, 0x1A00, 0x1A00, 0x20000008, 0x1A00, 0x60410010,
+        0x1A00, 0x24000010, 0x1A00, 0x1800, 0x40000180, 0x1800, 0xFE, 0x1800,
+        0x32,
 
-        0x1400, 0xC0000183, 0x1600, 0x1600, 0x10130020, 0x1600, 0x1400,
-        0x40000183, 0x1400, 0xFE, 0x1400, 0);
+        0x1801, 0xC0000280, 0x1A01, 0x1A01, 0x20000008, 0x1A01, 0x60630020,
+        0x1A01, 0x1801, 0x40000280, 0x1801, 0xFE, 0x1801, 0xa,
+
+        0x1400, 0xC0000200 + nodeid, 0x1600, 0x1600, 0x60c20208, 0x1600, 0x1400,
+        0x40000200 + nodeid, 0x1400, 0xFE, 0x1400, 0,
+
+        0x1401, 0xC0000300 + nodeid, 0x1601, 0x1601, 0x60c20108, 0x1601, 0x1401,
+        0x40000300 + nodeid, 0x1401, 0xFE, 0x1401, 0,
+
+        0x1402, 0xC0000400 + nodeid, 0x1602, 0x1602, 0x60c10120, 0x1602, 0x1402,
+        0x40000400 + nodeid, 0x1402, 0xFE, 0x1402, 0,
+
+        0x1403, 0xC0000380, 0x1603, 0x1603, 0x10130020, 0x1603, 0x1403,
+        0x40000380, 0x1403, 0xFE, 0x1403, 0);
   }
 
-  canopen_abort_code = RegisterSetODentryCallBack(d, 0x2400, 0,
-      &OnStatusUpdate);
-  //canopen_abort_code = RegisterSetODentryCallBack(d, 0x2400, 0, &OnSinUpdate);
-
-  if(canopen_abort_code)
-    printf(
-        "Error[%d on node %x]: Impossibile registrare il callback per l'oggetto 0x2400 (Canopen abort code %x)\n",
-        CANOpenError, nodeid, canopen_abort_code);
-
-  if(canopen_abort_code)
-    printf(
-        "Error[%d on node %x]: Impossibile registrare il callback per l'oggetto 0x2400 (Canopen abort code %x)\n",
-        CANOpenError, nodeid, canopen_abort_code);
-
-  fflush(stdout);
+  int i;
+  for(i = 0; i < TABLE_MAX_NUM; i++)
+  {
+    if(motor_table[i].nodeId == 0)
+    {
+      QueueInit(nodeid, &motor_table[i]);
+      break;
+    }
+  }
 }
 
 void CANOpenShellOD_post_Emcy(CO_Data* d, UNS8 nodeID, UNS16 errCode,
@@ -1290,7 +1403,7 @@ void CheckReadProgram(CO_Data* d, UNS8 nodeid)
 
   //pthread_mutex_unlock(&machine_mux[nodeid]);
 
-  Program(d, nodeid);
+  SmartProgram(d, nodeid);
 }
 
 /* Callback function that check the read SDO demand */
@@ -1320,7 +1433,7 @@ void CheckReadRaw(CO_Data* d, UNS8 nodeid)
 
   //pthread_mutex_unlock(&machine_mux[nodeid]);
 
-  WriteRaw(d, nodeid);
+  SmartWriteRaw(d, nodeid);
 }
 
 /* Callback function that check the read SDO demand */
@@ -1349,14 +1462,13 @@ void CheckReadStringRaw(CO_Data* d, UNS8 nodeid)
 
   //pthread_mutex_unlock(&machine_mux[nodeid]);
 
-  WriteRaw(d, nodeid);
+  SmartWriteRaw(d, nodeid);
 }
 
 void CheckWriteProgram(CO_Data* d, UNS8 nodeid)
 {
   UNS32 abortCode;
 
-  //pthread_mutex_lock(&machine_mux[nodeid]);
   if(getWriteResultNetworkDict(d, nodeid, &abortCode) != SDO_FINISHED)
   {
     printf("Error: %d", abortCode);
@@ -1369,7 +1481,7 @@ void CheckWriteProgram(CO_Data* d, UNS8 nodeid)
   machine_state++;
 
   //pthread_mutex_unlock(&machine_mux[nodeid]);
-  Program(d, nodeid);
+  SmartProgram(d, nodeid);
 }
 
 void CheckWriteRaw(CO_Data* d, UNS8 nodeid)
@@ -1389,7 +1501,7 @@ void CheckWriteRaw(CO_Data* d, UNS8 nodeid)
   machine_state++;
 
   //pthread_mutex_unlock(&machine_mux[nodeid]);
-  WriteRaw(d, nodeid);
+  SmartWriteRaw(d, nodeid);
 }
 
 void CANOpenShellOD_initialisation(CO_Data* d)
@@ -1397,28 +1509,28 @@ void CANOpenShellOD_initialisation(CO_Data* d)
   printf("Node_initialisation\n");
   fflush(stdout);
 
-  UNS32 PDO1_COBID = 0x0182;
-  UNS32 size = sizeof(UNS32);
-  UNS8 transmission_type = 0xff;
-  UNS32 size_type = sizeof(UNS8);
+  /*UNS32 PDO1_COBID = 0x0182;
+   UNS32 size = sizeof(UNS32);
+   UNS8 transmission_type = 0xff;
+   UNS32 size_type = sizeof(UNS8);*/
 
   /*****************************************
    * Define RPDOs to match slave ID=0 TPDOs*
    *****************************************/
-  writeLocalDict( d, /*CO_Data* d*/
-  0x1400, /*UNS16 index*/
-  0x01, /*UNS8 subind*/
-  &PDO1_COBID, /*void * pSourceData,*/
-  &size, /* UNS8 * pExpectedSize*/
-  RW);
+  //writeLocalDict( d, /*CO_Data* d*/
+  //0x1400, /*UNS16 index*/
+  //0x01, /*UNS8 subind*/
+  //&PDO1_COBID, /*void * pSourceData,*/
+  //&size, /* UNS8 * pExpectedSize*/
+  //RW);
   /* UNS8 checkAccess */
 
-  writeLocalDict( d, /*CO_Data* d*/
-  0x1400, /*UNS16 index*/
-  0x02, /*UNS8 subind*/
-  &transmission_type, /*void * pSourceData,*/
-  &size_type, /* UNS8 * pExpectedSize*/
-  RW);
+  //writeLocalDict( d, /*CO_Data* d*/
+  //0x1400, /*UNS16 index*/
+  //0x02, /*UNS8 subind*/
+  //&transmission_type, /*void * pSourceData,*/
+  //&size_type, /* UNS8 * pExpectedSize*/
+  //RW);
   /* UNS8 checkAccess */
 }
 
@@ -1513,7 +1625,6 @@ help_menu(void)
   printf("     spre#nodeid : Enter in pre-operational mode\n");
   printf("     soff#nodeid : Stop node\n");
   printf("     scan : Reset all nodes and print message when bootup\n");
-  printf("     wait#seconds : Sleep for n seconds\n");
   printf("\n");
   printf("   SDO: (size in bytes)\n");
   printf("     info#nodeid\n");
@@ -1527,8 +1638,6 @@ help_menu(void)
   printf("     ssto#nodeid : Stop a node and motor\n");
   printf("     sraw#nodeid,report_flag,command : raw cmd to motor\n");
   printf("        ex : sraw#3f,1,RMODE\n");
-  printf("     runf#nodeid,file : raw cmd to motor from file\n");
-  printf("        ex : runf#3f,movement_list.txt\n");
   printf(
       "     tpdo#nodeid,pdo_num - 1,cob_id,map1,map2,entry_num,type,time : map tpdo\n");
   printf("        ex : tpdo#3f,1,182,60410010,606c0020,2,FE,64\n");
@@ -1559,7 +1668,6 @@ int ExtractNodeId(char *command)
 int ProcessCommand(char* command)
 {
   int ret = 0;
-  int sec = 0;
   int NodeID;
 
   EnterMutex();
@@ -1579,6 +1687,11 @@ int ProcessCommand(char* command)
       SmartIntStart(ExtractNodeId(command + 5));
       break;
 
+    case cst_str4('s', 'i', 'm', 'u'):
+      LeaveMutex();
+      SimulationStart(ExtractNodeId(command + 5));
+      break;
+
     case cst_str4('i', 'n', 't', '1'):
       LeaveMutex();
       SmartIntTest1(ExtractNodeId(command + 5));
@@ -1596,7 +1709,7 @@ int ProcessCommand(char* command)
 
     case cst_str4('s', 'h', 'o', 'm'):
       LeaveMutex();
-      Home(command);
+      SmartHome(command);
       break;
 
     case cst_str4('t', 'p', 'd', '1'):
@@ -1652,16 +1765,6 @@ int ProcessCommand(char* command)
       DiscoverNodes();
       break;
 
-    case cst_str4('w', 'a', 'i', 't'): /* Waiting for a time */
-      ret = sscanf(command, "wait#%d", &sec);
-      if(ret == 1)
-      {
-        LeaveMutex();
-        SleepFunction(sec);
-        return 0;
-      }
-      break;
-
     case cst_str4('q', 'u', 'i', 't'): /* Quit application */
       LeaveMutex();
       return QUIT;
@@ -1684,11 +1787,6 @@ int ProcessCommand(char* command)
 
     case cst_str4('s', 'r', 'a', 'w'): /* RAW command */
       RawCmdMotor(command);
-      break;
-
-    case cst_str4('r', 'u', 'n', 'f'): /* read command by file */
-      LeaveMutex();
-      FileCmdMotor(command);
       break;
 
     case cst_str4('p', 'r', 'o', 'g'): /* download program to motor */
@@ -1761,8 +1859,9 @@ int main(int argc, char** argv)
 
   _machine_init();
 
-  heartbeatInit(CANOpenShellOD_Data);
-  //startSYNC(CANOpenShellOD_Data);
+  //heartbeatInit(CANOpenShellOD_Data);
+  startSYNC(CANOpenShellOD_Data);
+  PDOInit(CANOpenShellOD_Data);
 
   /* Enter in a loop to read stdin command until "quit" is called */
   while(ret != QUIT)
@@ -1783,7 +1882,7 @@ int main(int argc, char** argv)
   _machine_destroy();
 
   stopSYNC(CANOpenShellOD_Data);
-  heartbeatStop(CANOpenShellOD_Data);
+  //heartbeatStop(CANOpenShellOD_Data);
 
   // Stop timer thread
   StopTimerLoop(&Exit);

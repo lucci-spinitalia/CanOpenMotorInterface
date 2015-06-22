@@ -21,27 +21,26 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
 
-CC = gcc
-CXX = g++
-LD = g++
+CC = SUB_CC
+CXX = SUB_CXX
+LD = SUB_LD
 OPT_CFLAGS = -O2
-CFLAGS = $(OPT_CFLAGS)
-PROG_CFLAGS = 
-EXE_CFLAGS =  -lpthread -lrt -ldl
-OS_NAME = Linux
-ARCH_NAME = arm
-PREFIX = /usr/local
-TARGET = unix
-CAN_DRIVER = can_socket
-TIMERS_DRIVER = timers_unix
+CFLAGS = SUB_OPT_CFLAGS
+PROG_CFLAGS = SUB_PROG_CFLAGS
+EXE_CFLAGS = SUB_EXE_CFLAGS
+OS_NAME = SUB_OS_NAME
+ARCH_NAME = SUB_ARCH_NAME
+PREFIX = SUB_PREFIX
+TARGET = SUB_TARGET
+CAN_DRIVER = SUB_CAN_DRIVER
+TIMERS_DRIVER = SUB_TIMERS_DRIVER
 CANOPENSHELL = CANOpenShell
-CANFESTIVAL_DIR = /home/debian/CanFestival-3-7740ac6fdedc
 
-INCLUDES = -I$(CANFESTIVAL_DIR)/include -I$(CANFESTIVAL_DIR)/include/$(TARGET) -I$(CANFESTIVAL_DIR)/include/$(CAN_DRIVER) -I$(CANFESTIVAL_DIR)/include/$(TIMERS_DRIVER)
+INCLUDES = -I../../include -I../../include/$(TARGET) -I../../include/$(CAN_DRIVER) -I../../include/$(TIMERS_DRIVER)
 
-MASTER_OBJS = CANOpenShellMasterOD.o CANOpenShell.o CANOpenShellMasterError.o CANOpenShellStateMachine.o file_parser.o
+MASTER_OBJS = CANOpenShellMasterOD.o CANOpenShellSlaveOD.o CANOpenShell.o
 
-OBJS = $(MASTER_OBJS) $(CANFESTIVAL_DIR)/src/libcanfestival.a $(CANFESTIVAL_DIR)/drivers/$(TARGET)/libcanfestival_$(TARGET).a
+OBJS = $(MASTER_OBJS) ../../src/libcanfestival.a ../../drivers/$(TARGET)/libcanfestival_$(TARGET).a
 
 ifeq ($(TARGET),win32)
 	CANOPENSHELL = CANOpenShell.exe
@@ -61,16 +60,20 @@ endif
 
 all: $(CANOPENSHELL)
 
-$(CANFESTIVAL_DIR)/drivers/$(TARGET)/libcanfestival_$(TARGET).a:
-	$(MAKE) -C $(CANFESTIVAL_DIR)/drivers/$(TARGET) libcanfestival_$(TARGET).a
+../../drivers/$(TARGET)/libcanfestival_$(TARGET).a:
+	$(MAKE) -C ../../drivers/$(TARGET) libcanfestival_$(TARGET).a
 
 $(CANOPENSHELL): $(OBJS)
 	$(LD) $(CFLAGS) $(PROG_CFLAGS) ${PROGDEFINES} $(INCLUDES) -o $@ $(OBJS) $(EXE_CFLAGS)
 	mkdir -p Debug; cp $(CANOPENSHELL) Debug
 	
 CANOpenShellMasterOD.c: CANOpenShellMasterOD.od
-	$(MAKE) -C $(CANFESTIVAL_DIR)/objdictgen gnosis
-	python $(CANFESTIVAL_DIR)/objdictgen/objdictgen.py CANOpenShellMasterOD.od CANOpenShellMasterOD.c
+	$(MAKE) -C ../../objdictgen gnosis
+	python ../../objdictgen/objdictgen.py CANOpenShellMasterOD.od CANOpenShellMasterOD.c
+
+CANOpenShellSlaveOD.c: CANOpenShellSlaveOD.od
+	$(MAKE) -C ../../objdictgen gnosis
+	python ../../objdictgen/objdictgen.py CANOpenShellSlaveOD.od CANOpenShellSlaveOD.c
 
 %.o: %.c
 	$(CC) $(CFLAGS) $(PROG_CFLAGS) ${PROGDEFINES} $(INCLUDES) -o $@ -c $<
@@ -81,6 +84,7 @@ clean:
 		
 mrproper: clean
 	rm -f CANOpenShellMasterOD.c
+	rm -f CANOpenShellSlaveOD.c
 
 install: $(CANOPENSHELL)
 	mkdir -p $(DESTDIR)$(PREFIX)/bin/

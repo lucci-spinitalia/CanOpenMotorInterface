@@ -23,7 +23,7 @@ struct state_machine_struct
 pthread_mutex_t machine_mux[CANOPEN_NODE_NUMBER];
 extern int motor_active[CANOPEN_NODE_NUMBER];
 extern int motor_homing[CANOPEN_NODE_NUMBER];
-extern int motor_started[CANOPEN_NODE_NUMBER];
+extern volatile int motor_started[CANOPEN_NODE_NUMBER];
 
 extern void **sin_interpolation_function;
 extern UNS32 *sin_interpolation_param;

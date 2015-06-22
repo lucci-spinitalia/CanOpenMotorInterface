@@ -25,6 +25,33 @@ UNS16 Motor_Control = 0x0;		/* Mapped at index 0x2305, subindex 0x00 */
 INTEGER16 Motor_Subroutine_Index = 0x0;		/* Mapped at index 0x2306, subindex 0x00 */
 UNS16 Sample_Period = 0x0;		/* Mapped at index 0x2307, subindex 0x00 */
 UNS16 Interpolation_Mode_Status = 0x0;		/* Mapped at index 0x2400, subindex 0x00 */
+INTEGER8 InterpolationTimePeriod[] =		/* Mapped at index 0x2500, subindex 0x01 - 0x06 */
+  {
+    0x0,	/* 0 */
+    0x0,	/* 0 */
+    0x0,	/* 0 */
+    0x0,	/* 0 */
+    0x0,	/* 0 */
+    0x0	/* 0 */
+  };
+UNS8 InterpolationTimeValue[] =		/* Mapped at index 0x2501, subindex 0x01 - 0x06 */
+  {
+    0x0,	/* 0 */
+    0x0,	/* 0 */
+    0x0,	/* 0 */
+    0x0,	/* 0 */
+    0x0,	/* 0 */
+    0x0	/* 0 */
+  };
+INTEGER32 InterpolationData[] =		/* Mapped at index 0x2502, subindex 0x01 - 0x06 */
+  {
+    0x0,	/* 0 */
+    0x0,	/* 0 */
+    0x0,	/* 0 */
+    0x0,	/* 0 */
+    0x0,	/* 0 */
+    0x0	/* 0 */
+  };
 UNS16 Controlword = 0x0;		/* Mapped at index 0x6040, subindex 0x00 */
 UNS16 Statusword = 0x0;		/* Mapped at index 0x6041, subindex 0x00 */
 INTEGER16 Quick_Stop_Option_Code = 0x2;		/* Mapped at index 0x605A, subindex 0x00 */
@@ -1938,7 +1965,7 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
 /* index 0x1400 :   Receive PDO 1 Parameter. */
                     UNS8 CANOpenShellMasterOD_highestSubIndex_obj1400 = 6; /* number of subindex - 1*/
-                    UNS32 CANOpenShellMasterOD_obj1400_COB_ID_used_by_PDO = 0x182;	/* 386 */
+                    UNS32 CANOpenShellMasterOD_obj1400_COB_ID_used_by_PDO = 0x180;	/* 384 */
                     UNS8 CANOpenShellMasterOD_obj1400_Transmission_Type = 0xFF;	/* 255 */
                     UNS16 CANOpenShellMasterOD_obj1400_Inhibit_Time = 0x0;	/* 0 */
                     UNS8 CANOpenShellMasterOD_obj1400_Compatibility_Entry = 0x0;	/* 0 */
@@ -1957,7 +1984,7 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
 /* index 0x1401 :   Receive PDO 2 Parameter. */
                     UNS8 CANOpenShellMasterOD_highestSubIndex_obj1401 = 6; /* number of subindex - 1*/
-                    UNS32 CANOpenShellMasterOD_obj1401_COB_ID_used_by_PDO = 0x184;	/* 388 */
+                    UNS32 CANOpenShellMasterOD_obj1401_COB_ID_used_by_PDO = 0x280;	/* 640 */
                     UNS8 CANOpenShellMasterOD_obj1401_Transmission_Type = 0xFF;	/* 255 */
                     UNS16 CANOpenShellMasterOD_obj1401_Inhibit_Time = 0x0;	/* 0 */
                     UNS8 CANOpenShellMasterOD_obj1401_Compatibility_Entry = 0x0;	/* 0 */
@@ -1991,17 +2018,753 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                      };
 
 /* index 0x1601 :   Receive PDO 2 Mapping. */
-                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1601 = 2; /* number of subindex - 1*/
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1601 = 1; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj1601[] = 
                     {
-                      0x20000008,	/* 536870920 */
                       0x60630020	/* 1617100832 */
                     };
                     subindex CANOpenShellMasterOD_Index1601[] = 
                      {
                        { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1601 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1601[0] },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1601[1] }
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1601[0] }
+                     };
+
+/* index 0x1800 :   Transmit PDO 1 Parameter. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1800 = 6; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1800_COB_ID_used_by_PDO = 0x277;	/* 631 */
+                    UNS8 CANOpenShellMasterOD_obj1800_Transmission_Type = 0xFE;	/* 254 */
+                    UNS16 CANOpenShellMasterOD_obj1800_Inhibit_Time = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj1800_Compatibility_Entry = 0x0;	/* 0 */
+                    UNS16 CANOpenShellMasterOD_obj1800_Event_Timer = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj1800_SYNC_start_value = 0x0;	/* 0 */
+                    ODCallback_t CANOpenShellMasterOD_Index1800_callbacks[] = 
+                     {
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                     };
+                    subindex CANOpenShellMasterOD_Index1800[] = 
+                     {
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1800 },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1800_COB_ID_used_by_PDO },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1800_Transmission_Type },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1800_Inhibit_Time },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1800_Compatibility_Entry },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1800_Event_Timer },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1800_SYNC_start_value }
+                     };
+
+/* index 0x1801 :   Transmit PDO 2 Parameter. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1801 = 6; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1801_COB_ID_used_by_PDO = 0x278;	/* 632 */
+                    UNS8 CANOpenShellMasterOD_obj1801_Transmission_Type = 0xFE;	/* 254 */
+                    UNS16 CANOpenShellMasterOD_obj1801_Inhibit_Time = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj1801_Compatibility_Entry = 0x0;	/* 0 */
+                    UNS16 CANOpenShellMasterOD_obj1801_Event_Timer = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj1801_SYNC_start_value = 0x0;	/* 0 */
+                    ODCallback_t CANOpenShellMasterOD_Index1801_callbacks[] = 
+                     {
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                     };
+                    subindex CANOpenShellMasterOD_Index1801[] = 
+                     {
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1801 },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1801_COB_ID_used_by_PDO },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1801_Transmission_Type },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1801_Inhibit_Time },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1801_Compatibility_Entry },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1801_Event_Timer },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1801_SYNC_start_value }
+                     };
+
+/* index 0x1802 :   Transmit PDO 3 Parameter. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1802 = 6; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1802_COB_ID_used_by_PDO = 0x279;	/* 633 */
+                    UNS8 CANOpenShellMasterOD_obj1802_Transmission_Type = 0xFF;	/* 255 */
+                    UNS16 CANOpenShellMasterOD_obj1802_Inhibit_Time = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj1802_Compatibility_Entry = 0x0;	/* 0 */
+                    UNS16 CANOpenShellMasterOD_obj1802_Event_Timer = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj1802_SYNC_start_value = 0x0;	/* 0 */
+                    ODCallback_t CANOpenShellMasterOD_Index1802_callbacks[] = 
+                     {
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                     };
+                    subindex CANOpenShellMasterOD_Index1802[] = 
+                     {
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1802 },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1802_COB_ID_used_by_PDO },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1802_Transmission_Type },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1802_Inhibit_Time },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1802_Compatibility_Entry },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1802_Event_Timer },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1802_SYNC_start_value }
+                     };
+
+/* index 0x1803 :   Transmit PDO 4 Parameter. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1803 = 6; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1803_COB_ID_used_by_PDO = 0x27A;	/* 634 */
+                    UNS8 CANOpenShellMasterOD_obj1803_Transmission_Type = 0xFF;	/* 255 */
+                    UNS16 CANOpenShellMasterOD_obj1803_Inhibit_Time = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj1803_Compatibility_Entry = 0x0;	/* 0 */
+                    UNS16 CANOpenShellMasterOD_obj1803_Event_Timer = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj1803_SYNC_start_value = 0x0;	/* 0 */
+                    ODCallback_t CANOpenShellMasterOD_Index1803_callbacks[] = 
+                     {
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                     };
+                    subindex CANOpenShellMasterOD_Index1803[] = 
+                     {
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1803 },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1803_COB_ID_used_by_PDO },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1803_Transmission_Type },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1803_Inhibit_Time },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1803_Compatibility_Entry },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1803_Event_Timer },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1803_SYNC_start_value }
+                     };
+
+/* index 0x1804 :   Transmit PDO 5 Parameter. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1804 = 6; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1804_COB_ID_used_by_PDO = 0x27B;	/* 635 */
+                    UNS8 CANOpenShellMasterOD_obj1804_Transmission_Type = 0xFF;	/* 255 */
+                    UNS16 CANOpenShellMasterOD_obj1804_Inhibit_Time = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj1804_Compatibility_Entry = 0x0;	/* 0 */
+                    UNS16 CANOpenShellMasterOD_obj1804_Event_Timer = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj1804_SYNC_start_value = 0x0;	/* 0 */
+                    ODCallback_t CANOpenShellMasterOD_Index1804_callbacks[] = 
+                     {
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                     };
+                    subindex CANOpenShellMasterOD_Index1804[] = 
+                     {
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1804 },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1804_COB_ID_used_by_PDO },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1804_Transmission_Type },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1804_Inhibit_Time },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1804_Compatibility_Entry },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1804_Event_Timer },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1804_SYNC_start_value }
+                     };
+
+/* index 0x1805 :   Transmit PDO 6 Parameter. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1805 = 6; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1805_COB_ID_used_by_PDO = 0x27C;	/* 636 */
+                    UNS8 CANOpenShellMasterOD_obj1805_Transmission_Type = 0xFF;	/* 255 */
+                    UNS16 CANOpenShellMasterOD_obj1805_Inhibit_Time = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj1805_Compatibility_Entry = 0x0;	/* 0 */
+                    UNS16 CANOpenShellMasterOD_obj1805_Event_Timer = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj1805_SYNC_start_value = 0x0;	/* 0 */
+                    ODCallback_t CANOpenShellMasterOD_Index1805_callbacks[] = 
+                     {
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                     };
+                    subindex CANOpenShellMasterOD_Index1805[] = 
+                     {
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1805 },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1805_COB_ID_used_by_PDO },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1805_Transmission_Type },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1805_Inhibit_Time },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1805_Compatibility_Entry },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1805_Event_Timer },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1805_SYNC_start_value }
+                     };
+
+/* index 0x1806 :   Transmit PDO 7 Parameter. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1806 = 6; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1806_COB_ID_used_by_PDO = 0x377;	/* 887 */
+                    UNS8 CANOpenShellMasterOD_obj1806_Transmission_Type = 0xFF;	/* 255 */
+                    UNS16 CANOpenShellMasterOD_obj1806_Inhibit_Time = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj1806_Compatibility_Entry = 0x0;	/* 0 */
+                    UNS16 CANOpenShellMasterOD_obj1806_Event_Timer = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj1806_SYNC_start_value = 0x0;	/* 0 */
+                    ODCallback_t CANOpenShellMasterOD_Index1806_callbacks[] = 
+                     {
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                     };
+                    subindex CANOpenShellMasterOD_Index1806[] = 
+                     {
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1806 },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1806_COB_ID_used_by_PDO },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1806_Transmission_Type },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1806_Inhibit_Time },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1806_Compatibility_Entry },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1806_Event_Timer },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1806_SYNC_start_value }
+                     };
+
+/* index 0x1807 :   Transmit PDO 8 Parameter. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1807 = 6; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1807_COB_ID_used_by_PDO = 0x378;	/* 888 */
+                    UNS8 CANOpenShellMasterOD_obj1807_Transmission_Type = 0xFF;	/* 255 */
+                    UNS16 CANOpenShellMasterOD_obj1807_Inhibit_Time = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj1807_Compatibility_Entry = 0x0;	/* 0 */
+                    UNS16 CANOpenShellMasterOD_obj1807_Event_Timer = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj1807_SYNC_start_value = 0x0;	/* 0 */
+                    ODCallback_t CANOpenShellMasterOD_Index1807_callbacks[] = 
+                     {
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                     };
+                    subindex CANOpenShellMasterOD_Index1807[] = 
+                     {
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1807 },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1807_COB_ID_used_by_PDO },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1807_Transmission_Type },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1807_Inhibit_Time },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1807_Compatibility_Entry },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1807_Event_Timer },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1807_SYNC_start_value }
+                     };
+
+/* index 0x1808 :   Transmit PDO 9 Parameter. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1808 = 6; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1808_COB_ID_used_by_PDO = 0x379;	/* 889 */
+                    UNS8 CANOpenShellMasterOD_obj1808_Transmission_Type = 0xFF;	/* 255 */
+                    UNS16 CANOpenShellMasterOD_obj1808_Inhibit_Time = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj1808_Compatibility_Entry = 0x0;	/* 0 */
+                    UNS16 CANOpenShellMasterOD_obj1808_Event_Timer = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj1808_SYNC_start_value = 0x0;	/* 0 */
+                    ODCallback_t CANOpenShellMasterOD_Index1808_callbacks[] = 
+                     {
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                     };
+                    subindex CANOpenShellMasterOD_Index1808[] = 
+                     {
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1808 },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1808_COB_ID_used_by_PDO },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1808_Transmission_Type },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1808_Inhibit_Time },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1808_Compatibility_Entry },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1808_Event_Timer },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1808_SYNC_start_value }
+                     };
+
+/* index 0x1809 :   Transmit PDO 10 Parameter. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1809 = 6; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1809_COB_ID_used_by_PDO = 0x37A;	/* 890 */
+                    UNS8 CANOpenShellMasterOD_obj1809_Transmission_Type = 0xFF;	/* 255 */
+                    UNS16 CANOpenShellMasterOD_obj1809_Inhibit_Time = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj1809_Compatibility_Entry = 0x0;	/* 0 */
+                    UNS16 CANOpenShellMasterOD_obj1809_Event_Timer = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj1809_SYNC_start_value = 0x0;	/* 0 */
+                    ODCallback_t CANOpenShellMasterOD_Index1809_callbacks[] = 
+                     {
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                     };
+                    subindex CANOpenShellMasterOD_Index1809[] = 
+                     {
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1809 },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1809_COB_ID_used_by_PDO },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1809_Transmission_Type },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1809_Inhibit_Time },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1809_Compatibility_Entry },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1809_Event_Timer },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1809_SYNC_start_value }
+                     };
+
+/* index 0x180A :   Transmit PDO 11 Parameter. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj180A = 6; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj180A_COB_ID_used_by_PDO = 0x37B;	/* 891 */
+                    UNS8 CANOpenShellMasterOD_obj180A_Transmission_Type = 0xFF;	/* 255 */
+                    UNS16 CANOpenShellMasterOD_obj180A_Inhibit_Time = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj180A_Compatibility_Entry = 0x0;	/* 0 */
+                    UNS16 CANOpenShellMasterOD_obj180A_Event_Timer = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj180A_SYNC_start_value = 0x0;	/* 0 */
+                    ODCallback_t CANOpenShellMasterOD_Index180A_callbacks[] = 
+                     {
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                     };
+                    subindex CANOpenShellMasterOD_Index180A[] = 
+                     {
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj180A },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj180A_COB_ID_used_by_PDO },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180A_Transmission_Type },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180A_Inhibit_Time },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180A_Compatibility_Entry },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180A_Event_Timer },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180A_SYNC_start_value }
+                     };
+
+/* index 0x180B :   Transmit PDO 12 Parameter. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj180B = 6; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj180B_COB_ID_used_by_PDO = 0x37C;	/* 892 */
+                    UNS8 CANOpenShellMasterOD_obj180B_Transmission_Type = 0xFF;	/* 255 */
+                    UNS16 CANOpenShellMasterOD_obj180B_Inhibit_Time = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj180B_Compatibility_Entry = 0x0;	/* 0 */
+                    UNS16 CANOpenShellMasterOD_obj180B_Event_Timer = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj180B_SYNC_start_value = 0x0;	/* 0 */
+                    ODCallback_t CANOpenShellMasterOD_Index180B_callbacks[] = 
+                     {
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                     };
+                    subindex CANOpenShellMasterOD_Index180B[] = 
+                     {
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj180B },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj180B_COB_ID_used_by_PDO },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180B_Transmission_Type },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180B_Inhibit_Time },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180B_Compatibility_Entry },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180B_Event_Timer },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180B_SYNC_start_value }
+                     };
+
+/* index 0x180C :   Transmit PDO 13 Parameter. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj180C = 6; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj180C_COB_ID_used_by_PDO = 0x477;	/* 1143 */
+                    UNS8 CANOpenShellMasterOD_obj180C_Transmission_Type = 0xFF;	/* 255 */
+                    UNS16 CANOpenShellMasterOD_obj180C_Inhibit_Time = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj180C_Compatibility_Entry = 0x0;	/* 0 */
+                    UNS16 CANOpenShellMasterOD_obj180C_Event_Timer = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj180C_SYNC_start_value = 0x0;	/* 0 */
+                    ODCallback_t CANOpenShellMasterOD_Index180C_callbacks[] = 
+                     {
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                     };
+                    subindex CANOpenShellMasterOD_Index180C[] = 
+                     {
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj180C },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj180C_COB_ID_used_by_PDO },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180C_Transmission_Type },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180C_Inhibit_Time },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180C_Compatibility_Entry },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180C_Event_Timer },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180C_SYNC_start_value }
+                     };
+
+/* index 0x180D :   Transmit PDO 14 Parameter. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj180D = 6; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj180D_COB_ID_used_by_PDO = 0x478;	/* 1144 */
+                    UNS8 CANOpenShellMasterOD_obj180D_Transmission_Type = 0xFF;	/* 255 */
+                    UNS16 CANOpenShellMasterOD_obj180D_Inhibit_Time = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj180D_Compatibility_Entry = 0x0;	/* 0 */
+                    UNS16 CANOpenShellMasterOD_obj180D_Event_Timer = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj180D_SYNC_start_value = 0x0;	/* 0 */
+                    ODCallback_t CANOpenShellMasterOD_Index180D_callbacks[] = 
+                     {
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                     };
+                    subindex CANOpenShellMasterOD_Index180D[] = 
+                     {
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj180D },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj180D_COB_ID_used_by_PDO },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180D_Transmission_Type },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180D_Inhibit_Time },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180D_Compatibility_Entry },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180D_Event_Timer },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180D_SYNC_start_value }
+                     };
+
+/* index 0x180E :   Transmit PDO 15 Parameter. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj180E = 6; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj180E_COB_ID_used_by_PDO = 0x479;	/* 1145 */
+                    UNS8 CANOpenShellMasterOD_obj180E_Transmission_Type = 0x0;	/* 0 */
+                    UNS16 CANOpenShellMasterOD_obj180E_Inhibit_Time = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj180E_Compatibility_Entry = 0x0;	/* 0 */
+                    UNS16 CANOpenShellMasterOD_obj180E_Event_Timer = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj180E_SYNC_start_value = 0x0;	/* 0 */
+                    ODCallback_t CANOpenShellMasterOD_Index180E_callbacks[] = 
+                     {
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                     };
+                    subindex CANOpenShellMasterOD_Index180E[] = 
+                     {
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj180E },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj180E_COB_ID_used_by_PDO },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180E_Transmission_Type },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180E_Inhibit_Time },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180E_Compatibility_Entry },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180E_Event_Timer },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180E_SYNC_start_value }
+                     };
+
+/* index 0x180F :   Transmit PDO 16 Parameter. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj180F = 6; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj180F_COB_ID_used_by_PDO = 0x47A;	/* 1146 */
+                    UNS8 CANOpenShellMasterOD_obj180F_Transmission_Type = 0xFF;	/* 255 */
+                    UNS16 CANOpenShellMasterOD_obj180F_Inhibit_Time = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj180F_Compatibility_Entry = 0x0;	/* 0 */
+                    UNS16 CANOpenShellMasterOD_obj180F_Event_Timer = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj180F_SYNC_start_value = 0x0;	/* 0 */
+                    ODCallback_t CANOpenShellMasterOD_Index180F_callbacks[] = 
+                     {
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                     };
+                    subindex CANOpenShellMasterOD_Index180F[] = 
+                     {
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj180F },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj180F_COB_ID_used_by_PDO },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180F_Transmission_Type },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180F_Inhibit_Time },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180F_Compatibility_Entry },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180F_Event_Timer },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180F_SYNC_start_value }
+                     };
+
+/* index 0x1810 :   Transmit PDO 17 Parameter. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1810 = 6; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1810_COB_ID_used_by_PDO = 0x47B;	/* 1147 */
+                    UNS8 CANOpenShellMasterOD_obj1810_Transmission_Type = 0xFF;	/* 255 */
+                    UNS16 CANOpenShellMasterOD_obj1810_Inhibit_Time = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj1810_Compatibility_Entry = 0x0;	/* 0 */
+                    UNS16 CANOpenShellMasterOD_obj1810_Event_Timer = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj1810_SYNC_start_value = 0x0;	/* 0 */
+                    ODCallback_t CANOpenShellMasterOD_Index1810_callbacks[] = 
+                     {
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                     };
+                    subindex CANOpenShellMasterOD_Index1810[] = 
+                     {
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1810 },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1810_COB_ID_used_by_PDO },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1810_Transmission_Type },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1810_Inhibit_Time },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1810_Compatibility_Entry },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1810_Event_Timer },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1810_SYNC_start_value }
+                     };
+
+/* index 0x1811 :   Transmit PDO 18 Parameter. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1811 = 6; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1811_COB_ID_used_by_PDO = 0x47C;	/* 1148 */
+                    UNS8 CANOpenShellMasterOD_obj1811_Transmission_Type = 0xFF;	/* 255 */
+                    UNS16 CANOpenShellMasterOD_obj1811_Inhibit_Time = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj1811_Compatibility_Entry = 0x0;	/* 0 */
+                    UNS16 CANOpenShellMasterOD_obj1811_Event_Timer = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj1811_SYNC_start_value = 0x0;	/* 0 */
+                    ODCallback_t CANOpenShellMasterOD_Index1811_callbacks[] = 
+                     {
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                     };
+                    subindex CANOpenShellMasterOD_Index1811[] = 
+                     {
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1811 },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1811_COB_ID_used_by_PDO },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1811_Transmission_Type },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1811_Inhibit_Time },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1811_Compatibility_Entry },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1811_Event_Timer },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1811_SYNC_start_value }
+                     };
+
+/* index 0x1A00 :   Transmit PDO 1 Mapping. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A00 = 1; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1A00[] = 
+                    {
+                      0x25000108	/* 620757256 */
+                    };
+                    subindex CANOpenShellMasterOD_Index1A00[] = 
+                     {
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A00 },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A00[0] }
+                     };
+
+/* index 0x1A01 :   Transmit PDO 2 Mapping. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A01 = 1; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1A01[] = 
+                    {
+                      0x25000208	/* 620757512 */
+                    };
+                    subindex CANOpenShellMasterOD_Index1A01[] = 
+                     {
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A01 },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A01[0] }
+                     };
+
+/* index 0x1A02 :   Transmit PDO 3 Mapping. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A02 = 1; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1A02[] = 
+                    {
+                      0x25000308	/* 620757768 */
+                    };
+                    subindex CANOpenShellMasterOD_Index1A02[] = 
+                     {
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A02 },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A02[0] }
+                     };
+
+/* index 0x1A03 :   Transmit PDO 4 Mapping. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A03 = 1; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1A03[] = 
+                    {
+                      0x25000408	/* 620758024 */
+                    };
+                    subindex CANOpenShellMasterOD_Index1A03[] = 
+                     {
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A03 },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A03[0] }
+                     };
+
+/* index 0x1A04 :   Transmit PDO 5 Mapping. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A04 = 1; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1A04[] = 
+                    {
+                      0x25000508	/* 620758280 */
+                    };
+                    subindex CANOpenShellMasterOD_Index1A04[] = 
+                     {
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A04 },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A04[0] }
+                     };
+
+/* index 0x1A05 :   Transmit PDO 6 Mapping. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A05 = 1; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1A05[] = 
+                    {
+                      0x25000608	/* 620758536 */
+                    };
+                    subindex CANOpenShellMasterOD_Index1A05[] = 
+                     {
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A05 },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A05[0] }
+                     };
+
+/* index 0x1A06 :   Transmit PDO 7 Mapping. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A06 = 1; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1A06[] = 
+                    {
+                      0x25010108	/* 620822792 */
+                    };
+                    subindex CANOpenShellMasterOD_Index1A06[] = 
+                     {
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A06 },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A06[0] }
+                     };
+
+/* index 0x1A07 :   Transmit PDO 8 Mapping. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A07 = 1; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1A07[] = 
+                    {
+                      0x25010208	/* 620823048 */
+                    };
+                    subindex CANOpenShellMasterOD_Index1A07[] = 
+                     {
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A07 },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A07[0] }
+                     };
+
+/* index 0x1A08 :   Transmit PDO 9 Mapping. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A08 = 1; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1A08[] = 
+                    {
+                      0x25010308	/* 620823304 */
+                    };
+                    subindex CANOpenShellMasterOD_Index1A08[] = 
+                     {
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A08 },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A08[0] }
+                     };
+
+/* index 0x1A09 :   Transmit PDO 10 Mapping. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A09 = 1; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1A09[] = 
+                    {
+                      0x25010408	/* 620823560 */
+                    };
+                    subindex CANOpenShellMasterOD_Index1A09[] = 
+                     {
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A09 },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A09[0] }
+                     };
+
+/* index 0x1A0A :   Transmit PDO 11 Mapping. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A0A = 1; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1A0A[] = 
+                    {
+                      0x25010508	/* 620823816 */
+                    };
+                    subindex CANOpenShellMasterOD_Index1A0A[] = 
+                     {
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A0A },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A0A[0] }
+                     };
+
+/* index 0x1A0B :   Transmit PDO 12 Mapping. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A0B = 1; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1A0B[] = 
+                    {
+                      0x25010608	/* 620824072 */
+                    };
+                    subindex CANOpenShellMasterOD_Index1A0B[] = 
+                     {
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A0B },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A0B[0] }
+                     };
+
+/* index 0x1A0C :   Transmit PDO 13 Mapping. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A0C = 1; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1A0C[] = 
+                    {
+                      0x25020120	/* 620888352 */
+                    };
+                    subindex CANOpenShellMasterOD_Index1A0C[] = 
+                     {
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A0C },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A0C[0] }
+                     };
+
+/* index 0x1A0D :   Transmit PDO 14 Mapping. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A0D = 1; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1A0D[] = 
+                    {
+                      0x25020220	/* 620888608 */
+                    };
+                    subindex CANOpenShellMasterOD_Index1A0D[] = 
+                     {
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A0D },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A0D[0] }
+                     };
+
+/* index 0x1A0E :   Transmit PDO 15 Mapping. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A0E = 1; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1A0E[] = 
+                    {
+                      0x25020320	/* 620888864 */
+                    };
+                    subindex CANOpenShellMasterOD_Index1A0E[] = 
+                     {
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A0E },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A0E[0] }
+                     };
+
+/* index 0x1A0F :   Transmit PDO 16 Mapping. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A0F = 1; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1A0F[] = 
+                    {
+                      0x25020420	/* 620889120 */
+                    };
+                    subindex CANOpenShellMasterOD_Index1A0F[] = 
+                     {
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A0F },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A0F[0] }
+                     };
+
+/* index 0x1A10 :   Transmit PDO 17 Mapping. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A10 = 1; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1A10[] = 
+                    {
+                      0x25020520	/* 620889376 */
+                    };
+                    subindex CANOpenShellMasterOD_Index1A10[] = 
+                     {
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A10 },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A10[0] }
+                     };
+
+/* index 0x1A11 :   Transmit PDO 18 Mapping. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A11 = 1; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1A11[] = 
+                    {
+                      0x25020620	/* 620889632 */
+                    };
+                    subindex CANOpenShellMasterOD_Index1A11[] = 
+                     {
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A11 },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A11[0] }
                      };
 
 /* index 0x2000 :   Mapped variable NodeId */
@@ -2108,6 +2871,75 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     subindex CANOpenShellMasterOD_Index2400[] = 
                      {
                        { RW, uint16, sizeof (UNS16), (void*)&Interpolation_Mode_Status }
+                     };
+
+/* index 0x2500 :   Mapped variable InterpolationTimePeriod */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj2500 = 6; /* number of subindex - 1*/
+                    ODCallback_t InterpolationTimePeriod_callbacks[] = 
+                     {
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                     };
+                    subindex CANOpenShellMasterOD_Index2500[] = 
+                     {
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj2500 },
+                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[0] },
+                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[1] },
+                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[2] },
+                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[3] },
+                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[4] },
+                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[5] }
+                     };
+
+/* index 0x2501 :   Mapped variable InterpolationTimeValue */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj2501 = 6; /* number of subindex - 1*/
+                    ODCallback_t InterpolationTimeValue_callbacks[] = 
+                     {
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                     };
+                    subindex CANOpenShellMasterOD_Index2501[] = 
+                     {
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj2501 },
+                       { RW, uint8, sizeof (UNS8), (void*)&InterpolationTimeValue[0] },
+                       { RW, uint8, sizeof (UNS8), (void*)&InterpolationTimeValue[1] },
+                       { RW, uint8, sizeof (UNS8), (void*)&InterpolationTimeValue[2] },
+                       { RW, uint8, sizeof (UNS8), (void*)&InterpolationTimeValue[3] },
+                       { RW, uint8, sizeof (UNS8), (void*)&InterpolationTimeValue[4] },
+                       { RW, uint8, sizeof (UNS8), (void*)&InterpolationTimeValue[5] }
+                     };
+
+/* index 0x2502 :   Mapped variable InterpolationData */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj2502 = 6; /* number of subindex - 1*/
+                    ODCallback_t InterpolationData_callbacks[] = 
+                     {
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                     };
+                    subindex CANOpenShellMasterOD_Index2502[] = 
+                     {
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj2502 },
+                       { RW, int32, sizeof (INTEGER32), (void*)&InterpolationData[0] },
+                       { RW, int32, sizeof (INTEGER32), (void*)&InterpolationData[1] },
+                       { RW, int32, sizeof (INTEGER32), (void*)&InterpolationData[2] },
+                       { RW, int32, sizeof (INTEGER32), (void*)&InterpolationData[3] },
+                       { RW, int32, sizeof (INTEGER32), (void*)&InterpolationData[4] },
+                       { RW, int32, sizeof (INTEGER32), (void*)&InterpolationData[5] }
                      };
 
 /* index 0x6040 :   Mapped variable Controlword */
@@ -2536,6 +3368,42 @@ const indextable CANOpenShellMasterOD_objdict[] =
   { (subindex*)CANOpenShellMasterOD_Index1401,sizeof(CANOpenShellMasterOD_Index1401)/sizeof(CANOpenShellMasterOD_Index1401[0]), 0x1401},
   { (subindex*)CANOpenShellMasterOD_Index1600,sizeof(CANOpenShellMasterOD_Index1600)/sizeof(CANOpenShellMasterOD_Index1600[0]), 0x1600},
   { (subindex*)CANOpenShellMasterOD_Index1601,sizeof(CANOpenShellMasterOD_Index1601)/sizeof(CANOpenShellMasterOD_Index1601[0]), 0x1601},
+  { (subindex*)CANOpenShellMasterOD_Index1800,sizeof(CANOpenShellMasterOD_Index1800)/sizeof(CANOpenShellMasterOD_Index1800[0]), 0x1800},
+  { (subindex*)CANOpenShellMasterOD_Index1801,sizeof(CANOpenShellMasterOD_Index1801)/sizeof(CANOpenShellMasterOD_Index1801[0]), 0x1801},
+  { (subindex*)CANOpenShellMasterOD_Index1802,sizeof(CANOpenShellMasterOD_Index1802)/sizeof(CANOpenShellMasterOD_Index1802[0]), 0x1802},
+  { (subindex*)CANOpenShellMasterOD_Index1803,sizeof(CANOpenShellMasterOD_Index1803)/sizeof(CANOpenShellMasterOD_Index1803[0]), 0x1803},
+  { (subindex*)CANOpenShellMasterOD_Index1804,sizeof(CANOpenShellMasterOD_Index1804)/sizeof(CANOpenShellMasterOD_Index1804[0]), 0x1804},
+  { (subindex*)CANOpenShellMasterOD_Index1805,sizeof(CANOpenShellMasterOD_Index1805)/sizeof(CANOpenShellMasterOD_Index1805[0]), 0x1805},
+  { (subindex*)CANOpenShellMasterOD_Index1806,sizeof(CANOpenShellMasterOD_Index1806)/sizeof(CANOpenShellMasterOD_Index1806[0]), 0x1806},
+  { (subindex*)CANOpenShellMasterOD_Index1807,sizeof(CANOpenShellMasterOD_Index1807)/sizeof(CANOpenShellMasterOD_Index1807[0]), 0x1807},
+  { (subindex*)CANOpenShellMasterOD_Index1808,sizeof(CANOpenShellMasterOD_Index1808)/sizeof(CANOpenShellMasterOD_Index1808[0]), 0x1808},
+  { (subindex*)CANOpenShellMasterOD_Index1809,sizeof(CANOpenShellMasterOD_Index1809)/sizeof(CANOpenShellMasterOD_Index1809[0]), 0x1809},
+  { (subindex*)CANOpenShellMasterOD_Index180A,sizeof(CANOpenShellMasterOD_Index180A)/sizeof(CANOpenShellMasterOD_Index180A[0]), 0x180A},
+  { (subindex*)CANOpenShellMasterOD_Index180B,sizeof(CANOpenShellMasterOD_Index180B)/sizeof(CANOpenShellMasterOD_Index180B[0]), 0x180B},
+  { (subindex*)CANOpenShellMasterOD_Index180C,sizeof(CANOpenShellMasterOD_Index180C)/sizeof(CANOpenShellMasterOD_Index180C[0]), 0x180C},
+  { (subindex*)CANOpenShellMasterOD_Index180D,sizeof(CANOpenShellMasterOD_Index180D)/sizeof(CANOpenShellMasterOD_Index180D[0]), 0x180D},
+  { (subindex*)CANOpenShellMasterOD_Index180E,sizeof(CANOpenShellMasterOD_Index180E)/sizeof(CANOpenShellMasterOD_Index180E[0]), 0x180E},
+  { (subindex*)CANOpenShellMasterOD_Index180F,sizeof(CANOpenShellMasterOD_Index180F)/sizeof(CANOpenShellMasterOD_Index180F[0]), 0x180F},
+  { (subindex*)CANOpenShellMasterOD_Index1810,sizeof(CANOpenShellMasterOD_Index1810)/sizeof(CANOpenShellMasterOD_Index1810[0]), 0x1810},
+  { (subindex*)CANOpenShellMasterOD_Index1811,sizeof(CANOpenShellMasterOD_Index1811)/sizeof(CANOpenShellMasterOD_Index1811[0]), 0x1811},
+  { (subindex*)CANOpenShellMasterOD_Index1A00,sizeof(CANOpenShellMasterOD_Index1A00)/sizeof(CANOpenShellMasterOD_Index1A00[0]), 0x1A00},
+  { (subindex*)CANOpenShellMasterOD_Index1A01,sizeof(CANOpenShellMasterOD_Index1A01)/sizeof(CANOpenShellMasterOD_Index1A01[0]), 0x1A01},
+  { (subindex*)CANOpenShellMasterOD_Index1A02,sizeof(CANOpenShellMasterOD_Index1A02)/sizeof(CANOpenShellMasterOD_Index1A02[0]), 0x1A02},
+  { (subindex*)CANOpenShellMasterOD_Index1A03,sizeof(CANOpenShellMasterOD_Index1A03)/sizeof(CANOpenShellMasterOD_Index1A03[0]), 0x1A03},
+  { (subindex*)CANOpenShellMasterOD_Index1A04,sizeof(CANOpenShellMasterOD_Index1A04)/sizeof(CANOpenShellMasterOD_Index1A04[0]), 0x1A04},
+  { (subindex*)CANOpenShellMasterOD_Index1A05,sizeof(CANOpenShellMasterOD_Index1A05)/sizeof(CANOpenShellMasterOD_Index1A05[0]), 0x1A05},
+  { (subindex*)CANOpenShellMasterOD_Index1A06,sizeof(CANOpenShellMasterOD_Index1A06)/sizeof(CANOpenShellMasterOD_Index1A06[0]), 0x1A06},
+  { (subindex*)CANOpenShellMasterOD_Index1A07,sizeof(CANOpenShellMasterOD_Index1A07)/sizeof(CANOpenShellMasterOD_Index1A07[0]), 0x1A07},
+  { (subindex*)CANOpenShellMasterOD_Index1A08,sizeof(CANOpenShellMasterOD_Index1A08)/sizeof(CANOpenShellMasterOD_Index1A08[0]), 0x1A08},
+  { (subindex*)CANOpenShellMasterOD_Index1A09,sizeof(CANOpenShellMasterOD_Index1A09)/sizeof(CANOpenShellMasterOD_Index1A09[0]), 0x1A09},
+  { (subindex*)CANOpenShellMasterOD_Index1A0A,sizeof(CANOpenShellMasterOD_Index1A0A)/sizeof(CANOpenShellMasterOD_Index1A0A[0]), 0x1A0A},
+  { (subindex*)CANOpenShellMasterOD_Index1A0B,sizeof(CANOpenShellMasterOD_Index1A0B)/sizeof(CANOpenShellMasterOD_Index1A0B[0]), 0x1A0B},
+  { (subindex*)CANOpenShellMasterOD_Index1A0C,sizeof(CANOpenShellMasterOD_Index1A0C)/sizeof(CANOpenShellMasterOD_Index1A0C[0]), 0x1A0C},
+  { (subindex*)CANOpenShellMasterOD_Index1A0D,sizeof(CANOpenShellMasterOD_Index1A0D)/sizeof(CANOpenShellMasterOD_Index1A0D[0]), 0x1A0D},
+  { (subindex*)CANOpenShellMasterOD_Index1A0E,sizeof(CANOpenShellMasterOD_Index1A0E)/sizeof(CANOpenShellMasterOD_Index1A0E[0]), 0x1A0E},
+  { (subindex*)CANOpenShellMasterOD_Index1A0F,sizeof(CANOpenShellMasterOD_Index1A0F)/sizeof(CANOpenShellMasterOD_Index1A0F[0]), 0x1A0F},
+  { (subindex*)CANOpenShellMasterOD_Index1A10,sizeof(CANOpenShellMasterOD_Index1A10)/sizeof(CANOpenShellMasterOD_Index1A10[0]), 0x1A10},
+  { (subindex*)CANOpenShellMasterOD_Index1A11,sizeof(CANOpenShellMasterOD_Index1A11)/sizeof(CANOpenShellMasterOD_Index1A11[0]), 0x1A11},
   { (subindex*)CANOpenShellMasterOD_Index2000,sizeof(CANOpenShellMasterOD_Index2000)/sizeof(CANOpenShellMasterOD_Index2000[0]), 0x2000},
   { (subindex*)CANOpenShellMasterOD_Index2001,sizeof(CANOpenShellMasterOD_Index2001)/sizeof(CANOpenShellMasterOD_Index2001[0]), 0x2001},
   { (subindex*)CANOpenShellMasterOD_Index2100,sizeof(CANOpenShellMasterOD_Index2100)/sizeof(CANOpenShellMasterOD_Index2100[0]), 0x2100},
@@ -2551,6 +3419,9 @@ const indextable CANOpenShellMasterOD_objdict[] =
   { (subindex*)CANOpenShellMasterOD_Index2306,sizeof(CANOpenShellMasterOD_Index2306)/sizeof(CANOpenShellMasterOD_Index2306[0]), 0x2306},
   { (subindex*)CANOpenShellMasterOD_Index2307,sizeof(CANOpenShellMasterOD_Index2307)/sizeof(CANOpenShellMasterOD_Index2307[0]), 0x2307},
   { (subindex*)CANOpenShellMasterOD_Index2400,sizeof(CANOpenShellMasterOD_Index2400)/sizeof(CANOpenShellMasterOD_Index2400[0]), 0x2400},
+  { (subindex*)CANOpenShellMasterOD_Index2500,sizeof(CANOpenShellMasterOD_Index2500)/sizeof(CANOpenShellMasterOD_Index2500[0]), 0x2500},
+  { (subindex*)CANOpenShellMasterOD_Index2501,sizeof(CANOpenShellMasterOD_Index2501)/sizeof(CANOpenShellMasterOD_Index2501[0]), 0x2501},
+  { (subindex*)CANOpenShellMasterOD_Index2502,sizeof(CANOpenShellMasterOD_Index2502)/sizeof(CANOpenShellMasterOD_Index2502[0]), 0x2502},
   { (subindex*)CANOpenShellMasterOD_Index6040,sizeof(CANOpenShellMasterOD_Index6040)/sizeof(CANOpenShellMasterOD_Index6040[0]), 0x6040},
   { (subindex*)CANOpenShellMasterOD_Index6041,sizeof(CANOpenShellMasterOD_Index6041)/sizeof(CANOpenShellMasterOD_Index6041[0]), 0x6041},
   { (subindex*)CANOpenShellMasterOD_Index605A,sizeof(CANOpenShellMasterOD_Index605A)/sizeof(CANOpenShellMasterOD_Index605A[0]), 0x605A},
@@ -2743,61 +3614,100 @@ const indextable * CANOpenShellMasterOD_scanIndexOD (UNS16 wIndex, UNS32 * error
 		case 0x1401: i = 142;break;
 		case 0x1600: i = 143;break;
 		case 0x1601: i = 144;break;
-		case 0x2000: i = 145;*callbacks = NodeId_callbacks; break;
-		case 0x2001: i = 146;break;
-		case 0x2100: i = 147;break;
-		case 0x2200: i = 148;break;
-		case 0x2201: i = 149;break;
-		case 0x2202: i = 150;break;
-		case 0x2300: i = 151;break;
-		case 0x2301: i = 152;break;
-		case 0x2302: i = 153;break;
-		case 0x2303: i = 154;break;
-		case 0x2304: i = 155;break;
-		case 0x2305: i = 156;break;
-		case 0x2306: i = 157;break;
-		case 0x2307: i = 158;break;
-		case 0x2400: i = 159;*callbacks = Interpolation_Mode_Status_callbacks; break;
-		case 0x6040: i = 160;break;
-		case 0x6041: i = 161;*callbacks = Statusword_callbacks; break;
-		case 0x605A: i = 162;break;
-		case 0x605D: i = 163;break;
-		case 0x6060: i = 164;break;
-		case 0x6061: i = 165;break;
-		case 0x6063: i = 166;break;
-		case 0x6065: i = 167;break;
-		case 0x606C: i = 168;break;
-		case 0x6071: i = 169;break;
-		case 0x6072: i = 170;break;
-		case 0x6073: i = 171;break;
-		case 0x607A: i = 172;break;
-		case 0x607C: i = 173;break;
-		case 0x607D: i = 174;break;
-		case 0x607E: i = 175;break;
-		case 0x607F: i = 176;break;
-		case 0x6081: i = 177;break;
-		case 0x6083: i = 178;break;
-		case 0x6085: i = 179;break;
-		case 0x608F: i = 180;break;
-		case 0x6098: i = 181;break;
-		case 0x6099: i = 182;break;
-		case 0x609A: i = 183;break;
-		case 0x60F4: i = 184;break;
-		case 0x60FB: i = 185;break;
-		case 0x60FD: i = 186;break;
-		case 0x60FE: i = 187;break;
-		case 0x60FF: i = 188;break;
-		case 0x6401: i = 189;break;
-		case 0x6402: i = 190;break;
-		case 0x6403: i = 191;break;
-		case 0x6404: i = 192;break;
-		case 0x6405: i = 193;break;
-		case 0x6502: i = 194;break;
-		case 0x6503: i = 195;break;
-		case 0x6504: i = 196;break;
-		case 0x6505: i = 197;break;
-		case 0x6510: i = 198;break;
-		case 0x67FF: i = 199;break;
+		case 0x1800: i = 145;*callbacks = CANOpenShellMasterOD_Index1800_callbacks; break;
+		case 0x1801: i = 146;*callbacks = CANOpenShellMasterOD_Index1801_callbacks; break;
+		case 0x1802: i = 147;*callbacks = CANOpenShellMasterOD_Index1802_callbacks; break;
+		case 0x1803: i = 148;*callbacks = CANOpenShellMasterOD_Index1803_callbacks; break;
+		case 0x1804: i = 149;*callbacks = CANOpenShellMasterOD_Index1804_callbacks; break;
+		case 0x1805: i = 150;*callbacks = CANOpenShellMasterOD_Index1805_callbacks; break;
+		case 0x1806: i = 151;*callbacks = CANOpenShellMasterOD_Index1806_callbacks; break;
+		case 0x1807: i = 152;*callbacks = CANOpenShellMasterOD_Index1807_callbacks; break;
+		case 0x1808: i = 153;*callbacks = CANOpenShellMasterOD_Index1808_callbacks; break;
+		case 0x1809: i = 154;*callbacks = CANOpenShellMasterOD_Index1809_callbacks; break;
+		case 0x180A: i = 155;*callbacks = CANOpenShellMasterOD_Index180A_callbacks; break;
+		case 0x180B: i = 156;*callbacks = CANOpenShellMasterOD_Index180B_callbacks; break;
+		case 0x180C: i = 157;*callbacks = CANOpenShellMasterOD_Index180C_callbacks; break;
+		case 0x180D: i = 158;*callbacks = CANOpenShellMasterOD_Index180D_callbacks; break;
+		case 0x180E: i = 159;*callbacks = CANOpenShellMasterOD_Index180E_callbacks; break;
+		case 0x180F: i = 160;*callbacks = CANOpenShellMasterOD_Index180F_callbacks; break;
+		case 0x1810: i = 161;*callbacks = CANOpenShellMasterOD_Index1810_callbacks; break;
+		case 0x1811: i = 162;*callbacks = CANOpenShellMasterOD_Index1811_callbacks; break;
+		case 0x1A00: i = 163;break;
+		case 0x1A01: i = 164;break;
+		case 0x1A02: i = 165;break;
+		case 0x1A03: i = 166;break;
+		case 0x1A04: i = 167;break;
+		case 0x1A05: i = 168;break;
+		case 0x1A06: i = 169;break;
+		case 0x1A07: i = 170;break;
+		case 0x1A08: i = 171;break;
+		case 0x1A09: i = 172;break;
+		case 0x1A0A: i = 173;break;
+		case 0x1A0B: i = 174;break;
+		case 0x1A0C: i = 175;break;
+		case 0x1A0D: i = 176;break;
+		case 0x1A0E: i = 177;break;
+		case 0x1A0F: i = 178;break;
+		case 0x1A10: i = 179;break;
+		case 0x1A11: i = 180;break;
+		case 0x2000: i = 181;*callbacks = NodeId_callbacks; break;
+		case 0x2001: i = 182;break;
+		case 0x2100: i = 183;break;
+		case 0x2200: i = 184;break;
+		case 0x2201: i = 185;break;
+		case 0x2202: i = 186;break;
+		case 0x2300: i = 187;break;
+		case 0x2301: i = 188;break;
+		case 0x2302: i = 189;break;
+		case 0x2303: i = 190;break;
+		case 0x2304: i = 191;break;
+		case 0x2305: i = 192;break;
+		case 0x2306: i = 193;break;
+		case 0x2307: i = 194;break;
+		case 0x2400: i = 195;*callbacks = Interpolation_Mode_Status_callbacks; break;
+		case 0x2500: i = 196;*callbacks = InterpolationTimePeriod_callbacks; break;
+		case 0x2501: i = 197;*callbacks = InterpolationTimeValue_callbacks; break;
+		case 0x2502: i = 198;*callbacks = InterpolationData_callbacks; break;
+		case 0x6040: i = 199;break;
+		case 0x6041: i = 200;*callbacks = Statusword_callbacks; break;
+		case 0x605A: i = 201;break;
+		case 0x605D: i = 202;break;
+		case 0x6060: i = 203;break;
+		case 0x6061: i = 204;break;
+		case 0x6063: i = 205;break;
+		case 0x6065: i = 206;break;
+		case 0x606C: i = 207;break;
+		case 0x6071: i = 208;break;
+		case 0x6072: i = 209;break;
+		case 0x6073: i = 210;break;
+		case 0x607A: i = 211;break;
+		case 0x607C: i = 212;break;
+		case 0x607D: i = 213;break;
+		case 0x607E: i = 214;break;
+		case 0x607F: i = 215;break;
+		case 0x6081: i = 216;break;
+		case 0x6083: i = 217;break;
+		case 0x6085: i = 218;break;
+		case 0x608F: i = 219;break;
+		case 0x6098: i = 220;break;
+		case 0x6099: i = 221;break;
+		case 0x609A: i = 222;break;
+		case 0x60F4: i = 223;break;
+		case 0x60FB: i = 224;break;
+		case 0x60FD: i = 225;break;
+		case 0x60FE: i = 226;break;
+		case 0x60FF: i = 227;break;
+		case 0x6401: i = 228;break;
+		case 0x6402: i = 229;break;
+		case 0x6403: i = 230;break;
+		case 0x6404: i = 231;break;
+		case 0x6405: i = 232;break;
+		case 0x6502: i = 233;break;
+		case 0x6503: i = 234;break;
+		case 0x6504: i = 235;break;
+		case 0x6505: i = 236;break;
+		case 0x6510: i = 237;break;
+		case 0x67FF: i = 238;break;
 		default:
 			*errorCode = OD_NO_SUCH_OBJECT;
 			return NULL;
@@ -2811,15 +3721,15 @@ const indextable * CANOpenShellMasterOD_scanIndexOD (UNS16 wIndex, UNS32 * error
  * Even if no pdoTransmit are defined, at least one entry is computed
  * for compilations issues.
  */
-s_PDO_status CANOpenShellMasterOD_PDO_status[1] = {s_PDO_status_Initializer};
+s_PDO_status CANOpenShellMasterOD_PDO_status[18] = {s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer};
 
 const quick_index CANOpenShellMasterOD_firstIndex = {
   0, /* SDO_SVR */
   14, /* SDO_CLT */
   141, /* PDO_RCV */
   143, /* PDO_RCV_MAP */
-  0, /* PDO_TRS */
-  0 /* PDO_TRS_MAP */
+  145, /* PDO_TRS */
+  163 /* PDO_TRS_MAP */
 };
 
 const quick_index CANOpenShellMasterOD_lastIndex = {
@@ -2827,8 +3737,8 @@ const quick_index CANOpenShellMasterOD_lastIndex = {
   140, /* SDO_CLT */
   142, /* PDO_RCV */
   144, /* PDO_RCV_MAP */
-  0, /* PDO_TRS */
-  0 /* PDO_TRS_MAP */
+  162, /* PDO_TRS */
+  180 /* PDO_TRS_MAP */
 };
 
 const UNS16 CANOpenShellMasterOD_ObjdictSize = sizeof(CANOpenShellMasterOD_objdict)/sizeof(CANOpenShellMasterOD_objdict[0]); 
