@@ -19,6 +19,8 @@
 #include "file_parser.h"
 #include "CANOpenShell.h"
 
+static int row_read[127];
+
 int QueuePut(struct table_data *data, int line_number);
 
 void *QueueRefiller(void *args)
@@ -67,6 +69,8 @@ void QueueInit(int nodeid, struct table_data *data)
   data->cursor_position = 0;
   data->end_reached = 0;
 
+  row_read[nodeid] = 0;
+
   if(data->table_refiller == 0)
   {
     int err;
@@ -77,6 +81,54 @@ void QueueInit(int nodeid, struct table_data *data)
   }
 
   pthread_mutex_unlock(&data->table_mutex);
+}
+
+/**
+ * Legge dalla coda e restituisce i valori nella struttura passata.
+ *
+ * Questa funzione si occupa anche di seguire il buffer circolare a seconda dell'offset
+ * impostato. L'aggiornamento dei puntatori viene lasciato alla funzione QueueUpdate: in
+ * questo modo è possibile leggere nuovamente i dati in caso di errore.
+ */
+int QueueGet(struct table_data *data_in, struct table_data_read *data_out,
+    int offset)
+{
+  int read_pointer;
+
+  // Controllo che l'offset non sia più grande dei dati che ho scritto nel buffer
+  if(offset > data_in->count)
+    return -1;
+
+  if((data_in->read_pointer + offset) < POSITION_DATA_NUM_MAX)
+    read_pointer = data_in->read_pointer + offset;
+  else
+    read_pointer = (data_in->read_pointer + offset) % POSITION_DATA_NUM_MAX;
+
+  data_out->position = data_in->position[read_pointer];
+  data_out->time_ms = data_in->time_ms[read_pointer];
+
+  return 0;
+}
+
+/**
+ * Legge l'ultimo dato  nella coda.
+ *
+ * @attention: assicurarsi che la coda sia stata scritta precedentemente, altrimenti
+ * verrà restituito un valore casuale.
+ */
+int QueueLast(struct table_data *data_in, struct table_data_read *data_out)
+{
+  int read_pointer;
+
+  if((data_in->read_pointer) > 0)
+    read_pointer = data_in->read_pointer - 1;
+  else
+    read_pointer = POSITION_DATA_NUM_MAX - 1;
+
+  data_out->position = data_in->position[read_pointer];
+  data_out->time_ms = data_in->time_ms[read_pointer];
+
+  return 0;
 }
 
 /**
@@ -139,15 +191,19 @@ int QueuePut(struct table_data *data, int line_number)
   char time[12];
   int line_count = 0;
 
-  static int row_read[127];
-
   pthread_mutex_lock(&data->table_mutex);
 
   if(data->end_reached == 1)
+  {
+    pthread_mutex_unlock(&data->table_mutex);
     return 0;
+  }
 
   if(data->count == POSITION_DATA_NUM_MAX)
+  {
+    pthread_mutex_unlock(&data->table_mutex);
     return -2;
+  }
 
   char file_path[256];
   sprintf(file_path, "%s%d.mot", FILE_DIR, data->nodeId);
@@ -157,6 +213,7 @@ int QueuePut(struct table_data *data, int line_number)
   if(file == NULL)
   {
     perror("file");
+    pthread_mutex_unlock(&data->table_mutex);
 
     return -1;
   }
@@ -164,6 +221,8 @@ int QueuePut(struct table_data *data, int line_number)
   if(fseek(file, data->cursor_position, SEEK_SET) != 0)
   {
     fclose(file);
+
+    pthread_mutex_unlock(&data->table_mutex);
     return -1;
   }
 
@@ -172,12 +231,6 @@ int QueuePut(struct table_data *data, int line_number)
     // Ogni informazione è delimitata da uno spazio
     if((read = getline(&line, &len, file)) != -1)
     {
-      if(data->nodeId == 0x77)
-        printf("line readed: %d \n", read);
-
-      if((row_read[data->nodeId] + line_count) == 74)
-        printf("stop\n");
-
       // controllo se la riga entra nel buffer
       if(len < sizeof(line_copy))
         strcpy(line_copy, line);
@@ -228,27 +281,20 @@ int QueuePut(struct table_data *data, int line_number)
       data->count++;
 
       if(data->count == POSITION_DATA_NUM_MAX)
-      {
-        pthread_mutex_unlock(&data->table_mutex);
         break;
-      }
-
-      pthread_mutex_unlock(&data->table_mutex);
     }
     else
     {
-      pthread_mutex_lock(&data->table_mutex);
-
       //data->cursor_position = 0;
       data->end_reached = 1;
-
-      pthread_mutex_unlock(&data->table_mutex);
 
       break;
     }
   }
 
   row_read[data->nodeId] += line_count + 1;
+
+  pthread_mutex_unlock(&data->table_mutex);
 
   free(line);
   fclose(file);

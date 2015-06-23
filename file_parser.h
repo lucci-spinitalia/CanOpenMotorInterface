@@ -28,8 +28,17 @@ struct table_data
   pthread_t table_refiller; /**< thread per tenere la tabella piena */
 };
 
+struct table_data_read
+{
+  long position; /**< posizione da raggiungere in passi encoder */
+  long time_ms; /**< tempo per arrivare alla posizione in ms */
+};
+
 
 void QueueInit(int nodeid, struct table_data *data);
 void QueueUpdate(struct table_data *data, int point_number);
+int QueueGet(struct table_data *data_in, struct table_data_read *data_out,
+    int offset);
+int QueueLast(struct table_data *data_in, struct table_data_read *data_out);
 
 #endif /* FILE_PARSER_H_ */

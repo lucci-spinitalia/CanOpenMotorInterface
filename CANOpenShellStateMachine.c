@@ -7,6 +7,7 @@
 
 int motor_active[CANOPEN_NODE_NUMBER]; /**< indica se un motore si è dichiarato */
 int motor_homing[CANOPEN_NODE_NUMBER]; /**< indica se un motore si è dichiarato */
+long motor_position[CANOPEN_NODE_NUMBER]; /**< ultima posizione del motore */
 
 long next_machine_size[CANOPEN_NODE_NUMBER];
 struct state_machine_struct **next_machine[CANOPEN_NODE_NUMBER];
@@ -397,30 +398,28 @@ struct state_machine_struct smart_interpolation_test2_machine =
     {smart_interpolation_test2, 19, smart_interpolation_test2_param, 95,
         smart_interpolation_test2_error};
 
-void *init_interpolation_function[9] =
+void *init_interpolation_function[7] =
     {
-        &writeNetworkDictCallBack, // Reset the status word
-        &writeNetworkDictCallBack, // Change state: ready to switch on
-        &writeNetworkDictCallBack, // Change state: switched on
-        &writeNetworkDictCallBack, // Set interpolation mode
+        &writeNetworkDictCallBack, // Enable command (motion not actually started yet)
         &writeNetworkDictCallBack, // Clear buffer
         &writeNetworkDictCallBack, // Enable buffer
         &writeNetworkDictCallBack, // Set time period to seconds
         &writeNetworkDictCallBack, // Set time period to 1 (second)
-        &writeNetworkDictCallBack // Set interpolation mode
+        &writeNetworkDictCallBack, // Set interpolation mode
+        &writeNetworkDictCallBack // Set first point to zero
     };
-UNS32 init_interpolation_param[45] =
+/*
+ * Param
+ *   current_position
+ */UNS32 init_interpolation_param[35] =
     {
-        0x6040, 0x0, 2, 0, 0x80, // Reset the status word
-        0x6040, 0x0, 2, 0, 0x6, // Change state: ready to switch on
-        0x6040, 0x0, 2, 0, 0x7, // Change state: switched on
         0x6040, 0x0, 2, 0, 0xF, // Enable command (motion not actually started yet)
-
         0x60C4, 0x6, 1, 0, 0x0, // Clear buffer
         0x60C4, 0x6, 1, 0, 0x1, // Enable buffer
-        0x60C2, 0x2, 1, 0, 0xFF, // Set time period to seconds
+        0x60C2, 0x2, 1, 0, 0xFD, // Set time period to milliseconds
         0x60C2, 0x1, 1, 0, 0x1, // Set time period to 1 (second)
         0x6060, 0x0, 1, 0, 0x7, // Set interpolation mode
+        0x60C1, 0x1, 4, 0, 0x00000000 // Set first point to current position
     };
 
 char *init_interpolation_error[2] =
@@ -431,7 +430,7 @@ char *init_interpolation_error[2] =
 
 struct state_machine_struct init_interpolation_machine =
     {
-        init_interpolation_function, 9, init_interpolation_param, 45,
+        init_interpolation_function, 7, init_interpolation_param, 35,
         init_interpolation_error
     };
 
@@ -464,7 +463,7 @@ UNS32 stop_interpolation_param[15] =
     {
         0x60C2, 0x1, 1, 0, 0x0, // Write zero-length segment
         0x60C1, 0x1, 4, 0, 0xFFFFFFFF, // Repeat final data
-        0x6040, 0x0, 2, 0, 0xF, // leave drive on but holding at the ending position
+        0x6040, 0x0, 2, 0, 0x0F, // leave drive on but holding at the ending position
     };
 
 char *stop_interpolation_error[2] =
@@ -476,6 +475,34 @@ char *stop_interpolation_error[2] =
 struct state_machine_struct stop_interpolation_machine =
     {stop_interpolation_function, 3, stop_interpolation_param, 15,
         stop_interpolation_error};
+
+void *resume_interpolation_function[3] =
+    {
+        &writeNetworkDictCallBack, // Enable command (motion not actually started yet)
+        &writeNetworkDictCallBack,
+        &writeNetworkDictCallBack
+    };
+/*
+ * param:
+ *   - current position
+ */UNS32 resume_interpolation_param[15] =
+    {
+        0x6040, 0x0, 2, 0, 0xF, // Enable command (motion not actually started yet)
+        0x60C2, 0x1, 1, 0, 0x64, // back to the desire value
+        0x60C1, 0x1, 4, 0, 0xFFFFFFFF, // Repeat final data
+    };
+
+char *resume_interpolation_error[2] =
+    {
+        "Interpolation resumed",
+        "Cannot resume interpolation"
+    };
+
+struct state_machine_struct resume_interpolation_machine =
+    {
+        resume_interpolation_function, 3, resume_interpolation_param, 15,
+        resume_interpolation_error
+    };
 
 void *smart_homing_function[14] =
     {
@@ -525,6 +552,62 @@ char *smart_homing_error[2] =
 struct state_machine_struct smart_homing_machine =
     {smart_homing_function, 14, smart_homing_param, 70,
         smart_homing_error};
+
+void *smart_statusword_function[1] =
+    {
+        &readNetworkDictCallback // Read smartmotor status word 0
+    };
+UNS32 smart_statusword_param[3] =
+    {
+        0x2304, 0x1, 0 // Read smartmotor status word 0
+    };
+
+char *smart_statusword_error[2] =
+    {
+        NULL,
+        "Cannot read status word0 register"
+    };
+
+struct state_machine_struct smart_statusword_machine =
+    {smart_statusword_function, 1, smart_statusword_param, 3,
+        smart_statusword_error};
+
+void *smart_reset_statusword_function[1] =
+    {
+        &writeNetworkDictCallBack, // Reset status word
+    };
+UNS32 smart_reset_statusword_param[5] =
+    {
+        0x6040, 0x0, 2, 0, 0x80 // Reset status word
+    };
+
+char *smart_reset_statusword_error[2] =
+    {
+        "Status word cleared",
+        "Cannot reset status word"
+    };
+
+struct state_machine_struct smart_reset_statusword_machine =
+    {smart_reset_statusword_function, 1, smart_reset_statusword_param, 5,
+        smart_reset_statusword_error};
+
+void *smart_origin_function[1] =
+    {
+        &writeNetworkDictCallBack, // Set origin
+    };
+UNS32 smart_origin_param[5] =
+    {
+        0x2202, 0x0, 4, 0, 0x00  // Set origin
+    };
+
+char *smart_origin_error[2] =
+    {
+        "Origin set",
+        "Cannot set origin"
+    };
+
+struct state_machine_struct smart_origin_machine =
+    {smart_origin_function, 1, smart_origin_param, 5, smart_origin_error};
 
 void _machine_init()
 {
@@ -1373,9 +1456,6 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
     else if(next_machine[nodeId][0]->function[machine_state_index[nodeId]]
         == &readNetworkDictCallback)
     {
-      printf("WARN[%d on node %x state %d]: Funzione utente inaspettata\n",
-          InternalError, nodeId, machine_state_index[nodeId]);
-
       readNetworkDictCallback_t machine_function =
           next_machine[nodeId][0]->function[machine_state_index[nodeId]];
 
@@ -1624,7 +1704,8 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
   else
   {
     // Call Callback function
-    if((callback_user[nodeId] != NULL) && (nodeId != 0))
+    if((callback_user[nodeId] != NULL) && (nodeId != 0)
+        && (last_function != &readNetworkDictCallback))
       callback_user[nodeId](d, nodeId, machine_state_index[nodeId],
           result_value);
 
