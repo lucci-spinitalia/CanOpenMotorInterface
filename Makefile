@@ -34,12 +34,12 @@ PREFIX = /usr/local
 TARGET = unix
 CAN_DRIVER = can_socket
 TIMERS_DRIVER = timers_unix
-CANOPENSHELL = CANOpenShell
-CANFESTIVAL_DIR = /home/debian/CanFestival-3-7740ac6fdedc
+CANOPENSHELL =  SWP.33.05.02.0.0
+CANFESTIVAL_DIR = /home/pi/CanFestival-3-7740ac6fdedc
 
 INCLUDES = -I$(CANFESTIVAL_DIR)/include -I$(CANFESTIVAL_DIR)/include/$(TARGET) -I$(CANFESTIVAL_DIR)/include/$(CAN_DRIVER) -I$(CANFESTIVAL_DIR)/include/$(TIMERS_DRIVER)
 
-MASTER_OBJS = CANOpenShellMasterOD.o CANOpenShell.o CANOpenShellMasterError.o CANOpenShellStateMachine.o file_parser.o
+MASTER_OBJS = CANOpenShellMasterOD.o CANOpenShell.o CANOpenShellMasterError.o CANOpenShellStateMachine.o file_parser.o utils.o
 
 OBJS = $(MASTER_OBJS) $(CANFESTIVAL_DIR)/src/libcanfestival.a $(CANFESTIVAL_DIR)/drivers/$(TARGET)/libcanfestival_$(TARGET).a
 
@@ -66,7 +66,7 @@ $(CANFESTIVAL_DIR)/drivers/$(TARGET)/libcanfestival_$(TARGET).a:
 
 $(CANOPENSHELL): $(OBJS)
 	$(LD) $(CFLAGS) $(PROG_CFLAGS) ${PROGDEFINES} $(INCLUDES) -o $@ $(OBJS) $(EXE_CFLAGS)
-	mkdir -p Debug; cp $(CANOPENSHELL) Debug
+	mkdir -p Debug; cp $(CANOPENSHELL) Debug;
 	
 CANOpenShellMasterOD.c: CANOpenShellMasterOD.od
 	$(MAKE) -C $(CANFESTIVAL_DIR)/objdictgen gnosis
