@@ -38,6 +38,7 @@
 // INCLUDES
 #include <stdarg.h>
 #include <signal.h>
+#include <sys/stat.h>
 #include <math.h>
 #include "canfestival.h"
 #include "CANOpenShell.h"
@@ -45,10 +46,12 @@
 #include "CANOpenShellStateMachine.h"
 #include "CANOpenShellMasterError.h"
 #include "file_parser.h"
+#include "utils.h"
 
 //****************************************************************************
 // DEFINES
 #define MOTOR_INDEX_FIRST 0x77
+#define POSITION_FIFO_FILE "SWP.33.05.02.0.0/positions"
 
 #define TABLE_MAX_NUM 6
 #define cst_str4(c1, c2, c3, c4) ((((unsigned int)0 | \
@@ -105,6 +108,8 @@ float angle_step_rad[CANOPEN_NODE_NUMBER];
 struct table_data motor_table[TABLE_MAX_NUM];
 
 static int simulation_first_start[CANOPEN_NODE_NUMBER];
+
+FILE *position_fp = NULL;
 
 /**
  * @return: -1: errore, chunk_size: ok, <chunk_size: ultimi byte e fine del file
@@ -178,10 +183,21 @@ void SmartFaultCallback(CO_Data* d, UNS8 nodeId, int machine_state,
 UNS32 OnPositionUpdate(CO_Data* d, const indextable * indextable_curr,
     UNS8 bSubindex)
 {
+  char position_message[20];
   UNS8 nodeid = NodeId;
 
   if(Position_Actual_Value != motor_position[nodeid])
+  {
     motor_position[nodeid] = Position_Actual_Value;
+
+    if(position_fp != NULL)
+    {
+      sprintf(position_message, "%d %li\n", nodeid, motor_position[nodeid]);
+
+      fputs(position_message, position_fp);
+      fflush(position_fp);
+    }
+  }
 
   return 0;
 }
@@ -699,6 +715,160 @@ void SmartHome(char *sdo)
 
 }
 
+/**
+ * Scrive i punti di una sinusoide nel file del motore indicato.
+ */
+int GenerateSinData(int nodeid, long amplitude, long period, long tsamp,
+    long num_of_period)
+{
+  float num_of_points = 0;
+  float angle_step_rad = 0;
+  float angle_rad = 0;
+
+  long position = 0;
+  long position_prev = 0;
+
+  int i, j;
+
+  if(tsamp <= 0)
+  {
+    printf(
+        "ERR[%d on node %x]: Tempo campionamento non valido (GenerateSinData)\n",
+        InternalError, nodeid);
+    return -1;
+  }
+
+  num_of_points = period / tsamp;
+
+  if(num_of_points <= 0)
+  {
+    printf(
+        "ERR[%d on node %x]: Periodo dell'onda non valido (GenerateSinData)\n",
+        InternalError, nodeid);
+
+    return -1;
+  }
+
+  FILE *file = NULL;
+  char file_temp[256];
+  char file_destination[256];
+  sprintf(file_temp, "%s%d.mot.temp", FILE_DIR, nodeid);
+
+  file = fopen(file_temp, "w+");
+
+  if(file == NULL)
+  {
+    perror("file");
+
+    return -1;
+  }
+
+  angle_step_rad = 2 * M_PI / num_of_points;
+
+  // genero il primo punto, assumendo che il motore si trova nell'origine
+  fprintf(file, "%li 100\n", position);
+  angle_rad += angle_step_rad;
+
+  for(j = 0; j < num_of_period; j++)
+  {
+    for(i = 0; i < (num_of_points - 1); i++, angle_rad += angle_step_rad)
+    {
+      position = (long) (amplitude * sin(angle_rad));
+
+      // devo assicurarmi di non richiedere una velocità al motore troppo alta
+      // Se la velocità massima è di 30 giri/s, con un encoder da 4000 passi, equivarrà
+      // a 120000 step/s, cioè 120 step/ms.
+      // Quindi, la differenza tra il punto corrente e quello precedente divisa per il tempo
+      // richiesto per percorrerla, deve essere minore di 120.
+
+      if((labs(position - position_prev) / tsamp) >= 120)
+      {
+        printf(
+            "ERR[%d on node %x]: Velocità richiesta troppo elevata (GenerateSinData)\n",
+            InternalError, nodeid);
+        fclose(file);
+        return -1;
+      }
+      else
+      {
+        fprintf(file, "%li %li\n", position, tsamp);
+        position_prev = position;
+      }
+    }
+  }
+
+  // l'ultimo punto sarà lo stesso iniziale
+  //fprintf(file, "0 %li\n", tsamp);
+  fclose(file);
+
+  sprintf(file_destination, "%s%d.mot", FILE_DIR, nodeid);
+
+  remove(file_destination);
+
+  if(cp(file_destination, file_temp) == 0)
+    remove(file_temp);
+  else
+    printf(
+        "ERR[%d on node %x]: Impossibile copiare il file (GenerateSinData)\n",
+        InternalError, nodeid);
+
+  return 0;
+}
+
+void GenerateMotorData(char *sdo)
+{
+  int ret;
+
+  int nodeid;
+  char param[100];
+
+  ret = sscanf(sdo, "sgen#%2x,%s", &nodeid, param);
+
+  if(ret >= 2)
+  {
+    char *token = NULL;
+
+    token = strtok(param, ",");
+
+    if(token != NULL)
+    {
+      if(strcmp(token, "sin") == 0)
+      {
+        long param[4]; /* amplitude, period, tsamp, num of period */
+        int param_count = 0;
+
+        while(token != NULL)
+        {
+          token = strtok(NULL, ",\r\n\0");
+          if(token != NULL)
+          {
+            sscanf(token, "%lx", &param[param_count]);
+            param_count++;
+          }
+        }
+
+        if(param_count < 4)
+          goto fail;
+
+        if(GenerateSinData(nodeid, param[0], param[1], param[2], param[3]) >= 0)
+          printf("sin function generated\n");
+        else
+          goto fail;
+      }
+      else
+        goto fail;
+    }
+  }
+  else
+    printf("Wrong command  : %s\n", sdo);
+
+  return;
+
+  fail:
+  printf("Wrong command  : %s\n", sdo);
+
+}
+
 void SmartIntTest2(UNS8 nodeid)
 {
   struct state_machine_struct *machine = &smart_interpolation_test2_machine;
@@ -734,8 +904,10 @@ void SimulationStart(UNS8 nodeid)
   else
   {
     int i;
-    struct state_machine_struct *init_interpolation = &init_interpolation_machine;
-    struct state_machine_struct *resume_interpolation = &resume_interpolation_machine;
+    struct state_machine_struct *init_interpolation =
+        &init_interpolation_machine;
+    struct state_machine_struct *resume_interpolation =
+        &resume_interpolation_machine;
 
     for(i = 1; i < CANOPEN_NODE_NUMBER; i++)
     {
@@ -1722,6 +1894,12 @@ help_menu(void)
       "     sin1#nodeid,angle step,amplitude,point number : generate sin wave\n");
   printf("     ints#nodeid : start interpolated movement \n");
   printf("     shom#nodeid : homing\n");
+  printf(
+      "     simu#nodeid : start simulation reading data from tables/<nodeid>.mot file\n");
+  printf("     sgen#nodeid,type,<param> : generate simulation data\n");
+  printf(
+      "                 type: sin,amplitude,period[ms],tsamp[ms],num of period\n");
+  printf("        ex : sgen#77,sin,3e0,3e8,a,1\n");
   printf("\n");
   printf("   Note: All numbers are hex\n");
   printf("\n");
@@ -1763,6 +1941,11 @@ int ProcessCommand(char* command)
     case cst_str4('s', 'i', 'm', 'u'):
       LeaveMutex();
       SimulationStart(ExtractNodeId(command + 5));
+      break;
+
+    case cst_str4('s', 'g', 'e', 'n'):
+      LeaveMutex();
+      GenerateMotorData(command);
       break;
 
     case cst_str4('i', 'n', 't', '1'):
@@ -1920,6 +2103,20 @@ int main(int argc, char** argv)
 //signal(SIGINT, signal_handler);
 //signal(SIGTERM, signal_handler);
 
+  // inizializzo la named pipe per i dati di posizione
+
+  umask(0);
+  mknod(POSITION_FIFO_FILE, S_IFIFO|0666, 0);
+
+  printf("Waiting for someone who wants to read positions. . .\n");
+
+  position_fp = fopen(POSITION_FIFO_FILE, "w");
+
+  if(position_fp == NULL)
+    perror("position pipe");
+
+  printf("Starting. . .\n");
+
   /* Init stack timer */
   TimerInit();
 
@@ -1951,6 +2148,9 @@ int main(int argc, char** argv)
   }
 
   printf("Finishing.\n");
+
+  if(position_fp > 0)
+    fclose(position_fp);
 
   _machine_destroy();
 

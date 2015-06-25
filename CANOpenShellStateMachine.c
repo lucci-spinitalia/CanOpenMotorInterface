@@ -739,6 +739,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 
       lock_value = pthread_mutex_unlock(&machine_mux[nodeId]);
 
+      fflush(stdout);
       return 1;
     }
 
@@ -771,7 +772,6 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
     {
       printf("ERR[%d on node %x state %d]: Nessuna funzione\n", InternalError,
           nodeId, machine_state_index[nodeId]);
-      fflush(stdout);
       result_value = 1;
       goto finalize;
     }
@@ -974,6 +974,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
           InternalError,
           nodeId, machine_state_index[nodeId]);
 
+      fflush(stdout);
       return 1;
     }
     else
@@ -1120,6 +1121,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                 printf("Il numero di chiamate a questa funzione è: %d\n",
                     function_call_number[nodeId]);
 
+                fflush(stdout);
                 return 1;
                 break;
 
@@ -1386,6 +1388,8 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                 InternalError, nodeId, machine_state_index[nodeId]);
           }
 
+          fflush(stdout);
+
           return 0;
         }
         else
@@ -1528,6 +1532,8 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                 InternalError, nodeId, machine_state_index[nodeId]);
           }
 
+          fflush(stdout);
+
           return 0;
         }
         else
@@ -1589,6 +1595,8 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
         machine_function(d, nodeId, next_machine[nodeId][0]->param,
             next_machine[nodeId][0]->param_size);
 
+        fflush(stdout);
+
         return 0;
       }
       else
@@ -1649,6 +1657,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
         next_machine[nodeId][0]->function_size);
   }
 
+  fflush(stdout);
   return 0;
 
   finalize:
@@ -1741,6 +1750,8 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
           InternalError,
           nodeId, machine_state_index[nodeId], lock_value);
   }
+
+  fflush(stdout);
 
   return result_value;
 }

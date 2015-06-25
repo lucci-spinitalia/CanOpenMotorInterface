@@ -2018,15 +2018,17 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                      };
 
 /* index 0x1601 :   Receive PDO 2 Mapping. */
-                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1601 = 1; /* number of subindex - 1*/
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1601 = 2; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj1601[] = 
                     {
+                      0x20000008,	/* 536870920 */
                       0x60630020	/* 1617100832 */
                     };
                     subindex CANOpenShellMasterOD_Index1601[] = 
                      {
                        { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1601 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1601[0] }
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1601[0] },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1601[1] }
                      };
 
 /* index 0x1800 :   Transmit PDO 1 Parameter. */
@@ -2438,7 +2440,7 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 /* index 0x180E :   Transmit PDO 15 Parameter. */
                     UNS8 CANOpenShellMasterOD_highestSubIndex_obj180E = 6; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj180E_COB_ID_used_by_PDO = 0x479;	/* 1145 */
-                    UNS8 CANOpenShellMasterOD_obj180E_Transmission_Type = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj180E_Transmission_Type = 0xFF;	/* 255 */
                     UNS16 CANOpenShellMasterOD_obj180E_Inhibit_Time = 0x0;	/* 0 */
                     UNS8 CANOpenShellMasterOD_obj180E_Compatibility_Entry = 0x0;	/* 0 */
                     UNS16 CANOpenShellMasterOD_obj180E_Event_Timer = 0x0;	/* 0 */
@@ -2983,6 +2985,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                      };
 
 /* index 0x6063 :   Mapped variable Position Actual Value */
+                    ODCallback_t Position_Actual_Value_callbacks[] = 
+                     {
+                       NULL,
+                     };
                     subindex CANOpenShellMasterOD_Index6063[] = 
                      {
                        { RO, int32, sizeof (INTEGER32), (void*)&Position_Actual_Value }
@@ -3674,7 +3680,7 @@ const indextable * CANOpenShellMasterOD_scanIndexOD (UNS16 wIndex, UNS32 * error
 		case 0x605D: i = 202;break;
 		case 0x6060: i = 203;break;
 		case 0x6061: i = 204;break;
-		case 0x6063: i = 205;break;
+		case 0x6063: i = 205;*callbacks = Position_Actual_Value_callbacks; break;
 		case 0x6065: i = 206;break;
 		case 0x606C: i = 207;break;
 		case 0x6071: i = 208;break;
