@@ -6,7 +6,8 @@
 #include "CANOpenShellMasterError.h"
 
 int motor_active[CANOPEN_NODE_NUMBER]; /**< indica se un motore si è dichiarato */
-int motor_homing[CANOPEN_NODE_NUMBER]; /**< indica se un motore si è dichiarato */
+int motor_active_number; /**< tiene conto di quanti motori sono presenti */
+int motor_homing[CANOPEN_NODE_NUMBER]; /**< indica se un motore sta effettuando la procedura di homing */
 long motor_position[CANOPEN_NODE_NUMBER]; /**< ultima posizione del motore */
 
 long next_machine_size[CANOPEN_NODE_NUMBER];
@@ -398,8 +399,10 @@ struct state_machine_struct smart_interpolation_test2_machine =
     {smart_interpolation_test2, 19, smart_interpolation_test2_param, 95,
         smart_interpolation_test2_error};
 
-void *init_interpolation_function[7] =
+void *init_interpolation_function[9] =
     {
+        &writeNetworkDictCallBack, // Change state: ready to switch on
+        &writeNetworkDictCallBack, // Change state: switched on
         &writeNetworkDictCallBack, // Enable command (motion not actually started yet)
         &writeNetworkDictCallBack, // Clear buffer
         &writeNetworkDictCallBack, // Enable buffer
@@ -411,8 +414,10 @@ void *init_interpolation_function[7] =
 /*
  * Param
  *   current_position
- */UNS32 init_interpolation_param[35] =
+ */UNS32 init_interpolation_param[45] =
     {
+        0x6040, 0x0, 2, 0, 0x6, // Change state: ready to switch on
+        0x6040, 0x0, 2, 0, 0x7, // Change state: switched on
         0x6040, 0x0, 2, 0, 0xF, // Enable command (motion not actually started yet)
         0x60C4, 0x6, 1, 0, 0x0, // Clear buffer
         0x60C4, 0x6, 1, 0, 0x1, // Enable buffer
@@ -430,7 +435,7 @@ char *init_interpolation_error[2] =
 
 struct state_machine_struct init_interpolation_machine =
     {
-        init_interpolation_function, 7, init_interpolation_param, 35,
+        init_interpolation_function, 9, init_interpolation_param, 45,
         init_interpolation_error
     };
 
@@ -552,6 +557,49 @@ char *smart_homing_error[2] =
 struct state_machine_struct smart_homing_machine =
     {smart_homing_function, 14, smart_homing_param, 70,
         smart_homing_error};
+
+void *smart_velocity_pp_get_function[1] =
+    {
+        &readNetworkDictCallback // Read smartmotor VT
+    };
+UNS32 smart_velocity_pp_get_param[3] =
+    {
+        0x6081, 0x0, 0 // Read smartmotor VT
+    };
+
+char *smart_velocity_pp_get_error[2] =
+    {
+        NULL,
+        "Cannot read VT"
+    };
+
+struct state_machine_struct smart_velocity_pp_get_machine =
+    {smart_velocity_pp_get_function, 1, smart_velocity_pp_get_param, 3,
+        smart_velocity_pp_get_error};
+
+void *smart_velocity_pp_set_function[1] =
+    {
+        &writeNetworkDictCallBack, // Reset status word
+    };
+
+/*
+ * PARAM
+ * VT
+ */
+UNS32 smart_velocity_pp_set_param[5] =
+    {
+        0x6081, 0x0, 4, 0, 0xFFFFFFFF // Reset status word
+    };
+
+char *smart_velocity_pp_set_error[2] =
+    {
+        "Velocity target set",
+        "Cannot set the velocity target"
+    };
+
+struct state_machine_struct smart_velocity_pp_set_machine =
+    {smart_velocity_pp_set_function, 1, smart_velocity_pp_set_param, 5,
+        smart_velocity_pp_set_error};
 
 void *smart_statusword_function[1] =
     {

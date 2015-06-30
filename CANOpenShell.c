@@ -89,6 +89,9 @@ s_BOARD Board =
 CO_Data* CANOpenShellOD_Data;
 
 pthread_mutex_t sinwave_mux[CANOPEN_NODE_NUMBER];
+pthread_mutex_t position_mux[CANOPEN_NODE_NUMBER];
+char motor_position_write[CANOPEN_NODE_NUMBER]; /**< di chi ho già segnato la posizione */
+static struct timeval position_start_time;
 volatile int sinwave_busy[CANOPEN_NODE_NUMBER];
 
 int raw_response = -1;
@@ -146,58 +149,87 @@ int program_file_read(const char *file_path, char *program_chunk,
 void SmartFaultCallback(CO_Data* d, UNS8 nodeId, int machine_state,
     UNS32 return_value)
 {
-  UNS8 nodeid = NodeId;
-
   if((return_value & 0b0000000000001000) > 0)
     printf("ERR[%d on node %x]: Servo bus voltage fault\n", SmartMotorError,
-        nodeid);
+        nodeId);
 
   if((return_value & 0b0000000000010000) > 0)
     printf("ERR[%d on node %x]: Peak over-current occurred\n", SmartMotorError,
-        nodeid);
+        nodeId);
 
   if((return_value & 0b0000000000100000) > 0)
     printf("ERR[%d on node %x]: Excessive temperature\n", SmartMotorError,
-        nodeid);
+        nodeId);
 
   if((return_value & 0b0000000001000000) > 0)
     printf("ERR[%d on node %x]: Excessive position error\n", SmartMotorError,
-        nodeid);
+        nodeId);
 
   if((return_value & 0b0000000010000000) > 0)
-    printf("ERR[%d on node %x]: Velocity limit\n", SmartMotorError, nodeid);
+    printf("ERR[%d on node %x]: Velocity limit\n", SmartMotorError, nodeId);
 
   if((return_value & 0b0000001000000000) > 0)
     printf(
         "ERR[%d on node %x]: First derivative (DE/Dt) of position error over limit\n",
-        SmartMotorError, nodeid);
+        SmartMotorError, nodeId);
 
   if((return_value & 0b0001000000000000) > 0)
     printf("ERR[%d on node %x]: Right(+) over travel limit\n", SmartMotorError,
-        nodeid);
+        nodeId);
   else if((return_value & 0b0010000000000000) > 0)
     printf("ERR[%d on node %x]: Left(-) over travel limit\n", SmartMotorError,
-        nodeid);
+        nodeId);
 }
 
 UNS32 OnPositionUpdate(CO_Data* d, const indextable * indextable_curr,
     UNS8 bSubindex)
 {
-  char position_message[20];
+  static int motor_basket_num = 0;
+  static char position_message[256];
+  struct timeval position_stop_time;
+
   UNS8 nodeid = NodeId;
 
   if(Position_Actual_Value != motor_position[nodeid])
-  {
     motor_position[nodeid] = Position_Actual_Value;
+
+  pthread_mutex_lock(&position_mux[nodeid]);
+
+  if(motor_position_write[nodeid] == 0)
+  {
+    motor_position_write[nodeid] = 1;
+    if(position_message[0] == '\0')
+      sprintf(position_message, "%d %li", nodeid, motor_position[nodeid]);
+    else
+      sprintf(position_message, "%s %d %li", position_message, nodeid,
+          motor_position[nodeid]);
+    motor_basket_num++;
+  }
+
+  if(motor_basket_num == motor_active_number)
+  {
+    motor_basket_num = 0;
+    memset(motor_position_write, 0, sizeof(motor_position_write));
 
     if(position_fp != NULL)
     {
-      sprintf(position_message, "%d %li\n", nodeid, motor_position[nodeid]);
+      gettimeofday(&position_stop_time, NULL);
 
+      long position_delay = (position_stop_time.tv_sec
+          - position_start_time.tv_sec) * 1000000 + position_stop_time.tv_usec
+          - position_start_time.tv_usec;
+
+      sprintf(position_message, "%s %li\n", position_message, position_delay);
       fputs(position_message, position_fp);
       fflush(position_fp);
+
+      gettimeofday(&position_start_time, NULL);
     }
+
+    position_message[0] = '\0';
   }
+
+  pthread_mutex_unlock(&position_mux[nodeid]);
 
   return 0;
 }
@@ -209,12 +241,17 @@ UNS32 OnStatusUpdate(CO_Data* d, const indextable * indextable_curr,
   UNS16 statusword = Statusword;
 
   /** Fault management **/
+
   if((statusword & 0b0000000001001111) == 0b0000000000001000)
   {
     if(motor_homing[nodeid] == 1)
       motor_homing[nodeid] = 0;
-    else
+
+    if(motor_active[nodeid])
+    {
       motor_started[nodeid] = 0;
+      simulation_first_start[nodeid] = 1;
+    }
 
     struct state_machine_struct *fault_machine[] =
         {&smart_statusword_machine, &smart_reset_statusword_machine};
@@ -223,6 +260,7 @@ UNS32 OnStatusUpdate(CO_Data* d, const indextable * indextable_curr,
         fault_machine, 2, 1, 0);
   }
 
+  // Homing concluso
   if((statusword & 0b0001010000000000) == 0b0001010000000000)
   {
     if(motor_homing[nodeid] == 1)
@@ -236,17 +274,19 @@ UNS32 OnStatusUpdate(CO_Data* d, const indextable * indextable_curr,
     }
   }
 
+  // Move error
   if((statusword & 0b0010000000000000) > 0)
   {
     printf("ERR[%d on node %x]: Move error\n", SmartMotorError, nodeid);
 
     if(motor_homing[nodeid] == 1)
       motor_homing[nodeid] = 0;
+
+    SmartStop(nodeid, 1);
   }
 
   if((statusword & 0b0000000001101111) == 0b0000000000000111)
   {
-    //UNS32 data = 0X80;
     printf("ERR[%d on node %x]: Quick stop active\n", SmartMotorError, nodeid);
 
     _machine_reset(d, nodeid);
@@ -390,8 +430,8 @@ void SimulationTableUpdate(CO_Data* d, UNS8 nodeid, int point_number,
     return;
   }
 
-  pthread_mutex_lock(&motor_table[motor_table_index].table_mutex);
   pthread_mutex_lock(&sinwave_mux[nodeid]);
+
   if((sinwave_busy[nodeid] == 0) && (point_number > 0))
     sinwave_busy[nodeid] = 1;
   else
@@ -400,12 +440,13 @@ void SimulationTableUpdate(CO_Data* d, UNS8 nodeid, int point_number,
       printf("sinwave busy %d\n", nodeid);
 
     pthread_mutex_unlock(&sinwave_mux[nodeid]);
-    pthread_mutex_unlock(&motor_table[motor_table_index].table_mutex);
 
     return;
   }
 
   pthread_mutex_unlock(&sinwave_mux[nodeid]);
+
+  pthread_mutex_lock(&motor_table[motor_table_index].table_mutex);
 
   int i;
   int point_to_send;
@@ -471,9 +512,9 @@ void SimulationTableUpdate(CO_Data* d, UNS8 nodeid, int point_number,
     motor_started[nodeid] = 0;
   }
 
-  pthread_mutex_unlock(&motor_table[motor_table_index].table_mutex);
-
   QueueUpdate(&motor_table[motor_table_index], point_to_send);
+
+  pthread_mutex_unlock(&motor_table[motor_table_index].table_mutex);
 
   pthread_mutex_lock(&sinwave_mux[nodeid]);
   sinwave_busy[nodeid] = 0;
@@ -493,7 +534,7 @@ void SmartSin1(CO_Data* d, UNS8 nodeid, int angle_step_grad, long amplitude,
       stop_delay[CANOPEN_NODE_NUMBER];
 
   static long int position_max = 0;
-  float current_angle = 0;
+  //float current_angle = 0;
 
   if(((motor_started[nodeid] == 0) && (angle_step_grad == 0))
       || (motor_active[nodeid] == 0))
@@ -553,7 +594,7 @@ void SmartSin1(CO_Data* d, UNS8 nodeid, int angle_step_grad, long amplitude,
     angle_actual_rad[nodeid] = 0;
   }
 
-  current_angle = angle_actual_rad[nodeid];
+  //current_angle = angle_actual_rad[nodeid];
 
   if(amplitude != 0)
     position_max = amplitude;
@@ -630,15 +671,33 @@ void SmartSin1(CO_Data* d, UNS8 nodeid, int angle_step_grad, long amplitude,
   }
 }
 
+void SmartVelocityCallback(CO_Data* d, UNS8 nodeId, int machine_state,
+    UNS32 return_value)
+{
+  printf("INFO[%d on node %x]: VT = %ld\n", SmartMotorError, nodeId,
+      return_value);
+}
+
+void SmartVelocityGet(UNS8 nodeid)
+{
+  struct state_machine_struct *velocity_machine[] =
+      {&smart_velocity_pp_get_machine};
+
+  _machine_exe(CANOpenShellOD_Data, nodeid, &SmartVelocityCallback,
+      velocity_machine, 1, 0, 0);
+}
+
 void SimulationStop(UNS8 nodeid)
 {
   int motor_table_index = MotorTableIndexFromNodeId(nodeid);
 
-  QueueInit(nodeid, &motor_table[motor_table_index]);
-
   pthread_mutex_lock(&motor_table[motor_table_index].table_mutex);
-  sinwave_busy[nodeid] = 0;
+  QueueInit(nodeid, &motor_table[motor_table_index]);
   pthread_mutex_unlock(&motor_table[motor_table_index].table_mutex);
+
+  pthread_mutex_lock(&sinwave_mux[nodeid]);
+  sinwave_busy[nodeid] = 0;
+  pthread_mutex_unlock(&sinwave_mux[nodeid]);
 
   motor_started[nodeid] = 0;
 
@@ -668,19 +727,31 @@ void SinFunction(char *sdo)
 
   if(ret >= 4)
   {
-    // Inizializzo i mutex
-    int i;
-    for(i = 0; i < CANOPEN_NODE_NUMBER; i++)
-    {
-      pthread_mutex_init(&sinwave_mux[i], NULL);
-    }
-
     SmartSin1(CANOpenShellOD_Data, nodeid, angle_step_grad, amplitude,
         point_number, 0);
   }
   else
     printf("Wrong command  : %s\n", sdo);
 
+}
+
+void SmartVelocitySet(char *sdo)
+{
+  int ret;
+
+  int nodeid;
+  long VT = 0;
+
+  ret = sscanf(sdo, "sVTS#%2x,%4lx", &nodeid, &VT);
+
+  if(ret == 2)
+  {
+    struct state_machine_struct *velocity_machine[] =
+        {&smart_velocity_pp_set_machine};
+
+    _machine_exe(CANOpenShellOD_Data, nodeid, NULL, velocity_machine, 1, 0, 1,
+        VT);
+  }
 }
 
 void SmartHome(char *sdo)
@@ -699,12 +770,21 @@ void SmartHome(char *sdo)
       int i;
       for(i = 0; i < CANOPEN_NODE_NUMBER; i++)
       {
-        if(motor_active[nodeid])
+        if(motor_active[i])
+        {
+          simulation_first_start[i] = 1;
           motor_homing[i] = 1;
+        }
       }
     }
     else
-      motor_homing[nodeid] = 1;
+    {
+      if(motor_active[nodeid])
+      {
+        motor_homing[nodeid] = 1;
+        simulation_first_start[nodeid] = 1;
+      }
+    }
 
     struct state_machine_struct *machine = &smart_homing_machine;
     _machine_exe(CANOpenShellOD_Data, nodeid, NULL, &machine, 1, 0, 1,
@@ -713,6 +793,65 @@ void SmartHome(char *sdo)
   else
     printf("Wrong command  : %s\n", sdo);
 
+}
+
+/**
+ * Scrive i punti di una sinusoide nel file del motore indicato.
+ */
+int GenerateSawData(int nodeid, long amplitude, long half_period, long pause,
+    long num_of_period)
+{
+  int j;
+
+  if(half_period <= 0)
+  {
+    printf(
+        "ERR[%d on node %x]: Periodo dell'onda non valido (GenerateSinData)\n",
+        InternalError, nodeid);
+
+    return -1;
+  }
+
+  FILE *file = NULL;
+  char file_temp[256];
+  char file_destination[256];
+  sprintf(file_temp, "%s%d.mot.temp", FILE_DIR, nodeid);
+
+  file = fopen(file_temp, "w+");
+
+  if(file == NULL)
+  {
+    perror("file");
+
+    return -1;
+  }
+
+  // genero il primo punto, assumendo che il motore si trovi nell'origine
+  fprintf(file, "0 100\n");
+
+  for(j = 0; j < num_of_period; j++)
+  {
+    fprintf(file, "%li %li\n", amplitude, half_period);
+    fprintf(file, "0 %li\n", half_period);
+
+    if(pause > 0)
+      fprintf(file, "0 %li\n", pause);
+  }
+
+  fclose(file);
+
+  sprintf(file_destination, "%s%d.mot", FILE_DIR, nodeid);
+
+  remove(file_destination);
+
+  if(cp(file_destination, file_temp) == 0)
+    remove(file_temp);
+  else
+    printf(
+        "ERR[%d on node %x]: Impossibile copiare il file (GenerateSinData)\n",
+        InternalError, nodeid);
+
+  return 0;
 }
 
 /**
@@ -855,6 +994,29 @@ void GenerateMotorData(char *sdo)
         else
           goto fail;
       }
+      else if(strcmp(token, "saw") == 0)
+      {
+        long param[4]; /* amplitude, half_period, pause, num of period */
+        int param_count = 0;
+
+        while(token != NULL)
+        {
+          token = strtok(NULL, ",\r\n\0");
+          if(token != NULL)
+          {
+            sscanf(token, "%lx", &param[param_count]);
+            param_count++;
+          }
+        }
+
+        if(param_count < 4)
+          goto fail;
+
+        if(GenerateSawData(nodeid, param[0], param[1], param[2], param[3]) >= 0)
+          printf("saw function generated\n");
+        else
+          goto fail;
+      }
       else
         goto fail;
     }
@@ -903,6 +1065,8 @@ void SimulationStart(UNS8 nodeid)
   }
   else
   {
+    gettimeofday(&position_start_time, NULL);
+
     int i;
     struct state_machine_struct *init_interpolation =
         &init_interpolation_machine;
@@ -937,12 +1101,42 @@ void SmartIntStart(UNS8 nodeid)
 
 void SmartOrigin(UNS8 nodeid)
 {
+  if(nodeid == 0)
+  {
+    int i;
+    for(i = 0; i < CANOPEN_NODE_NUMBER; i++)
+    {
+      if(motor_active[i])
+        simulation_first_start[i] = 1;
+    }
+  }
+  else
+  {
+    if(motor_active[nodeid])
+      simulation_first_start[nodeid] = 1;
+  }
+
   struct state_machine_struct *machine = &smart_position_zero_machine;
   _machine_exe(CANOpenShellOD_Data, nodeid, NULL, &machine, 1, 0, 0);
 }
 
 void SmartStop(UNS8 nodeid, int from_callback)
 {
+  if(nodeid == 0)
+  {
+    int i;
+    for(i = 0; i < CANOPEN_NODE_NUMBER; i++)
+    {
+      if(motor_active[i])
+        simulation_first_start[i] = 1;
+    }
+  }
+  else
+  {
+    if(motor_active[nodeid])
+      simulation_first_start[nodeid] = 1;
+  }
+
   struct state_machine_struct *machine = &smart_stop_machine;
   _machine_exe(CANOpenShellOD_Data, nodeid, NULL, &machine, 1, from_callback,
       0);
@@ -1209,6 +1403,7 @@ void StartNode(UNS8 nodeid)
 /* Ask a slave node to reset */
 void ResetNode(UNS8 nodeid)
 {
+  motor_active_number = 0;
   masterSendNMTstateChange(CANOpenShellOD_Data, nodeid, NMT_Reset_Node);
 }
 
@@ -1474,12 +1669,50 @@ void DownloadToMotor(char* sdo)
  */
 void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
 {
+  static pthread_mutex_t motor_active_number_mutex = PTHREAD_MUTEX_INITIALIZER;
+
   SmartSin1Stop(nodeid);
   _machine_reset(d, nodeid);
 
-  motor_active[nodeid] = 1;
+  if(motor_active[nodeid] == 0)
+  {
+    pthread_mutex_lock(&motor_active_number_mutex);
+
+    motor_active_number++;
+
+    // al primo motore che si dichiara, registro i callback per la lettura
+    // della statusword e del registro IP
+    if(motor_active_number == 1)
+    {
+      canopen_abort_code = RegisterSetODentryCallBack(d, 0x2400, 0,
+          &OnStatusUpdate);
+
+      if(canopen_abort_code)
+        printf(
+            "Error[%d on node %x]: Impossibile registrare il callback per l'oggetto 0x2400 (Canopen abort code %x)\n",
+            CANOpenError, nodeid, canopen_abort_code);
+
+      canopen_abort_code = RegisterSetODentryCallBack(d, 0x6063, 0,
+          &OnPositionUpdate);
+
+      if(canopen_abort_code)
+        printf(
+            "Error[%d on node %x]: Impossibile registrare il callback per l'oggetto 0x2400 (Canopen abort code %x)\n",
+            CANOpenError, nodeid, canopen_abort_code);
+
+      fflush(stdout);
+    }
+
+    pthread_mutex_unlock(&motor_active_number_mutex);
+
+    motor_active[nodeid] = 1;
+  }
+
   motor_started[nodeid] = 0;
   simulation_first_start[nodeid] = 1;
+
+  pthread_mutex_init(&sinwave_mux[nodeid], NULL);
+  pthread_mutex_init(&position_mux[nodeid], NULL);
 
   if(nodeid == MOTOR_INDEX_FIRST)
   {
@@ -1522,24 +1755,6 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
         0x40000400 + nodeid, 0x1402, 0xFE, 0x1402, 0
 
         );
-
-    canopen_abort_code = RegisterSetODentryCallBack(d, 0x2400, 0,
-        &OnStatusUpdate);
-
-    if(canopen_abort_code)
-      printf(
-          "Error[%d on node %x]: Impossibile registrare il callback per l'oggetto 0x2400 (Canopen abort code %x)\n",
-          CANOpenError, nodeid, canopen_abort_code);
-
-    canopen_abort_code = RegisterSetODentryCallBack(d, 0x6063, 0,
-        &OnPositionUpdate);
-
-    if(canopen_abort_code)
-      printf(
-          "Error[%d on node %x]: Impossibile registrare il callback per l'oggetto 0x2400 (Canopen abort code %x)\n",
-          CANOpenError, nodeid, canopen_abort_code);
-
-    fflush(stdout);
   }
   else
   {
@@ -1585,20 +1800,25 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
 // trovo una libera
   int motor_table_index = MotorTableIndexFromNodeId(nodeid);
 
-  if(motor_table_index == -1)
+  if(motor_table_index == -1) // tabella non assegnata
   {
     int i;
     for(i = 0; i < TABLE_MAX_NUM; i++)
     {
       if(motor_table[i].nodeId == 0)
       {
+        pthread_mutex_init(&motor_table[i].table_mutex, NULL);
         QueueInit(nodeid, &motor_table[i]);
         break;
       }
     }
   }
   else
+  {
+    pthread_mutex_lock(&motor_table[motor_table_index].table_mutex);
     QueueInit(nodeid, &motor_table[motor_table_index]);
+    pthread_mutex_unlock(&motor_table[motor_table_index].table_mutex);
+  }
 }
 
 void CANOpenShellOD_post_Emcy(CO_Data* d, UNS8 nodeID, UNS16 errCode,
@@ -1894,12 +2114,17 @@ help_menu(void)
       "     sin1#nodeid,angle step,amplitude,point number : generate sin wave\n");
   printf("     ints#nodeid : start interpolated movement \n");
   printf("     shom#nodeid : homing\n");
+  printf("     svel#nodeid : read the target velocity\n");
+  printf("     sVTS#nodeid,VT : set target velocity to VT\n");
   printf(
       "     simu#nodeid : start simulation reading data from tables/<nodeid>.mot file\n");
   printf("     sgen#nodeid,type,<param> : generate simulation data\n");
   printf(
       "                 type: sin,amplitude,period[ms],tsamp[ms],num of period\n");
+  printf(
+      "                 type: saw,amplitude,half_period[ms],pause[ms],num of period\n");
   printf("        ex : sgen#77,sin,3e0,3e8,a,1\n");
+  printf("        ex : sgen#77,saw,4e200,3e8,3e8,10\n");
   printf("\n");
   printf("   Note: All numbers are hex\n");
   printf("\n");
@@ -1946,6 +2171,16 @@ int ProcessCommand(char* command)
     case cst_str4('s', 'g', 'e', 'n'):
       LeaveMutex();
       GenerateMotorData(command);
+      break;
+
+    case cst_str4('s', 'v', 'e', 'l'):
+      LeaveMutex();
+      SmartVelocityGet(ExtractNodeId(command + 5));
+      break;
+
+    case cst_str4('s', 'V', 'T', 'S'):
+      LeaveMutex();
+      SmartVelocitySet(command);
       break;
 
     case cst_str4('i', 'n', 't', '1'):
@@ -2090,7 +2325,7 @@ int main(int argc, char** argv)
   char command[200];
   char* res;
   int ret = 0;
-  int sysret = 0;
+  //int sysret = 0;
   int i = 0;
 
   /* Print help and exit immediatly*/
@@ -2106,7 +2341,7 @@ int main(int argc, char** argv)
   // inizializzo la named pipe per i dati di posizione
 
   umask(0);
-  mknod(POSITION_FIFO_FILE, S_IFIFO|0666, 0);
+  mknod(POSITION_FIFO_FILE, S_IFIFO | 0666, 0);
 
   printf("Waiting for someone who wants to read positions. . .\n");
 
@@ -2141,7 +2376,7 @@ int main(int argc, char** argv)
 
     if(res != NULL)
     {
-      sysret = system(CLEARSCREEN);
+      //sysret = system(CLEARSCREEN);
       ret = ProcessCommand(command);
       fflush(stdout);
     }

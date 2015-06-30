@@ -22,6 +22,7 @@ struct state_machine_struct
 
 pthread_mutex_t machine_mux[CANOPEN_NODE_NUMBER];
 extern int motor_active[CANOPEN_NODE_NUMBER];
+extern int motor_active_number;
 extern int motor_homing[CANOPEN_NODE_NUMBER];
 extern volatile int motor_started[CANOPEN_NODE_NUMBER];
 extern long motor_position[CANOPEN_NODE_NUMBER];
@@ -53,6 +54,8 @@ extern struct state_machine_struct smart_statusword_machine;
 extern struct state_machine_struct smart_reset_statusword_machine;
 extern struct state_machine_struct smart_origin_machine;
 extern struct state_machine_struct resume_interpolation_machine;
+extern struct state_machine_struct smart_velocity_pp_get_machine;
+extern struct state_machine_struct smart_velocity_pp_set_machine;
 
 typedef UNS8 (*writeNetworkDictCallBack_t)(CO_Data* d, UNS8 nodeId, UNS16 index,
     UNS8 subIndex, UNS32 count, UNS8 dataType, void *data,

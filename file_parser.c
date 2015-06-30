@@ -34,8 +34,6 @@ void *QueueRefiller(void *args)
 
     if(data->count < POSITION_DATA_NUM_MAX)
     {
-      pthread_mutex_unlock(&data->table_mutex);
-
       data_refilled = QueuePut(data, POSITION_DATA_NUM_MAX - data->count);
 
       if(data_refilled == -1)
@@ -50,6 +48,8 @@ void *QueueRefiller(void *args)
        printf("Refilled node %d: %d\n", data->nodeId, data_refilled);
        fflush(stdout);
        }*/
+
+      pthread_mutex_unlock(&data->table_mutex);
     }
     else
       pthread_mutex_unlock(&data->table_mutex);
@@ -60,8 +60,6 @@ void *QueueRefiller(void *args)
 
 void QueueInit(int nodeid, struct table_data *data)
 {
-  pthread_mutex_lock(&data->table_mutex);
-
   data->nodeId = nodeid;
   data->write_pointer = 0;
   data->read_pointer = 0;
@@ -79,8 +77,6 @@ void QueueInit(int nodeid, struct table_data *data)
     if(err != 0)
       printf("can't create thread:[%s]", strerror(err));
   }
-
-  pthread_mutex_unlock(&data->table_mutex);
 }
 
 /**
@@ -141,8 +137,6 @@ int QueueLast(struct table_data *data_in, struct table_data_read *data_out)
  */
 void QueueUpdate(struct table_data *data, int point_number)
 {
-  pthread_mutex_lock(&data->table_mutex);
-
   if(point_number <= data->count)
   {
     data->read_pointer += point_number;
@@ -160,7 +154,6 @@ void QueueUpdate(struct table_data *data, int point_number)
           InternalError, data->nodeId);
   }
 
-  pthread_mutex_unlock(&data->table_mutex);
 }
 
 /**
@@ -186,26 +179,19 @@ int QueuePut(struct table_data *data, int line_number)
   ssize_t read;
 
   char *token;
+  char *token_save;
   char line_copy[256];
+  char file_path[256];
   char position[12];
   char time[12];
   int line_count = 0;
 
-  pthread_mutex_lock(&data->table_mutex);
-
   if(data->end_reached == 1)
-  {
-    pthread_mutex_unlock(&data->table_mutex);
     return 0;
-  }
 
   if(data->count == POSITION_DATA_NUM_MAX)
-  {
-    pthread_mutex_unlock(&data->table_mutex);
     return -2;
-  }
 
-  char file_path[256];
   sprintf(file_path, "%s%d.mot", FILE_DIR, data->nodeId);
 
   file = fopen(file_path, "r");
@@ -213,16 +199,12 @@ int QueuePut(struct table_data *data, int line_number)
   if(file == NULL)
   {
     perror("file");
-    pthread_mutex_unlock(&data->table_mutex);
-
     return -1;
   }
 
   if(fseek(file, data->cursor_position, SEEK_SET) != 0)
   {
     fclose(file);
-
-    pthread_mutex_unlock(&data->table_mutex);
     return -1;
   }
 
@@ -235,29 +217,34 @@ int QueuePut(struct table_data *data, int line_number)
       if(len < sizeof(line_copy))
         strcpy(line_copy, line);
       else
-        strncpy(line_copy, line, sizeof(line_copy) - 1);
+        strncpy(line_copy, line, sizeof(line_copy));
 
-      //printf("line: %s on %d\n", line_copy, data->nodeId);
       // copio la posizione
-      token = strtok(line_copy, " ");
+      token = strtok_r(line_copy, " ", &token_save);
       if(token != NULL)
         strcpy(position, token);
       else
       {
-        printf("WARN[%d on node %x]: Riga %d non valida.\n",
+        printf("WARN[%d on node %x]: Riga %d non valida (posizione)\n",
             InternalError, data->nodeId, row_read[data->nodeId] + line_count);
 
+        printf("line: %s", line);
+
+        data->cursor_position += read;
         continue;
       }
 
       // copio il tempo
-      token = strtok(NULL, " \n\r\a");
+      token = strtok_r(NULL, " \n\r\a", &token_save);
       if(token != NULL)
         strcpy(time, token);
       else
       {
-        printf("WARN[%d on node %x]: Riga %d non valida.\n",
+        printf("WARN[%d on node %x]: Riga %d non valida (tempo): \n",
             InternalError, data->nodeId, row_read[data->nodeId] + line_count);
+        printf("line: %s, position: %s", line, position);
+
+        data->cursor_position += read;
 
         continue;
       }
@@ -285,7 +272,6 @@ int QueuePut(struct table_data *data, int line_number)
     }
     else
     {
-      //data->cursor_position = 0;
       data->end_reached = 1;
 
       break;
@@ -293,8 +279,6 @@ int QueuePut(struct table_data *data, int line_number)
   }
 
   row_read[data->nodeId] += line_count + 1;
-
-  pthread_mutex_unlock(&data->table_mutex);
 
   free(line);
   fclose(file);
