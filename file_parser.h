@@ -40,5 +40,7 @@ void QueueUpdate(struct table_data *data, int point_number);
 int QueueGet(struct table_data *data_in, struct table_data_read *data_out,
     int offset);
 int QueueLast(struct table_data *data_in, struct table_data_read *data_out);
+void QueueFill(struct table_data *data);
+float FileCompleteGet(int nodeId, int point_in_table);
 
 #endif /* FILE_PARSER_H_ */

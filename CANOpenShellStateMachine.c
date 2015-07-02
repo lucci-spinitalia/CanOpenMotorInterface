@@ -9,6 +9,7 @@ int motor_active[CANOPEN_NODE_NUMBER]; /**< indica se un motore si è dichiarato
 int motor_active_number; /**< tiene conto di quanti motori sono presenti */
 int motor_homing[CANOPEN_NODE_NUMBER]; /**< indica se un motore sta effettuando la procedura di homing */
 long motor_position[CANOPEN_NODE_NUMBER]; /**< ultima posizione del motore */
+UNS32 motor_status[CANOPEN_NODE_NUMBER]; /**< ultimo stato del motore */
 
 long next_machine_size[CANOPEN_NODE_NUMBER];
 struct state_machine_struct **next_machine[CANOPEN_NODE_NUMBER];
@@ -36,7 +37,14 @@ char *sin_interpolation_error[2] =
 struct state_machine_struct sin_interpolation_machine =
     {NULL, 0, NULL, 0, sin_interpolation_error};
 
+#ifndef SDO_SYNC
+pthread_mutex_t machine_mux[CANOPEN_NODE_NUMBER];
 volatile int machine_run[CANOPEN_NODE_NUMBER];
+#else
+pthread_mutex_t machine_mux;
+volatile int machine_run = 0;
+pthread_cond_t machine_run_cond = PTHREAD_COND_INITIALIZER;
+#endif
 
 void *smart_start[8] =
     {
@@ -581,12 +589,10 @@ void *smart_velocity_pp_set_function[1] =
     {
         &writeNetworkDictCallBack, // Reset status word
     };
-
 /*
  * PARAM
  * VT
- */
-UNS32 smart_velocity_pp_set_param[5] =
+ */UNS32 smart_velocity_pp_set_param[5] =
     {
         0x6081, 0x0, 4, 0, 0xFFFFFFFF // Reset status word
     };
@@ -679,20 +685,31 @@ void _machine_init()
     machine_state_index[i] = 0;
     machine_state_param_index[i] = 0;
 
+#ifndef SDO_SYNC
     pthread_mutex_init(&machine_mux[i], &Attr);
+#endif
   }
+
+#ifdef SDO_SYNC
+  pthread_mutex_init(&machine_mux, &Attr);
+  pthread_cond_init(&machine_run_cond, NULL);
+#endif
 
   motor_active[0] = 1;
 }
 
 void _machine_destroy()
 {
+#ifndef SDO_SYNC
   int i = 0;
 
   for(i = 0; i < CANOPEN_NODE_NUMBER; i++)
   {
     pthread_mutex_destroy(&machine_mux[i]);
   }
+#else
+  pthread_mutex_destroy(&machine_mux);
+#endif
 }
 
 void _machine_reset(CO_Data* d, UNS8 nodeId)
@@ -728,7 +745,9 @@ void _machine_reset(CO_Data* d, UNS8 nodeId)
     next_machine[nodeId] = NULL;
   }
 
+#ifndef SDO_SYNC
   machine_run[nodeId] = 0;
+#endif
 }
 
 /**
@@ -776,6 +795,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 
   if(callback_num != 0) // se la funzione non è stata richiamata dal callback
   {
+#ifndef SDO_SYNC
     lock_value = pthread_mutex_lock(&machine_mux[nodeId]);
 
     if(machine_run[nodeId] == 1)
@@ -790,6 +810,17 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
       fflush(stdout);
       return 1;
     }
+#else
+    lock_value = pthread_mutex_lock(&machine_mux);
+
+    if(machine_run == 1)
+    {
+      printf("machine wait %d\n", nodeId);
+      pthread_cond_wait(&machine_run_cond, &machine_mux);
+    }
+
+    printf("machine %d\n", nodeId);
+#endif
 
     if(machine_state_index[nodeId] > 0)
     {
@@ -801,7 +832,11 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
     // se non è una richiesta broadcast
     if(nodeId != 0)
     {
+#ifndef SDO_SYNC
       machine_run[nodeId] = 1;
+#else
+      machine_run = 1;
+#endif
       callback_user[nodeId] = machine_callback;
     }
     else
@@ -811,9 +846,17 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
         if(motor_active[i] > 0)
           callback_user[i] = machine_callback;
       }
+
+#ifdef SDO_SYNC
+      machine_run = 1;
+#endif
     }
 
+#ifndef SDO_SYNC
     lock_value = pthread_mutex_unlock(&machine_mux[nodeId]);
+#else
+    lock_value = pthread_mutex_unlock(&machine_mux);
+#endif
 
     // Memorizzo il vettore con le prossime funzioni da eseguire
     if(callback_num == 0)
@@ -1406,11 +1449,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 
         // chimao EnterMutex e LeaveMutex solo se non sono in un callback
         if(!from_callback)
-        {
-          //if(nodeId == 0x77)
-          //  printf("EnterMutex\n");
           EnterMutex();
-        }
 
         machine_function_return = machine_function(d, nodeId, user_param[0],
             user_param[1], user_param[2], user_param[3], &user_param[4],
@@ -1418,11 +1457,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 
         // chiamo EnterMutex e LeaveMutex solo se non sono in un callback
         if(!from_callback)
-        {
-          //if(nodeId == 0x77)
-          // printf("LeaveMutex\n");
           LeaveMutex();
-        }
 
         if(machine_function_return != 0xFF)
         {
@@ -1455,14 +1490,29 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
       {
         for(i = 1; i < CANOPEN_NODE_NUMBER; i++)
         {
+#ifndef SDO_SYNC
           lock_value = pthread_mutex_lock(&machine_mux[i]);
 
           if((motor_active[i] > 0) && machine_run[i] == 0)
           {
-            machine_state_param_index[i] = machine_state_param_index[nodeId];
             machine_run[i] = 1;
-            function_call_number[i]++;
             lock_value = pthread_mutex_unlock(&machine_mux[i]);
+#else
+          if(motor_active[i] > 0)
+          {
+            lock_value = pthread_mutex_lock(&machine_mux);
+
+            if(machine_run == 1)
+              pthread_cond_wait(&machine_run_cond, &machine_mux);
+            else
+              machine_run = 1;
+
+            printf("writenetworkdick machine %d\n", nodeId);
+
+            lock_value = pthread_mutex_unlock(&machine_mux);
+#endif
+            machine_state_param_index[i] = machine_state_param_index[nodeId];
+            function_call_number[i]++;
 
             if(!from_callback)
             {
@@ -1497,8 +1547,10 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
               }
             }
           }
+#ifndef SDO_SYNC
           else
-            lock_value = pthread_mutex_unlock(&machine_mux[i]);
+          lock_value = pthread_mutex_unlock(&machine_mux[i]);
+#endif
         }
 
         result_value = 0;
@@ -1667,7 +1719,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
     }
   }
 
-  // Nel caso in cui le funzioni siano finite
+// Nel caso in cui le funzioni siano finite
   if(machine_state_index[nodeId] == next_machine[nodeId][0]->function_size)
   {
     if(next_machine[nodeId][0]->error[0] != NULL)
@@ -1710,7 +1762,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 
   finalize:
   // nel caso in cui la funzione broadcast chiudesse la macchina con una funzione che non
-  // prevede un callback, allora devo deallocare tutte le variabili precedenti.
+// prevede un callback, allora devo deallocare tutte le variabili precedenti.
   if((machine_state_index[nodeId] == next_machine[nodeId][0]->function_size)
       && (nodeId == 0))
   {
@@ -1737,21 +1789,27 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
           next_machine[i] = NULL;
         }
 
+#ifndef SDO_SYNC
         lock_value = pthread_mutex_lock(&machine_mux[i]);
         machine_run[i] = 0;
         lock_value = pthread_mutex_unlock(&machine_mux[i]);
 
-        //if(nodeId == 0x77)
-        //  printf("Mutex exit 4\n");
-
         if(lock_value != 0)
-          printf(
-              "ERR[%d on node %x state %d]: Impossibile sbloccare il mutex 6: %d\n",
-              InternalError,
-              nodeId, machine_state_index[nodeId], lock_value);
-
+        printf(
+            "ERR[%d on node %x state %d]: Impossibile sbloccare il mutex 6: %d\n",
+            InternalError,
+            nodeId, machine_state_index[nodeId], lock_value);
+#endif
       }
     }
+
+#ifdef SDO_SYNC
+    lock_value = pthread_mutex_lock(&machine_mux);
+    machine_run = 0;
+    printf("end machine %d\n", nodeId);
+    pthread_cond_signal(&machine_run_cond);
+    lock_value = pthread_mutex_unlock(&machine_mux);
+#endif
 
     // Call Callback function
     if(callback_user[nodeId] != NULL)
@@ -1785,18 +1843,24 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
       next_machine[nodeId] = NULL;
     }
 
+#ifndef SDO_SYNC
     lock_value = pthread_mutex_lock(&machine_mux[nodeId]);
     machine_run[nodeId] = 0;
     lock_value = pthread_mutex_unlock(&machine_mux[nodeId]);
 
-    //if(nodeId == 0x77)
-    //  printf("Mutex exit 5\n");
 
     if(lock_value != 0)
       printf(
           "ERR[%d on node %x state %d]: Impossibile sbloccare il mutex 7: %d\n",
           InternalError,
           nodeId, machine_state_index[nodeId], lock_value);
+#else
+    lock_value = pthread_mutex_lock(&machine_mux);
+    machine_run = 0;
+    printf("end machine %d\n", nodeId);
+    pthread_cond_signal(&machine_run_cond);
+    lock_value = pthread_mutex_unlock(&machine_mux);
+#endif
   }
 
   fflush(stdout);

@@ -19,14 +19,55 @@
 #include "file_parser.h"
 #include "CANOpenShell.h"
 
-static int row_read[127];
+long row_read[127];
+long row_total[127];
+float compleate_percent;
 
 int QueuePut(struct table_data *data, int line_number);
+
+float FileCompleteGet(int nodeId, int point_in_table)
+{
+  if(row_total[nodeId] != 0)
+    return (((row_read[nodeId] - point_in_table) * 100) / row_total[nodeId]);
+  else
+    return 0;
+}
+
+long FileLineCount(int nodeId)
+{
+  FILE *file = NULL;
+  char *line = NULL;
+  size_t len = 0;
+
+  char file_path[256];
+  long line_count = 0;
+
+  sprintf(file_path, "%s%d.mot", FILE_DIR, nodeId);
+
+  file = fopen(file_path, "r");
+
+  if(file == NULL)
+  {
+    perror("file");
+    return -1;
+  }
+
+  // Ogni informazione è delimitata da uno spazio
+  while(getline(&line, &len, file) != -1)
+    line_count++;
+
+  free(line);
+  fclose(file);
+
+  return line_count;
+}
 
 void *QueueRefiller(void *args)
 {
   struct table_data *data = args;
   int data_refilled = 0;
+
+  row_total[data->nodeId] = FileLineCount(data->nodeId);
 
   while(1)
   {
@@ -44,10 +85,10 @@ void *QueueRefiller(void *args)
         break;
       }
       /*else if(data_refilled > 0)
-       {
-       printf("Refilled node %d: %d\n", data->nodeId, data_refilled);
-       fflush(stdout);
-       }*/
+      {
+        printf("Refilled node %d: %d\n", data->nodeId, data_refilled);
+        fflush(stdout);
+      }*/
 
       pthread_mutex_unlock(&data->table_mutex);
     }
@@ -65,7 +106,7 @@ void QueueInit(int nodeid, struct table_data *data)
   data->read_pointer = 0;
   data->count = 0;
   data->cursor_position = 0;
-  data->end_reached = 0;
+  data->end_reached = 1;
 
   row_read[nodeid] = 0;
 
@@ -76,6 +117,18 @@ void QueueInit(int nodeid, struct table_data *data)
 
     if(err != 0)
       printf("can't create thread:[%s]", strerror(err));
+  }
+}
+
+void QueueFill(struct table_data *data)
+{
+  if(data->table_refiller != 0)
+  {
+    data->write_pointer = 0;
+    data->read_pointer = 0;
+    data->count = 0;
+    data->cursor_position = 0;
+    data->end_reached = 0;
   }
 }
 
@@ -225,7 +278,7 @@ int QueuePut(struct table_data *data, int line_number)
         strcpy(position, token);
       else
       {
-        printf("WARN[%d on node %x]: Riga %d non valida (posizione)\n",
+        printf("WARN[%d on node %x]: Riga %ld non valida (posizione)\n",
             InternalError, data->nodeId, row_read[data->nodeId] + line_count);
 
         printf("line: %s", line);
@@ -240,7 +293,7 @@ int QueuePut(struct table_data *data, int line_number)
         strcpy(time, token);
       else
       {
-        printf("WARN[%d on node %x]: Riga %d non valida (tempo): \n",
+        printf("WARN[%d on node %x]: Riga %ld non valida (tempo): \n",
             InternalError, data->nodeId, row_read[data->nodeId] + line_count);
         printf("line: %s, position: %s", line, position);
 

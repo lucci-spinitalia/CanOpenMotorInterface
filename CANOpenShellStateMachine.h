@@ -11,6 +11,10 @@
 #include "canfestival.h"
 
 #define CANOPEN_NODE_NUMBER 128 // 127 nodi più quello di broadcast
+#define SMART_TABLE_SIZE 45
+//#define SDO_SYNC // se impostato, la macchina a stati _machine_exe viene eseguita da un thread (motore)
+                 // per volta. Questo riduce il carico istantaneo sul bus, anche se aumenta il tempo
+                 // complessivo di esecuzione.
 struct state_machine_struct
 {
   void **function;
@@ -20,12 +24,12 @@ struct state_machine_struct
   char **error;
 };
 
-pthread_mutex_t machine_mux[CANOPEN_NODE_NUMBER];
 extern int motor_active[CANOPEN_NODE_NUMBER];
 extern int motor_active_number;
 extern int motor_homing[CANOPEN_NODE_NUMBER];
 extern volatile int motor_started[CANOPEN_NODE_NUMBER];
 extern long motor_position[CANOPEN_NODE_NUMBER];
+extern UNS32 motor_status[CANOPEN_NODE_NUMBER];
 
 extern void **sin_interpolation_function;
 extern UNS32 *sin_interpolation_param;

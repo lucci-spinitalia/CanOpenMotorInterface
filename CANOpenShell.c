@@ -327,21 +327,19 @@ UNS32 OnStatusUpdate(CO_Data* d, const indextable * indextable_curr,
 
 UNS32 OnInterpUpdate(CO_Data* d, UNS8 nodeid)
 {
-  static UNS32 smart_motor_status[CANOPEN_NODE_NUMBER];
-
-  if(smart_motor_status[nodeid] != 0)
+  if(motor_status[nodeid] != 0)
   {
-    if((smart_motor_status[nodeid] & 0b1000000000000000)
+    if((motor_status[nodeid] & 0b1000000000000000)
         < (Interpolation_Mode_Status & 0b1000000000000000))
       printf("INF[%d on node %x]: Interpolation started (sin IP mode)\n",
           SmartMotorError, nodeid);
-    else if((smart_motor_status[nodeid] & 0b1000000000000000)
+    else if((motor_status[nodeid] & 0b1000000000000000)
         > (Interpolation_Mode_Status & 0b1000000000000000))
     {
       printf("INF[%d on node %x]: Interpolation finished (sin IP mode)\n",
           SmartMotorError, nodeid);
 
-      smart_motor_status[nodeid] = Interpolation_Mode_Status;
+      motor_status[nodeid] = Interpolation_Mode_Status;
 
       //SmartSin1Stop(NodeId);
       SimulationStop(nodeid);
@@ -350,14 +348,14 @@ UNS32 OnInterpUpdate(CO_Data* d, UNS8 nodeid)
     }
   }
 
-  smart_motor_status[nodeid] = Interpolation_Mode_Status;
+  motor_status[nodeid] = Interpolation_Mode_Status;
 
   if((motor_started[nodeid] == 1)
   //&& ((Interpolation_Mode_Status & 0x3F) > 0x16)
   )
   {
     //SmartSin1(d, NodeId, 0, 0, Interpolation_Mode_Status & 0x3F, 1);
-    SimulationTableUpdate(d, nodeid, Interpolation_Mode_Status & 0x3F, 1);
+    SimulationTableUpdate(d, nodeid, motor_status[nodeid] & 0x3F, 1);
   }
 
   return 0;
@@ -404,6 +402,15 @@ int MotorTableIndexFromNodeId(UNS8 nodeId)
 void SimulationInitCallback(CO_Data* d, UNS8 nodeid, int machine_state,
     UNS32 return_value)
 {
+  int motor_table_index = MotorTableIndexFromNodeId(nodeid);
+
+  if(motor_table_index >= 0)
+  {
+    pthread_mutex_lock(&motor_table[motor_table_index].table_mutex);
+    QueueFill(&motor_table[motor_table_index]);
+    pthread_mutex_unlock(&motor_table[motor_table_index].table_mutex);
+  }
+
   motor_started[nodeid] = 1;
 }
 
@@ -675,7 +682,7 @@ void SmartVelocityCallback(CO_Data* d, UNS8 nodeId, int machine_state,
     UNS32 return_value)
 {
   printf("INFO[%d on node %x]: VT = %ld\n", SmartMotorError, nodeId,
-      return_value);
+      (long) return_value);
 }
 
 void SmartVelocityGet(UNS8 nodeid)
@@ -689,12 +696,6 @@ void SmartVelocityGet(UNS8 nodeid)
 
 void SimulationStop(UNS8 nodeid)
 {
-  int motor_table_index = MotorTableIndexFromNodeId(nodeid);
-
-  pthread_mutex_lock(&motor_table[motor_table_index].table_mutex);
-  QueueInit(nodeid, &motor_table[motor_table_index]);
-  pthread_mutex_unlock(&motor_table[motor_table_index].table_mutex);
-
   pthread_mutex_lock(&sinwave_mux[nodeid]);
   sinwave_busy[nodeid] = 0;
   pthread_mutex_unlock(&sinwave_mux[nodeid]);
@@ -835,7 +836,7 @@ int GenerateSawData(int nodeid, long amplitude, long half_period, long pause,
     fprintf(file, "0 %li\n", half_period);
 
     if(pause > 0)
-      fprintf(file, "0 %li\n", pause);
+      fprintf(file, "1 %li\n", pause);
   }
 
   fclose(file);
@@ -1037,6 +1038,33 @@ void SmartIntTest2(UNS8 nodeid)
   _machine_exe(CANOpenShellOD_Data, nodeid, NULL, &machine, 1, 0, 0);
 }
 
+void SmartFileComplete(UNS8 nodeid)
+{
+  float complete_percent = 0;
+
+  if(nodeid == 0)
+  {
+    int i;
+    for(i = 1; i < CANOPEN_NODE_NUMBER; i++)
+    {
+      if(motor_active[i] > 0)
+      {
+        complete_percent = FileCompleteGet(i, SMART_TABLE_SIZE - (motor_status[i] & 0x3F));
+
+        printf("INFO[%d on node %x]: Percentuale completamento: %.0f%%\n",
+            InternalError, nodeid, complete_percent);
+      }
+    }
+  }
+  else
+  {
+    complete_percent = FileCompleteGet(nodeid, SMART_TABLE_SIZE - (motor_status[nodeid] & 0x3F));
+
+    printf("INFO[%d on node %x]: Percentuale completamento: %.0f%%\n",
+        InternalError, nodeid, complete_percent);
+  }
+}
+
 void SmartIntTest1(UNS8 nodeid)
 {
   struct state_machine_struct *machine = &smart_interpolation_test1_machine;
@@ -1101,19 +1129,29 @@ void SmartIntStart(UNS8 nodeid)
 
 void SmartOrigin(UNS8 nodeid)
 {
+  int motor_table_index;
+
   if(nodeid == 0)
   {
     int i;
     for(i = 0; i < CANOPEN_NODE_NUMBER; i++)
     {
       if(motor_active[i])
+      {
+        motor_table_index = MotorTableIndexFromNodeId(i);
+        QueueInit(i, &motor_table[motor_table_index]);
         simulation_first_start[i] = 1;
+      }
     }
   }
   else
   {
     if(motor_active[nodeid])
+    {
+      motor_table_index = MotorTableIndexFromNodeId(nodeid);
+      QueueInit(nodeid, &motor_table[motor_table_index]);
       simulation_first_start[nodeid] = 1;
+    }
   }
 
   struct state_machine_struct *machine = &smart_position_zero_machine;
@@ -1684,6 +1722,51 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
     // della statusword e del registro IP
     if(motor_active_number == 1)
     {
+      pthread_mutex_unlock(&motor_active_number_mutex);
+
+      // CONFIGURE HEARTBEAT TO 100 ms
+      // MAP TPDO 1 (COB-ID 180) to transmit "node id" (8-bit), "status word" (16-bit), "interpolation mode status" (16-bit)
+      // MAP TPDO 2 (COB-ID 280) to transmit "node id" (8-bit), "position actual value" (32-bit)
+      // MAP TPDO 3 (COB-ID 380) to receive high resolution timestamp
+
+      // MAP RPDO 1 (COB-ID 200 + nodeid) to receive "Interpolation Time Index" (8-bit)" (0x06c2 sub2)
+      // MAP RPDO 2 (COB-ID 300 + nodeid) to receive "Interpolation Time Units" (8-bit)" (0x06c2 sub1)
+      // MAP RPDO 3 (COB-ID 400 + nodeid) to receive "Interpolation Data" (32-bit)" (0x06c1 sub1)
+
+      struct state_machine_struct *configure_pdo_machine[] =
+          {
+              &heart_start_machine, &map3_pdo_machine, &map2_pdo_machine,
+              &map1_pdo_machine, &map1_pdo_machine, &map1_pdo_machine,
+              &map1_pdo_machine, &smart_start_machine
+          };
+
+      _machine_exe(d, nodeid, NULL, configure_pdo_machine, 8, 1, 79,
+          100,
+
+          0x1800, 0xC0000180, 0x1A00, 0x1A00, 0x20000008, 0x1A00, 0x60410010,
+          0x1A00, 0x24000010, 0x1A00, 0x1800, 0x40000180, 0x1800, 0xFE, 0x1800,
+          0x32,
+
+          0x1801, 0xC0000280, 0x1A01, 0x1A01, 0x20000008, 0x1A01, 0x60630020,
+          0x1A01, 0x1801, 0x40000280, 0x1801, 0xFE, 0x1801, 0xa,
+
+          0x1802, 0xC0000380, 0x1A02, 0x1A02, 0x10130020, 0x1A02, 0x1802,
+          0x40000380, 0x1802, 10, 0x1802, 0,
+
+          0x1400, 0xC0000200 + nodeid, 0x1600, 0x1600, 0x60c20208, 0x1600,
+          0x1400,
+          0x40000200 + nodeid, 0x1400, 0xFE, 0x1400, 0,
+
+          0x1401, 0xC0000300 + nodeid, 0x1601, 0x1601, 0x60c20108, 0x1601,
+          0x1401,
+          0x40000300 + nodeid, 0x1401, 0xFE, 0x1401, 0,
+
+          0x1402, 0xC0000400 + nodeid, 0x1602, 0x1602, 0x60c10120, 0x1602,
+          0x1402,
+          0x40000400 + nodeid, 0x1402, 0xFE, 0x1402, 0
+
+          );
+
       canopen_abort_code = RegisterSetODentryCallBack(d, 0x2400, 0,
           &OnStatusUpdate);
 
@@ -1702,8 +1785,50 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
 
       fflush(stdout);
     }
+    else
+    {
+      pthread_mutex_unlock(&motor_active_number_mutex);
 
-    pthread_mutex_unlock(&motor_active_number_mutex);
+      // CONFIGURE HEARTBEAT TO 100 ms
+      // MAP TPDO 1 (COB-ID 180) to transmit "node id" (8-bit), "status word" (16-bit), "interpolation mode status" (16-bit)
+      // MAP TPDO 2 (COB-ID 280) to transmit "node id" (8-bit), "position actual value" (32-bit)
+
+      // MAP RPDO 1 (COB-ID 200 + nodeid) to receive "Interpolation Time Index" (8-bit)" (0x06c2 sub2)
+      // MAP RPDO 2 (COB-ID 300 + nodeid) to receive "Interpolation Time Units" (8-bit)" (0x06c2 sub1)
+      // MAP RPDO 3 (COB-ID 400 + nodeid) to receive "Interpolation Data" (32-bit)" (0x06c1 sub1)
+      // MAP RPDO 4 (COB-ID 380) to receive high resolution timestamp
+      struct state_machine_struct *configure_slave_machine[] =
+          {
+              &heart_start_machine, &map3_pdo_machine, &map2_pdo_machine,
+              &map1_pdo_machine, &map1_pdo_machine, &map1_pdo_machine,
+              &map1_pdo_machine, &smart_start_machine
+          };
+
+      _machine_exe(d, nodeid, NULL, configure_slave_machine, 8, 1, 79,
+          100,
+
+          0x1800, 0xC0000180, 0x1A00, 0x1A00, 0x20000008, 0x1A00, 0x60410010,
+          0x1A00, 0x24000010, 0x1A00, 0x1800, 0x40000180, 0x1800, 0xFE, 0x1800,
+          0x32,
+
+          0x1801, 0xC0000280, 0x1A01, 0x1A01, 0x20000008, 0x1A01, 0x60630020,
+          0x1A01, 0x1801, 0x40000280, 0x1801, 0xFE, 0x1801, 0xa,
+
+          0x1400, 0xC0000200 + nodeid, 0x1600, 0x1600, 0x60c20208, 0x1600,
+          0x1400,
+          0x40000200 + nodeid, 0x1400, 0xFE, 0x1400, 0,
+
+          0x1401, 0xC0000300 + nodeid, 0x1601, 0x1601, 0x60c20108, 0x1601,
+          0x1401,
+          0x40000300 + nodeid, 0x1401, 0xFE, 0x1401, 0,
+
+          0x1402, 0xC0000400 + nodeid, 0x1602, 0x1602, 0x60c10120, 0x1602,
+          0x1402,
+          0x40000400 + nodeid, 0x1402, 0xFE, 0x1402, 0,
+
+          0x1403, 0xC0000380, 0x1603, 0x1603, 0x10130020, 0x1603, 0x1403,
+          0x40000380, 0x1403, 0xFE, 0x1403, 0);
+    }
 
     motor_active[nodeid] = 1;
   }
@@ -1713,88 +1838,6 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
 
   pthread_mutex_init(&sinwave_mux[nodeid], NULL);
   pthread_mutex_init(&position_mux[nodeid], NULL);
-
-  if(nodeid == MOTOR_INDEX_FIRST)
-  {
-    // CONFIGURE HEARTBEAT TO 100 ms
-    // MAP TPDO 1 (COB-ID 180) to transmit "node id" (8-bit), "status word" (16-bit), "interpolation mode status" (16-bit)
-    // MAP TPDO 2 (COB-ID 280) to transmit "node id" (8-bit), "position actual value" (32-bit)
-    // MAP TPDO 3 (COB-ID 380) to receive high resolution timestamp
-
-    // MAP RPDO 1 (COB-ID 200 + nodeid) to receive "Interpolation Time Index" (8-bit)" (0x06c2 sub2)
-    // MAP RPDO 2 (COB-ID 300 + nodeid) to receive "Interpolation Time Units" (8-bit)" (0x06c2 sub1)
-    // MAP RPDO 3 (COB-ID 400 + nodeid) to receive "Interpolation Data" (32-bit)" (0x06c1 sub1)
-
-    struct state_machine_struct *configure_pdo_machine[] =
-        {
-            &heart_start_machine, &map3_pdo_machine, &map2_pdo_machine,
-            &map1_pdo_machine, &map1_pdo_machine, &map1_pdo_machine,
-            &map1_pdo_machine, &smart_start_machine
-        };
-
-    _machine_exe(d, nodeid, NULL, configure_pdo_machine, 8, 1, 79,
-        100,
-
-        0x1800, 0xC0000180, 0x1A00, 0x1A00, 0x20000008, 0x1A00, 0x60410010,
-        0x1A00, 0x24000010, 0x1A00, 0x1800, 0x40000180, 0x1800, 0xFE, 0x1800,
-        0x32,
-
-        0x1801, 0xC0000280, 0x1A01, 0x1A01, 0x20000008, 0x1A01, 0x60630020,
-        0x1A01, 0x1801, 0x40000280, 0x1801, 0xFE, 0x1801, 0xa,
-
-        0x1802, 0xC0000380, 0x1A02, 0x1A02, 0x10130020, 0x1A02, 0x1802,
-        0x40000380, 0x1802, 10, 0x1802, 0,
-
-        0x1400, 0xC0000200 + nodeid, 0x1600, 0x1600, 0x60c20208, 0x1600, 0x1400,
-        0x40000200 + nodeid, 0x1400, 0xFE, 0x1400, 0,
-
-        0x1401, 0xC0000300 + nodeid, 0x1601, 0x1601, 0x60c20108, 0x1601, 0x1401,
-        0x40000300 + nodeid, 0x1401, 0xFE, 0x1401, 0,
-
-        0x1402, 0xC0000400 + nodeid, 0x1602, 0x1602, 0x60c10120, 0x1602, 0x1402,
-        0x40000400 + nodeid, 0x1402, 0xFE, 0x1402, 0
-
-        );
-  }
-  else
-  {
-    // CONFIGURE HEARTBEAT TO 100 ms
-    // MAP TPDO 1 (COB-ID 180) to transmit "node id" (8-bit), "status word" (16-bit), "interpolation mode status" (16-bit)
-    // MAP TPDO 2 (COB-ID 280) to transmit "node id" (8-bit), "position actual value" (32-bit)
-
-    // MAP RPDO 1 (COB-ID 200 + nodeid) to receive "Interpolation Time Index" (8-bit)" (0x06c2 sub2)
-    // MAP RPDO 2 (COB-ID 300 + nodeid) to receive "Interpolation Time Units" (8-bit)" (0x06c2 sub1)
-    // MAP RPDO 3 (COB-ID 400 + nodeid) to receive "Interpolation Data" (32-bit)" (0x06c1 sub1)
-    // MAP RPDO 4 (COB-ID 380) to receive high resolution timestamp
-    struct state_machine_struct *configure_slave_machine[] =
-        {
-            &heart_start_machine, &map3_pdo_machine, &map2_pdo_machine,
-            &map1_pdo_machine, &map1_pdo_machine, &map1_pdo_machine,
-            &map1_pdo_machine, &smart_start_machine
-        };
-
-    _machine_exe(d, nodeid, NULL, configure_slave_machine, 8, 1, 79,
-        100,
-
-        0x1800, 0xC0000180, 0x1A00, 0x1A00, 0x20000008, 0x1A00, 0x60410010,
-        0x1A00, 0x24000010, 0x1A00, 0x1800, 0x40000180, 0x1800, 0xFE, 0x1800,
-        0x32,
-
-        0x1801, 0xC0000280, 0x1A01, 0x1A01, 0x20000008, 0x1A01, 0x60630020,
-        0x1A01, 0x1801, 0x40000280, 0x1801, 0xFE, 0x1801, 0xa,
-
-        0x1400, 0xC0000200 + nodeid, 0x1600, 0x1600, 0x60c20208, 0x1600, 0x1400,
-        0x40000200 + nodeid, 0x1400, 0xFE, 0x1400, 0,
-
-        0x1401, 0xC0000300 + nodeid, 0x1601, 0x1601, 0x60c20108, 0x1601, 0x1401,
-        0x40000300 + nodeid, 0x1401, 0xFE, 0x1401, 0,
-
-        0x1402, 0xC0000400 + nodeid, 0x1602, 0x1602, 0x60c10120, 0x1602, 0x1402,
-        0x40000400 + nodeid, 0x1402, 0xFE, 0x1402, 0,
-
-        0x1403, 0xC0000380, 0x1603, 0x1603, 0x10130020, 0x1603, 0x1403,
-        0x40000380, 0x1403, 0xFE, 0x1403, 0);
-  }
 
 // Controllo se una tabella sia stata già assegnata, altrimenti ne
 // trovo una libera
@@ -2118,6 +2161,7 @@ help_menu(void)
   printf("     sVTS#nodeid,VT : set target velocity to VT\n");
   printf(
       "     simu#nodeid : start simulation reading data from tables/<nodeid>.mot file\n");
+  printf("     sprg#nodeid : get actual simulation progress in %%\n");
   printf("     sgen#nodeid,type,<param> : generate simulation data\n");
   printf(
       "                 type: sin,amplitude,period[ms],tsamp[ms],num of period\n");
@@ -2181,6 +2225,11 @@ int ProcessCommand(char* command)
     case cst_str4('s', 'V', 'T', 'S'):
       LeaveMutex();
       SmartVelocitySet(command);
+      break;
+
+    case cst_str4('s', 'p', 'r', 'g'):
+      LeaveMutex();
+      SmartFileComplete(ExtractNodeId(command + 5));
       break;
 
     case cst_str4('i', 'n', 't', '1'):
