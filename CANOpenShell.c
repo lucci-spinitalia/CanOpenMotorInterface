@@ -68,8 +68,10 @@ void CheckReadStringRaw(CO_Data* d, UNS8 nodeid);
 void CheckWriteRaw(CO_Data* d, UNS8 nodeid);
 int SmartWriteRaw(CO_Data* d, UNS8 nodeid);
 
-void CheckWriteProgram(CO_Data* d, UNS8 nodeid);
-void CheckReadProgram(CO_Data* d, UNS8 nodeid);
+void CheckWriteProgramDownload(CO_Data* d, UNS8 nodeid);
+void CheckWriteProgramUpload(CO_Data* d, UNS8 nodeid);
+void CheckReadProgramDownload(CO_Data* d, UNS8 nodeid);
+void CheckReadProgramUpload(CO_Data* d, UNS8 nodeid);
 UNS32 OnInterpUpdate(CO_Data* d, UNS8 nodeid);
 void SmartStop(UNS8 nodeid, int from_callback);
 void SmartSin1Stop(UNS8 nodeid);
@@ -93,8 +95,9 @@ pthread_mutex_t position_mux[CANOPEN_NODE_NUMBER];
 char motor_position_write[CANOPEN_NODE_NUMBER]; /**< di chi ho già segnato la posizione */
 static struct timeval position_start_time;
 volatile int sinwave_busy[CANOPEN_NODE_NUMBER];
-
-int raw_response = -1;
+UNS8 raw_response[33];
+int raw_response_flag = -1;
+UNS32 raw_response_size = 0;
 int raw_report_flag = 0;
 char raw_report[100];
 char raw_cmd[100];
@@ -123,6 +126,9 @@ int program_file_read(const char *file_path, char *program_chunk,
   FILE *file = NULL;
   ssize_t read;
   static int cursor_position = 0;
+  static int cursor_end_program = 0;
+  static char end_program[] =
+      {0xff, 0xff, 0x20};
 
   memset(program_chunk, '\0', chunk_size);
   file = fopen(file_path, "r");
@@ -140,6 +146,21 @@ int program_file_read(const char *file_path, char *program_chunk,
   read = fread(program_chunk, 1, chunk_size, file);
 
   cursor_position += read;
+
+  // se non ho letto 32 byte, significa che sono arrivato alla fine del file
+  // e devo inserire la chiave di fine programmazione
+  while((read < 32) && (cursor_end_program < 3))
+  {
+    program_chunk[read++] = end_program[cursor_end_program++];
+  }
+
+  // se sono riuscito a scrivere tutta la chiave, resetto le
+  // variabili
+  if(cursor_end_program == 3)
+  {
+    cursor_position = 0;
+    cursor_end_program = 0;
+  }
 
   fclose(file);
 
@@ -1049,7 +1070,8 @@ void SmartFileComplete(UNS8 nodeid)
     {
       if(motor_active[i] > 0)
       {
-        complete_percent = FileCompleteGet(i, SMART_TABLE_SIZE - (motor_status[i] & 0x3F));
+        complete_percent = FileCompleteGet(i,
+            SMART_TABLE_SIZE - (motor_status[i] & 0x3F));
 
         printf("INFO[%d on node %x]: Percentuale completamento: %.0f%%\n",
             InternalError, nodeid, complete_percent);
@@ -1058,7 +1080,8 @@ void SmartFileComplete(UNS8 nodeid)
   }
   else
   {
-    complete_percent = FileCompleteGet(nodeid, SMART_TABLE_SIZE - (motor_status[nodeid] & 0x3F));
+    complete_percent = FileCompleteGet(nodeid,
+        SMART_TABLE_SIZE - (motor_status[nodeid] & 0x3F));
 
     printf("INFO[%d on node %x]: Percentuale completamento: %.0f%%\n",
         InternalError, nodeid, complete_percent);
@@ -1197,7 +1220,107 @@ void StartHeart(char* sdo)
     printf("Wrong command  : %s\n", sdo);
 }
 
-int SmartProgram(CO_Data* d, UNS8 nodeid)
+int SmartProgramUpload(CO_Data* d, UNS8 nodeid)
+{
+  char command[32];
+
+  static char program_read[256];
+  static int green_light = 0;
+  static int byte_write = 0;
+
+  switch(machine_state)
+  {
+    case 0:
+      program_read[0] = '\0';
+      //printf("Sending UPLOAD command. . .\n");
+      sprintf(command, "UPLOAD");
+      writeNetworkDictCallBack(d, nodeid, 0x2500, 0x01, strlen(command),
+          visible_string, command, CheckWriteProgramUpload, 0);
+      break;
+
+    case 1:
+      progress_read:
+      // Check that the command in progress bit (bit 0) is 1 and
+      // response reade (bit 2) is 1
+      if(raw_response_flag != -1)
+      {
+        raw_response_flag = -1;
+
+        if((raw_response[0] & 0x3) == 3)
+        {
+          green_light = 1;
+          machine_state++;
+          //printf("Motor ready!\n");
+          //printf("Start reading. . .\n");
+
+          goto block_read;
+        }
+        else if((green_light == 1) && ((raw_response[0] & 0x3) == 0))
+        {
+          green_light = 0;
+          raw_response_flag = -1;
+          machine_state = -1;
+          byte_write = 0;
+          printf("%s\n", program_read);
+        }
+        else if(green_light == 1)
+        {
+          machine_state++;
+          goto block_read;
+        }
+      }
+      else
+      {
+        raw_response_flag = -1;
+
+        //printf("Checking for green light. . .\n");
+        readNetworkDictCallback(d, nodeid, 0x2500, 0x03, 0,
+            CheckReadProgramUpload, 0);
+      }
+      break;
+
+    case 2:
+      block_read:
+      // Check that the command in progress bit (bit 0) is 1 and
+      // response reade (bit 2) is 1
+
+      if(raw_response_flag != -1)
+      {
+        raw_response_flag = -1;
+
+        int i = 0;
+        //printf("Block read\n");
+        for(i = 0; i < raw_response_size; i++)
+        {
+          if(raw_response[i] == 0)
+            break;
+
+          program_read[byte_write] = (char) raw_response[i];
+          byte_write++;
+        }
+
+        machine_state--;
+        goto progress_read;
+      }
+
+      raw_response_flag = -1;
+
+      //printf("Reading block. . .\n");
+      readNetworkDictCallback(d, nodeid, 0x2500, 0x02, visible_string,
+          CheckReadProgramUpload, 0);
+
+      break;
+
+    default:
+      raw_response_flag = -1;
+      machine_state = -1;
+      break;
+  }
+
+  return 0;
+}
+
+int SmartProgramDownload(CO_Data* d, UNS8 nodeid)
 {
 //pthread_mutex_lock(&machine_mux[nodeid]);
   char command[32];
@@ -1208,29 +1331,38 @@ int SmartProgram(CO_Data* d, UNS8 nodeid)
   {
     case 0:
       printf("Sending LOAD command. . .\n");
-      sprintf(command, "LOAD\r");
+      sprintf(command, "LOAD");
       writeNetworkDictCallBack(d, nodeid, 0x2500, 0x01, strlen(command),
-          visible_string, command, CheckWriteProgram, 0);
+          visible_string, command, CheckWriteProgramDownload, 0);
+
+      machine_state++;
       break;
 
     case 1:
+      progress_read:
       // Check that the command in progress bit (bit 0) is 0
-      if((raw_response != -1) && ((raw_response & 0x1) == 0))
+      if((raw_response_flag != -1) && ((raw_response[0] & 0x1) == 0))
       {
-        raw_response = -1;
+        raw_response_flag = -1;
         machine_state++;
         printf("Motor ready!\n");
         printf("Start programming. . .\n");
+
+        goto block_write;
       }
       else
       {
         printf("Checking for green light. . .\n");
-        readNetworkDictCallback(d, nodeid, 0x2500, 0x03, 0, CheckReadProgram,
-            0);
-        break;
+
+        raw_response_flag = -1;
+
+        readNetworkDictCallback(d, nodeid, 0x2500, 0x03, 0,
+            CheckReadProgramDownload, 0);
       }
+      break;
 
     case 2:
+      block_write:
       // Write program 32 bytes of data
       bytes_read = program_file_read(program_file_path, command, 32);
 
@@ -1239,40 +1371,34 @@ int SmartProgram(CO_Data* d, UNS8 nodeid)
         printf("Errore [%s]. Errore inaspettato nella lettura del file.\n",
             strerror(errno));
         machine_state = -1;
-        break;
       }
-      else if(bytes_read > 0)
+      else if(bytes_read == 32)
       {
-        machine_state -= 2;
-
         for(count = 0; count < bytes_read; count++)
-          printf("%x", command[count]);
+          printf("%c", command[count]);
 
-        writeNetworkDictCallBack(d, nodeid, 0x2500, 0x01, bytes_read,
-            visible_string, command, CheckWriteProgram, 0);
-        break;
+        writeNetworkDictCallBack(d, nodeid, 0x2500, 0x01, sizeof(command),
+            visible_string, command, CheckWriteProgramDownload, 0);
+
+        machine_state--;
       }
       else
+      {
+        printf("End of writing. . .\n");
+
+        for(count = 0; count < bytes_read; count++)
+          printf("%c", command[count]);
+
+        writeNetworkDictCallBack(d, nodeid, 0x2500, 0x01, sizeof(command),
+            visible_string, command, CheckWriteProgramDownload, 0);
+
         machine_state++;
-
-    case 3:
-      // End transmission
-      printf("Ending transmission. . .\n");
-      command[0] = 0xff;
-      command[1] = 0xff;
-      command[2] = 0x20;
-
-      for(count = 0; count < 3; count++)
-        printf("%x", command[count]);
-
-      writeNetworkDictCallBack(d, nodeid, 0x2500, 0x01, 3, visible_string,
-          command, CheckWriteProgram, 0);
+      }
       break;
 
-    case 4:
-      printf("Program complete\n");
-
+    case 3:
       machine_state = -1;
+      printf("Motor programmed\n");
       break;
 
     case -1:
@@ -1292,18 +1418,18 @@ int SmartWriteRaw(CO_Data* d, UNS8 nodeid)
   {
     case 0:
       // Check that the command in progress bit (bit 0) is 0
-      if(raw_response != -1)
+      if(raw_response_flag != -1)
       {
-        if((raw_response & 0x1) == 0)
+        if((raw_response[0] & 0x1) == 0)
         {
-          raw_response = -1;
+          raw_response_flag = -1;
           machine_state++;
           printf("Motor ready!\n");
         }
         else
         {
           printf("Errore: altro comando in esecuzione\n");
-          raw_response = -1;
+          raw_response_flag = -1;
           machine_state = 0;
           break;
         }
@@ -1323,10 +1449,10 @@ int SmartWriteRaw(CO_Data* d, UNS8 nodeid)
 
     case 2:
       // Check that the command complete bit (bit 1) is 1
-      if((raw_response != -1) && (raw_response & 0x2) == 2)
+      if((raw_response_flag != -1) && (raw_response[0] & 0x2) == 2)
       {
         printf("Command received\n");
-        raw_response = -1;
+        raw_response_flag = -1;
         machine_state++;
       }
       else
@@ -1339,7 +1465,7 @@ int SmartWriteRaw(CO_Data* d, UNS8 nodeid)
     case 3:
       if(raw_report_flag == 1)
       {
-        if(raw_response == -1)
+        if(raw_response_flag == -1)
         {
           printf("Read response\n");
           readNetworkDictCallback(d, nodeid, 0x2500, 0x02, visible_string,
@@ -1349,7 +1475,7 @@ int SmartWriteRaw(CO_Data* d, UNS8 nodeid)
         else
         {
           printf("\nResult : %s\n", raw_report);
-          raw_response = -1;
+          raw_response_flag = -1;
           machine_state++;
         }
       }
@@ -1656,6 +1782,28 @@ void RawCmdMotor(char* sdo)
     printf("Wrong command  : %s\n", sdo);
 }
 
+void UploadFromMotor(UNS8 nodeid)
+{
+  if(machine_state != -1)
+  {
+    printf("Error: complex command in progress.\n");
+    return;
+  }
+
+  if(nodeid == 0)
+  {
+    printf("Ancora non è possibile programmare più dispositivi insieme\n");
+    return;
+  }
+
+  printf("##################################\n");
+  printf("### Upload firmware from motor ###\n");
+  printf("##################################\n");
+
+  machine_state = 0;
+  SmartProgramUpload(CANOpenShellOD_Data, nodeid);
+}
+
 /* Write a raw command to motor */
 void DownloadToMotor(char* sdo)
 {
@@ -1679,7 +1827,7 @@ void DownloadToMotor(char* sdo)
     printf("File  : %s\n", program_file_path);
 
     machine_state = 0;
-    SmartProgram(CANOpenShellOD_Data, nodeid);
+    SmartProgramDownload(CANOpenShellOD_Data, nodeid);
   }
   else
     printf("Wrong command  : %s\n", sdo);
@@ -1885,11 +2033,11 @@ void CANOpenShellOD_heartbeatError(CO_Data* d, UNS8 nodeid)
 /***************************  CALLBACK FUNCTIONS  *****************************************/
 
 /* Callback function that check the read SDO demand */
-void CheckReadProgram(CO_Data* d, UNS8 nodeid)
+void CheckReadProgramUpload(CO_Data* d, UNS8 nodeid)
 {
   UNS32 abortCode;
-  UNS32 data = 0;
-  UNS32 size = 64;
+  UNS8 data[33];
+  UNS32 size = 33;
 
 //pthread_mutex_lock(&machine_mux[nodeid]);
 
@@ -1900,25 +2048,28 @@ void CheckReadProgram(CO_Data* d, UNS8 nodeid)
         "\nResult : Failed in getting information for slave %2.2x, AbortCode :%4.4x \n",
         nodeid, abortCode);
     fflush(stdout);
-    raw_response = -1;
+    raw_response_flag = -1;
     machine_state = -1;
   }
   else
-    raw_response = data;
+  {
+    memcpy(raw_response, data, size);
+    raw_response_size = size;
+    raw_response_flag = 1;
+  }
 
   /* Finalize last SDO transfer with this node */
   closeSDOtransfer(d, nodeid, SDO_CLIENT);
 
 //pthread_mutex_unlock(&machine_mux[nodeid]);
 
-  SmartProgram(d, nodeid);
+  SmartProgramUpload(d, nodeid);
 }
 
-/* Callback function that check the read SDO demand */
-void CheckReadRaw(CO_Data* d, UNS8 nodeid)
+void CheckReadProgramDownload(CO_Data* d, UNS8 nodeid)
 {
   UNS32 abortCode;
-  UNS32 data = 0;
+  UNS32 data[33];
   UNS32 size = 64;
 
 //pthread_mutex_lock(&machine_mux[nodeid]);
@@ -1930,11 +2081,49 @@ void CheckReadRaw(CO_Data* d, UNS8 nodeid)
         "\nResult : Failed in getting information for slave %2.2x, AbortCode :%4.4x \n",
         nodeid, abortCode);
     fflush(stdout);
-    raw_response = -1;
+    raw_response_flag = -1;
     machine_state = -1;
   }
   else
-    raw_response = data;
+  {
+    memcpy(raw_response, data, size);
+    raw_response_size = size;
+    raw_response_flag = 1;
+  }
+
+  /* Finalize last SDO transfer with this node */
+  closeSDOtransfer(d, nodeid, SDO_CLIENT);
+
+//pthread_mutex_unlock(&machine_mux[nodeid]);
+
+  SmartProgramDownload(d, nodeid);
+}
+
+/* Callback function that check the read SDO demand */
+void CheckReadRaw(CO_Data* d, UNS8 nodeid)
+{
+  UNS32 abortCode;
+  UNS32 data[33];
+  UNS32 size = 64;
+
+//pthread_mutex_lock(&machine_mux[nodeid]);
+
+  if(getReadResultNetworkDict(CANOpenShellOD_Data, nodeid, &data, &size,
+      &abortCode) != SDO_FINISHED)
+  {
+    printf(
+        "\nResult : Failed in getting information for slave %2.2x, AbortCode :%4.4x \n",
+        nodeid, abortCode);
+    fflush(stdout);
+    raw_response_flag = -1;
+    machine_state = -1;
+  }
+  else
+  {
+    memcpy(raw_response, data, size);
+    raw_response_size = size;
+    raw_response_flag = 1;
+  }
 
   /* Finalize last SDO transfer with this node */
   closeSDOtransfer(d, nodeid, SDO_CLIENT);
@@ -1959,11 +2148,15 @@ void CheckReadStringRaw(CO_Data* d, UNS8 nodeid)
         "\nResult : Failed in getting information for slave %2.2x, AbortCode :%x \n",
         nodeid, abortCode);
     fflush(stdout);
-    raw_response = -1;
+    raw_response_flag = -1;
     machine_state = -1;
   }
   else
-    raw_response = 1;
+  {
+    raw_response[0] = 1;
+    raw_response_size = 1;
+    raw_response_flag = 1;
+  }
 
   /* Finalize last SDO transfer with this node */
   closeSDOtransfer(d, nodeid, SDO_CLIENT);
@@ -1973,7 +2166,7 @@ void CheckReadStringRaw(CO_Data* d, UNS8 nodeid)
   SmartWriteRaw(d, nodeid);
 }
 
-void CheckWriteProgram(CO_Data* d, UNS8 nodeid)
+void CheckWriteProgramUpload(CO_Data* d, UNS8 nodeid)
 {
   UNS32 abortCode;
 
@@ -1989,7 +2182,24 @@ void CheckWriteProgram(CO_Data* d, UNS8 nodeid)
   machine_state++;
 
 //pthread_mutex_unlock(&machine_mux[nodeid]);
-  SmartProgram(d, nodeid);
+  SmartProgramUpload(d, nodeid);
+}
+
+void CheckWriteProgramDownload(CO_Data* d, UNS8 nodeid)
+{
+  UNS32 abortCode;
+
+  if(getWriteResultNetworkDict(d, nodeid, &abortCode) != SDO_FINISHED)
+  {
+    printf("Error: %d", abortCode);
+    fflush(stdout);
+    machine_state = -1;
+  }
+
+  closeSDOtransfer(d, nodeid, SDO_CLIENT);
+
+//pthread_mutex_unlock(&machine_mux[nodeid]);
+  SmartProgramDownload(d, nodeid);
 }
 
 void CheckWriteRaw(CO_Data* d, UNS8 nodeid)
@@ -2331,6 +2541,10 @@ int ProcessCommand(char* command)
 
     case cst_str4('p', 'r', 'o', 'g'): /* download program to motor */
       DownloadToMotor(command);
+      break;
+
+    case cst_str4('u', 'p', 'l', 'o'): /* download program to motor */
+      UploadFromMotor(ExtractNodeId(command + 5));
       break;
 
     default:
