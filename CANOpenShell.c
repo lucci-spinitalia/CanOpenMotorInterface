@@ -54,6 +54,9 @@
 #define POSITION_FIFO_FILE "SWP.33.05.02.0.0/positions"
 
 #define TABLE_MAX_NUM 6
+#define cst_str2(c1, c2) ((unsigned int)0 | \
+    (char)c2) << 8 | (char)c1
+
 #define cst_str4(c1, c2, c3, c4) ((((unsigned int)0 | \
     (char)c4 << 8) | \
     (char)c3) << 8 | \
@@ -89,9 +92,11 @@ char BoardBaudRate[5];
 s_BOARD Board =
     {BoardBusName, BoardBaudRate};
 CO_Data* CANOpenShellOD_Data;
+static timer_t timer;
 
 pthread_mutex_t sinwave_mux[CANOPEN_NODE_NUMBER];
 pthread_mutex_t position_mux[CANOPEN_NODE_NUMBER];
+pthread_mutex_t motor_active_number_mutex = PTHREAD_MUTEX_INITIALIZER;
 char motor_position_write[CANOPEN_NODE_NUMBER]; /**< di chi ho già segnato la posizione */
 static struct timeval position_start_time;
 volatile int sinwave_busy[CANOPEN_NODE_NUMBER];
@@ -1339,7 +1344,6 @@ int SmartProgramDownload(CO_Data* d, UNS8 nodeid)
       break;
 
     case 1:
-      progress_read:
       // Check that the command in progress bit (bit 0) is 0
       if((raw_response_flag != -1) && ((raw_response[0] & 0x1) == 0))
       {
@@ -1574,7 +1578,9 @@ void ResetNode(UNS8 nodeid)
 /* Reset all nodes on the network and print message when boot-up*/
 void DiscoverNodes()
 {
+#ifdef CANOPENSHELL_VERBOSE
   printf("Wait for Slave nodes bootup...\n\n");
+#endif
   ResetNode(0x00);
 }
 
@@ -1833,6 +1839,15 @@ void DownloadToMotor(char* sdo)
     printf("Wrong command  : %s\n", sdo);
 }
 
+void ConfigureSlaveNodeCallback(CO_Data* d, UNS8 nodeId, int machine_state,
+    UNS32 return_value)
+{
+  if(return_value)
+    CERR("CT0", CERR_InternalError);
+  else
+    printf("@M A%2x\n", nodeId);
+}
+
 /*
  * Studio banda necessaria:
  *
@@ -1855,8 +1870,6 @@ void DownloadToMotor(char* sdo)
  */
 void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
 {
-  static pthread_mutex_t motor_active_number_mutex = PTHREAD_MUTEX_INITIALIZER;
-
   SmartSin1Stop(nodeid);
   _machine_reset(d, nodeid);
 
@@ -1888,8 +1901,8 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
               &map1_pdo_machine, &smart_start_machine
           };
 
-      _machine_exe(d, nodeid, NULL, configure_pdo_machine, 8, 1, 79,
-          100,
+      _machine_exe(d, nodeid, &ConfigureSlaveNodeCallback,
+          configure_pdo_machine, 8, 1, 79, 100,
 
           0x1800, 0xC0000180, 0x1A00, 0x1A00, 0x20000008, 0x1A00, 0x60410010,
           0x1A00, 0x24000010, 0x1A00, 0x1800, 0x40000180, 0x1800, 0xFE, 0x1800,
@@ -1919,9 +1932,14 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
           &OnStatusUpdate);
 
       if(canopen_abort_code)
+      {
+#ifdef CANOPENSHELL_VERBOSE
         printf(
             "Error[%d on node %x]: Impossibile registrare il callback per l'oggetto 0x2400 (Canopen abort code %x)\n",
             CANOpenError, nodeid, canopen_abort_code);
+#endif
+
+      }
 
       canopen_abort_code = RegisterSetODentryCallBack(d, 0x6063, 0,
           &OnPositionUpdate);
@@ -1952,7 +1970,8 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
               &map1_pdo_machine, &smart_start_machine
           };
 
-      _machine_exe(d, nodeid, NULL, configure_slave_machine, 8, 1, 79,
+      _machine_exe(d, nodeid, &ConfigureSlaveNodeCallback,
+          configure_slave_machine, 8, 1, 79,
           100,
 
           0x1800, 0xC0000180, 0x1A00, 0x1A00, 0x20000008, 0x1A00, 0x60410010,
@@ -2020,7 +2039,9 @@ void CANOpenShellOD_post_Emcy(CO_Data* d, UNS8 nodeID, UNS16 errCode,
 
 void CANOpenShellOD_post_SlaveBootup(CO_Data* d, UNS8 nodeid)
 {
+#ifdef CANOPENSHELL_VERBOSE
   printf("Slave %x boot up\n", nodeid);
+#endif
 
   ConfigureSlaveNode(d, nodeid);
 }
@@ -2337,12 +2358,12 @@ help_menu(void)
 {
   printf("   MANDATORY COMMAND (must be the first command):\n");
   printf("     load#CanLibraryPath,channel,baudrate,nodeid\n");
+  printf("       ex: load#libcanfestival_can_socket.so,0,1M,8\n");
   printf("\n");
   printf("   NETWORK: (if nodeid=0x00 : broadcast)\n");
   printf("     srst#nodeid : Reset a node\n");
   printf("     spre#nodeid : Enter in pre-operational mode\n");
   printf("     soff#nodeid : Stop node\n");
-  printf("     scan : Reset all nodes and print message when bootup\n");
   printf("\n");
   printf("   SDO: (size in bytes)\n");
   printf("     info#nodeid\n");
@@ -2352,6 +2373,9 @@ help_menu(void)
   printf("        ex : wsdo#42,6200,01,01,FF\n");
   printf("\n");
   printf("   SMART MOTOR:\n");
+  printf(
+      "     CT0 M<num_mot> : Discover nodes and check if there's num_mot motors\n");
+
   printf("     ssta#nodeid : Reset error and make motor operative\n");
   printf("     ssto#nodeid : Stop a node and motor\n");
   printf("     sraw#nodeid,report_flag,command : raw cmd to motor\n");
@@ -2395,165 +2419,265 @@ int ExtractNodeId(char *command)
   return nodeid;
 }
 
+void DiscoverTimeout(sigval_t val)
+{
+  pthread_mutex_lock(&motor_active_number_mutex);
+
+  if(motor_active_number != val.sival_int)
+    CERR("CT0", CERR_ConfigError);
+  else
+    OK("CT0");
+
+  pthread_mutex_unlock(&motor_active_number_mutex);
+
+  timer_delete(timer);
+}
+
+void ProcessCommandTripode(char* command)
+{
+  struct sigevent sigev;
+  int parse_num = 0;
+  int parse_int = 0;
+
+  switch(command[2] - '0')
+  {
+    case 0: // Reset di tutti i motori e loro dichiarazione
+
+      parse_num = sscanf(command, "CT0 M%d", &parse_int);
+
+      if(parse_num == 1)
+      {
+        // Creo il timer e lo avvio
+        memset(&sigev, 0, sizeof(struct sigevent));
+        sigev.sigev_value.sival_int = parse_int;
+        sigev.sigev_notify = SIGEV_THREAD;
+        sigev.sigev_notify_attributes = NULL;
+        sigev.sigev_notify_function = DiscoverTimeout;
+
+        if(timer_create(CLOCK_REALTIME, &sigev, &timer))
+        {
+          perror("timer_create()");
+          break;
+        }
+
+        long tv_nsec = 0;
+        time_t tv_sec = 1;
+        struct itimerspec timerValues;
+        timerValues.it_value.tv_sec = tv_sec;
+        timerValues.it_value.tv_nsec = tv_nsec;
+        timerValues.it_interval.tv_sec = 0;
+        timerValues.it_interval.tv_nsec = 0;
+
+        timer_settime(timer, 0, &timerValues, NULL);
+
+        DiscoverNodes();
+      }
+      else
+        goto fail;
+      break;
+
+    case 2:
+      switch(cst_str2(command[4], command[5]))
+      {
+        case cst_str2('P', '1'):
+          // leggo i parametri dal file e li passo alla
+          // funzione di homing
+          for(parse_num = 1; parse_num <= motor_active_number; parse_num++)
+          {
+            int motor_table_index = MotorTableIndexFromNodeId(parse_num);
+
+            QueueInit(parse_num, &motor_table[motor_table_index]);
+            SmartHome("shom#0,%4lx");
+          }
+          break;
+
+        default:
+          goto fail;
+          break;
+      }
+      break;
+
+    default:
+      CERR(command, CERR_NotFound);
+      break;
+  }
+
+  return;
+
+  fail:
+  CERR(command, CERR_ParamError);
+}
+
 int ProcessCommand(char* command)
 {
   int ret = 0;
   int NodeID;
 
-  EnterMutex();
-  switch(cst_str4(command[0], command[1], command[2], command[3]))
+  switch(cst_str2(command[0], command[1]))
   {
-    case cst_str4('h', 'e', 'l', 'p'): /* Display Help*/
-      help_menu();
-      break;
-
-    case cst_str4('s', 'z', 'e', 'r'):
-      LeaveMutex();
-      SmartOrigin(ExtractNodeId(command + 5));
-      break;
-
-    case cst_str4('i', 'n', 't', 's'):
-      LeaveMutex();
-      SmartIntStart(ExtractNodeId(command + 5));
-      break;
-
-    case cst_str4('s', 'i', 'm', 'u'):
-      LeaveMutex();
-      SimulationStart(ExtractNodeId(command + 5));
-      break;
-
-    case cst_str4('s', 'g', 'e', 'n'):
-      LeaveMutex();
-      GenerateMotorData(command);
-      break;
-
-    case cst_str4('s', 'v', 'e', 'l'):
-      LeaveMutex();
-      SmartVelocityGet(ExtractNodeId(command + 5));
-      break;
-
-    case cst_str4('s', 'V', 'T', 'S'):
-      LeaveMutex();
-      SmartVelocitySet(command);
-      break;
-
-    case cst_str4('s', 'p', 'r', 'g'):
-      LeaveMutex();
-      SmartFileComplete(ExtractNodeId(command + 5));
-      break;
-
-    case cst_str4('i', 'n', 't', '1'):
-      LeaveMutex();
-      SmartIntTest1(ExtractNodeId(command + 5));
-      break;
-
-    case cst_str4('i', 'n', 't', '2'):
-      LeaveMutex();
-      SmartIntTest2(ExtractNodeId(command + 5));
-      break;
-
-    case cst_str4('s', 'i', 'n', '1'):
-      LeaveMutex();
-      SinFunction(command);
-      break;
-
-    case cst_str4('s', 'h', 'o', 'm'):
-      LeaveMutex();
-      SmartHome(command);
-      break;
-
-    case cst_str4('t', 'p', 'd', '1'):
-      LeaveMutex();
-      Map1TPDO(command);
-      break;
-
-    case cst_str4('t', 'p', 'd', '2'):
-      LeaveMutex();
-      Map2TPDO(command);
-      break;
-
-    case cst_str4('s', 'h', 'r', 't'):
-      LeaveMutex();
-      StartHeart(command);
-      break;
-
-    case cst_str4('s', 's', 't', 'a'): /* Slave Start*/
-      LeaveMutex();
-      StartNode(ExtractNodeId(command + 5));
-      break;
-
-    case cst_str4('s', 's', 't', 'o'): /* Slave Stop */
-      LeaveMutex();
-      SmartStop(ExtractNodeId(command + 5), 0);
-      break;
-
-    case cst_str4('s', 'r', 's', 't'): /* Slave Reset */
-      ResetNode(ExtractNodeId(command + 5));
-      break;
-
-    case cst_str4('s', 'p', 'r', 'e'): /* Slave Reset */
-      PreoperationalNode(ExtractNodeId(command + 5));
-      break;
-
-    case cst_str4('s', 'o', 'f', 'f'): /* Slave Reset */
-      StopNode(ExtractNodeId(command + 5));
-      break;
-
-    case cst_str4('i', 'n', 'f', 'o'): /* Retrieve node informations */
-      GetSlaveNodeInfo(ExtractNodeId(command + 5));
-      break;
-
-    case cst_str4('r', 's', 'd', 'o'): /* Read device entry */
-      ReadDeviceEntry(command);
-      break;
-
-    case cst_str4('w', 's', 'd', 'o'): /* Write device entry */
-      WriteDeviceEntry(command);
-      break;
-
-    case cst_str4('s', 'c', 'a', 'n'): /* Discover nodes */
-      DiscoverNodes();
-      break;
-
-    case cst_str4('q', 'u', 'i', 't'): /* Quit application */
-      LeaveMutex();
-      return QUIT;
-
-    case cst_str4('l', 'o', 'a', 'd'): /* Library Interface*/
-      ret = sscanf(command, "load#%100[^,],%30[^,],%4[^,],%d", LibraryPath,
-          BoardBusName, BoardBaudRate, &NodeID);
-
-      if(ret == 4)
-      {
-        LeaveMutex();
-        ret = NodeInit(NodeID);
-        return ret;
-      }
-      else
-      {
-        printf("Invalid load parameters\n");
-      }
-      break;
-
-    case cst_str4('s', 'r', 'a', 'w'): /* RAW command */
-      RawCmdMotor(command);
-      break;
-
-    case cst_str4('p', 'r', 'o', 'g'): /* download program to motor */
-      DownloadToMotor(command);
-      break;
-
-    case cst_str4('u', 'p', 'l', 'o'): /* download program to motor */
-      UploadFromMotor(ExtractNodeId(command + 5));
+    case cst_str2('C', 'T'):
+      ProcessCommandTripode(command);
       break;
 
     default:
-      if(*command != '\n')
-        help_menu();
+      EnterMutex();
+
+      switch(cst_str4(command[0], command[1], command[2], command[3]))
+      {
+        case cst_str4('l', 'o', 'a', 'd'): // Library Interface
+          ret = sscanf(command, "load#%100[^,],%30[^,],%4[^,],%d", LibraryPath,
+              BoardBusName, BoardBaudRate, &NodeID);
+
+          if(ret == 4)
+          {
+            LeaveMutex();
+            ret = NodeInit(NodeID);
+            return ret;
+          }
+          else
+          {
+            printf("Invalid load parameters\n");
+          }
+          break;
+
+        case cst_str4('q', 'u', 'i', 't'): // Quit application
+          LeaveMutex();
+          return QUIT;
+
+        default:
+          CERR(command, CERR_NotFound);
+          break;
+      }
+
+      LeaveMutex();
       break;
   }
 
-  LeaveMutex();
+  /*EnterMutex();
+   switch(cst_str4(command[0], command[1], command[2], command[3]))
+   {
+   case cst_str4('h', 'e', 'l', 'p'): // Display Help
+   help_menu();
+   break;
+
+   case cst_str4('s', 'z', 'e', 'r'): // OK
+   LeaveMutex();
+   SmartOrigin(ExtractNodeId(command + 5));
+   break;
+
+   case cst_str4('i', 'n', 't', 's'):
+   LeaveMutex();
+   SmartIntStart(ExtractNodeId(command + 5));
+   break;
+
+   case cst_str4('s', 'i', 'm', 'u'): // OK
+   LeaveMutex();
+   SimulationStart(ExtractNodeId(command + 5));
+   break;
+
+   case cst_str4('s', 'g', 'e', 'n'):
+   LeaveMutex();
+   GenerateMotorData(command);
+   break;
+
+   case cst_str4('s', 'v', 'e', 'l'):
+   LeaveMutex();
+   SmartVelocityGet(ExtractNodeId(command + 5));
+   break;
+
+   case cst_str4('s', 'V', 'T', 'S'):
+   LeaveMutex();
+   SmartVelocitySet(command);
+   break;
+
+   case cst_str4('s', 'p', 'r', 'g'): // OK
+   LeaveMutex();
+   SmartFileComplete(ExtractNodeId(command + 5));
+   break;
+
+   case cst_str4('i', 'n', 't', '1'):
+   LeaveMutex();
+   SmartIntTest1(ExtractNodeId(command + 5));
+   break;
+
+   case cst_str4('i', 'n', 't', '2'):
+   LeaveMutex();
+   SmartIntTest2(ExtractNodeId(command + 5));
+   break;
+
+   case cst_str4('s', 'i', 'n', '1'):
+   LeaveMutex();
+   SinFunction(command);
+   break;
+
+   case cst_str4('t', 'p', 'd', '1'):
+   LeaveMutex();
+   Map1TPDO(command);
+   break;
+
+   case cst_str4('t', 'p', 'd', '2'):
+   LeaveMutex();
+   Map2TPDO(command);
+   break;
+
+   case cst_str4('s', 'h', 'r', 't'):
+   LeaveMutex();
+   StartHeart(command);
+   break;
+
+   case cst_str4('s', 's', 't', 'a'): // Slave Start
+   LeaveMutex();
+   StartNode(ExtractNodeId(command + 5));
+   break;
+
+   case cst_str4('s', 's', 't', 'o'): // Slave Stop
+   LeaveMutex();
+   SmartStop(ExtractNodeId(command + 5), 0);
+   break;
+
+   case cst_str4('s', 'r', 's', 't'): // Slave Reset
+   ResetNode(ExtractNodeId(command + 5));
+   break;
+
+   case cst_str4('s', 'p', 'r', 'e'): // Slave Reset
+   PreoperationalNode(ExtractNodeId(command + 5));
+   break;
+
+   case cst_str4('s', 'o', 'f', 'f'): // Slave Reset
+   StopNode(ExtractNodeId(command + 5));
+   break;
+
+   case cst_str4('i', 'n', 'f', 'o'): // Retrieve node informations
+   GetSlaveNodeInfo(ExtractNodeId(command + 5));
+   break;
+
+   case cst_str4('r', 's', 'd', 'o'): // Read device entry
+   ReadDeviceEntry(command);
+   break;
+
+   case cst_str4('w', 's', 'd', 'o'): // Write device entry
+   WriteDeviceEntry(command);
+   break;
+
+   case cst_str4('s', 'r', 'a', 'w'): // RAW command
+   RawCmdMotor(command);
+   break;
+
+   case cst_str4('p', 'r', 'o', 'g'): // download program to motor
+   DownloadToMotor(command);
+   break;
+
+   case cst_str4('u', 'p', 'l', 'o'): // download program from motor
+   UploadFromMotor(ExtractNodeId(command + 5));
+   break;
+
+   default:
+   if(*command != '\n')
+   help_menu();
+   break;
+   }
+
+   LeaveMutex();*/
   return 0;
 }
 
@@ -2640,6 +2764,7 @@ int main(int argc, char** argv)
     if(res != NULL)
     {
       //sysret = system(CLEARSCREEN);
+      command[strlen(command) - 1] = '\0';
       ret = ProcessCommand(command);
       fflush(stdout);
     }

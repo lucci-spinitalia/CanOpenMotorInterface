@@ -8,3 +8,10 @@
 #include "CANOpenShellMasterError.h"
 
 UNS32 canopen_abort_code = 0;  /**< Codice dell'ultimo errore del tipo CANOpenError */
+
+char *cerr_descr[] = {
+    "Comando non riconosciuto",
+    "Errore intero",
+    "Parametri errati",
+    "Errore di configurazione"
+};

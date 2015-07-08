@@ -716,12 +716,14 @@ void _machine_reset(CO_Data* d, UNS8 nodeId)
 {
   int sdo_result = closeSDOtransfer(d, nodeId, SDO_CLIENT);
 
+#ifdef CANOPENSHELL_VERBOSE
   if((sdo_result != 0) && (sdo_result != 0xFF))
   {
     printf("ERR[%d on node %x state %d]: %s (SDO close error %d)\n",
         InternalError, nodeId, machine_state_index[nodeId],
         next_machine[nodeId][0]->error[1], sdo_result);
   }
+#endif
 
   motor_active[nodeId] = 0;
   motor_homing[nodeId] = 0;
@@ -800,10 +802,12 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 
     if(machine_run[nodeId] == 1)
     {
+#ifdef CANOPENSHELL_VERBOSE
       printf(
           "ERR[%d on node %x state %d]: %s (Operazione in corso)\n",
           InternalError, nodeId, machine_state_index[nodeId],
           next_machine[nodeId][0]->error[1]);
+#endif
 
       lock_value = pthread_mutex_unlock(&machine_mux[nodeId]);
 
@@ -824,9 +828,11 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 
     if(machine_state_index[nodeId] > 0)
     {
+#ifdef CANOPENSHELL_VERBOSE
       printf(
           "WARN[%d on node %x state %d]: Qualcuno è entrato senza bussare...\n",
           InternalError, nodeId, machine_state_index[nodeId]);
+#endif
     }
 
     // se non è una richiesta broadcast
@@ -861,8 +867,11 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
     // Memorizzo il vettore con le prossime funzioni da eseguire
     if(callback_num == 0)
     {
+#ifdef CANOPENSHELL_VERBOSE
       printf("ERR[%d on node %x state %d]: Nessuna funzione\n", InternalError,
           nodeId, machine_state_index[nodeId]);
+#endif
+
       result_value = 1;
       goto finalize;
     }
@@ -889,10 +898,12 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 
         if(next_machine[nodeId] == NULL)
         {
+#ifdef CANOPENSHELL_VERBOSE
           printf(
               "ERR[%d on node %x state %d]: %s (memoria finita per allocare next_machine[%d])\n",
               InternalError, nodeId, machine_state_index[nodeId],
               next_machine[nodeId][0]->error[1], nodeId);
+#endif
 
           result_value = 1;
           goto finalize;
@@ -907,10 +918,12 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 
         if(next_machine[nodeId] == NULL)
         {
+#ifdef CANOPENSHELL_VERBOSE
           printf(
               "ERR[%d on node %x state %d]: %s (memoria finita per allocare next_machine[%d])\n",
               InternalError, nodeId, machine_state_index[nodeId],
               next_machine[nodeId][0]->error[1], nodeId);
+#endif
 
           result_value = 1;
           goto finalize;
@@ -934,10 +947,12 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 
             if(next_machine[i] == NULL)
             {
+#ifdef CANOPENSHELL_VERBOSE
               printf(
                   "ERR[%d on node %x state %d]: %s (memoria finita per allocare next_machine[%d])\n",
                   InternalError, i, machine_state_index[i],
                   next_machine[i][0]->error[1], i);
+#endif
 
               result_value = 1;
               goto finalize;
@@ -953,10 +968,12 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 
             if(next_machine[i] == NULL)
             {
+#ifdef CANOPENSHELL_VERBOSE
               printf(
                   "ERR[%d on node %x state %d]: %s (memoria finita per allocare next_machine[%d])\n",
                   InternalError, i, machine_state_index[i],
                   next_machine[i][0]->error[1], i);
+#endif
 
               result_value = 1;
               goto finalize;
@@ -982,10 +999,12 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
           args_ptr[nodeId] = malloc(next_var_count[nodeId] * sizeof(UNS32));
           if(args_ptr[nodeId] == NULL)
           {
+#ifdef CANOPENSHELL_VERBOSE
             printf(
                 "ERR[%d on node %x state %d]: %s (memoria finita per allocare args_ptr[%d])\n",
                 InternalError, nodeId, machine_state_index[nodeId],
                 next_machine[nodeId][0]->error[1], nodeId);
+#endif
 
             result_value = 1;
             goto finalize;
@@ -1006,10 +1025,12 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
               args_ptr[i] = malloc(next_var_count[i] * sizeof(UNS32));
               if(args_ptr[i] == NULL)
               {
+#ifdef CANOPENSHELL_VERBOSE
                 printf(
                     "ERR[%d on node %x state %d]: %s (memoria finita per allocare args_ptr[%d])\n",
                     InternalError, i, machine_state_index[i],
                     next_machine[i][0]->error[1], i);
+#endif
 
                 result_value = 1;
                 goto finalize;
@@ -1061,9 +1082,11 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
     // stato resettato tutto
     if(machine_state_index[nodeId] <= 0)
     {
+#ifdef CANOPENSHELL_VERBOSE
       printf("ERR[%d on node %x state %d]: Errore al ritorno dal callback\n",
           InternalError,
           nodeId, machine_state_index[nodeId]);
+#endif
 
       fflush(stdout);
       return 1;
@@ -1073,18 +1096,22 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
       if(machine_state_index[nodeId]
           > next_machine[nodeId][0]->function_size)
       {
+#ifdef CANOPENSHELL_VERBOSE
         printf(
             "WARN[%d on node %x state %d]: Qualcuno si è intrufolato dalla porta posteriore...\n",
             InternalError, nodeId, machine_state_index[nodeId]);
 
         printf("Il numero di chiamate a questa funzione è: %d\n",
             function_call_number[nodeId]);
+#endif
       }
 
+#ifdef CANOPENSHELL_VERBOSE
       if(function_call_number[nodeId] < 1)
         printf(
             "WARN[%d on node %x state %d]: Sei andato un po' troppo veloce...\n",
             InternalError, nodeId, machine_state_index[nodeId]);
+#endif
 
     }
   }
@@ -1115,18 +1142,23 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
       switch(d->transfers[line].state)
       {
         case SDO_ABORTED_INTERNAL:
+          #ifdef CANOPENSHELL_VERBOSE
           printf(
               "ERR[%d on node %x state %d]: %s (Aborted internal code: %x)\n",
               InternalError, nodeId, machine_state_index[nodeId],
               next_machine[nodeId][0]->error[1], d->transfers[line].abortCode);
+#endif
 
           sdo_result = closeSDOtransfer(d, nodeId, SDO_CLIENT);
+
+#ifdef CANOPENSHELL_VERBOSE
           if((sdo_result != 0) && (sdo_result != 0xFF))
           {
             printf("ERR[%d on node %x state %d]: %s (SDO close error %d)\n",
                 InternalError, nodeId, machine_state_index[nodeId],
                 next_machine[nodeId][0]->error[1], sdo_result);
           }
+#endif
 
           result_value = 1;
           goto finalize;
@@ -1153,6 +1185,8 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 
               case SDO_FINISHED:
                 sdo_result = closeSDOtransfer(d, nodeId, SDO_CLIENT);
+
+#ifdef CANOPENSHELL_VERBOSE
                 if((sdo_result != 0) && (sdo_result != 0xFF))
                 {
                   printf(
@@ -1160,14 +1194,16 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                       InternalError, nodeId, machine_state_index[nodeId],
                       next_machine[nodeId][0]->error[1], sdo_result);
                 }
+#endif
 
                 if(canopen_abort_code > 0)
                 {
+#ifdef CANOPENSHELL_VERBOSE
                   printf(
                       "ERR[%d on node %x state %d]: %s (Canopen abort code %x)\n",
                       CANOpenError, nodeId, machine_state_index[nodeId],
                       next_machine[nodeId][0]->error[1], canopen_abort_code);
-
+#endif
                   result_value = 1;
                   goto finalize;
                 }
@@ -1175,6 +1211,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 
               case SDO_ABORTED_INTERNAL:
                 sdo_result = closeSDOtransfer(d, nodeId, SDO_CLIENT);
+#ifdef CANOPENSHELL_VERBOSE
                 if((sdo_result != 0) && (sdo_result != 0xFF))
                 {
                   printf(
@@ -1182,15 +1219,20 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                       InternalError, nodeId, machine_state_index[nodeId],
                       next_machine[nodeId][0]->error[1], sdo_result);
                 }
+#endif
                 break;
 
               case SDO_ABORTED_RCV:
+                #ifdef CANOPENSHELL_VERBOSE
                 printf(
                     "ERR[%d on node %x state %d]: %s (SDO getWriteResult error %d)\n",
                     InternalError, nodeId, machine_state_index[nodeId],
                     next_machine[nodeId][0]->error[1], sdo_result);
+#endif
 
                 sdo_result = closeSDOtransfer(d, nodeId, SDO_CLIENT);
+
+#ifdef CANOPENSHELL_VERBOSE
                 if((sdo_result != 0) && (sdo_result != 0xFF))
                 {
                   printf(
@@ -1198,12 +1240,14 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                       InternalError, nodeId, machine_state_index[nodeId],
                       next_machine[nodeId][0]->error[1], sdo_result);
                 }
+#endif
 
                 machine_state_index[nodeId]--; // provo a rieseguire la stessa funzione
                 machine_state_param_index[nodeId] -= 5;
                 break;
 
               case SDO_RESET:
+                #ifdef CANOPENSHELL_VERBOSE
                 printf(
                     "ERR[%d on node %x state %d]: %s (SDO getWriteResult error %d)\n",
                     InternalError, nodeId, machine_state_index[nodeId],
@@ -1213,10 +1257,12 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                     function_call_number[nodeId]);
 
                 fflush(stdout);
+#endif
                 return 1;
                 break;
 
               default:
+                #ifdef CANOPENSHELL_VERBOSE
                 printf(
                     "ERR[%d on node %x state %d]: %s (SDO getWriteResult error %d)\n",
                     InternalError, nodeId, machine_state_index[nodeId],
@@ -1224,8 +1270,11 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 
                 printf("Il numero 2 di chiamate a questa funzione è: %d\n",
                     function_call_number[nodeId]);
+#endif
 
                 sdo_result = closeSDOtransfer(d, nodeId, SDO_CLIENT);
+
+#ifdef CANOPENSHELL_VERBOSE
                 if((sdo_result != 0) && (sdo_result != 0xFF))
                 {
                   printf(
@@ -1233,6 +1282,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                       InternalError, nodeId, machine_state_index[nodeId],
                       next_machine[nodeId][0]->error[1], sdo_result);
                 }
+#endif
 
                 result_value = 1;
                 goto finalize;
@@ -1266,6 +1316,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
               case SDO_FINISHED:
                 sdo_result = closeSDOtransfer(d, nodeId, SDO_CLIENT);
 
+#ifdef CANOPENSHELL_VERBOSE
                 if((sdo_result != 0) && (sdo_result != 0xFF))
                 {
                   printf(
@@ -1273,13 +1324,16 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                       InternalError, nodeId, machine_state_index[nodeId],
                       next_machine[nodeId][0]->error[1], sdo_result);
                 }
+#endif
 
                 if(canopen_abort_code > 0)
                 {
+#ifdef CANOPENSHELL_VERBOSE
                   printf(
                       "ERR[%d on node %x state %d]: %s (Canopen abort code %x)\n",
                       CANOpenError, nodeId, machine_state_index[nodeId],
                       next_machine[nodeId][0]->error[1], canopen_abort_code);
+#endif
 
                   result_value = 1;
                   goto finalize;
@@ -1290,17 +1344,21 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                   callback_user[nodeId](d, nodeId, machine_state_index[nodeId],
                       data);
                 }
+#ifdef CANOPENSHELL_VERBOSE
                 else
                 {
                   printf(
                       "WARN[%d on node %x state %d]: Lettura senza funzione di callback \n",
                       InternalError, nodeId, machine_state_index[nodeId]);
                 }
+#endif
 
                 break;
 
               case SDO_ABORTED_RCV:
                 sdo_result = closeSDOtransfer(d, nodeId, SDO_CLIENT);
+
+#ifdef CANOPENSHELL_VERBOSE
                 if((sdo_result != 0) && (sdo_result != 0xFF))
                 {
                   printf(
@@ -1313,18 +1371,23 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                     "ERR[%d on node %x state %d]: %s (SDO getReadResult error %d)\n",
                     InternalError, nodeId, machine_state_index[nodeId],
                     next_machine[nodeId][0]->error[1], sdo_result);
+#endif
 
                 machine_state_index[nodeId]--; // provo a rieseguire la stessa funzione
                 machine_state_param_index[nodeId] -= 5;
                 break;
 
               default:
+                #ifdef CANOPENSHELL_VERBOSE
                 printf(
                     "ERR[%d on node %x state %d]: %s (SDO getReadResult error %d)\n",
                     InternalError, nodeId, machine_state_index[nodeId],
                     next_machine[nodeId][0]->error[1], sdo_result);
+#endif
 
                 sdo_result = closeSDOtransfer(d, nodeId, SDO_CLIENT);
+
+#ifdef CANOPENSHELL_VERBOSE
                 if((sdo_result != 0) && (sdo_result != 0xFF))
                 {
                   printf(
@@ -1332,6 +1395,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                       InternalError, nodeId, machine_state_index[nodeId],
                       next_machine[nodeId][0]->error[1], sdo_result);
                 }
+#endif
 
                 result_value = 1;
                 goto finalize;
@@ -1379,6 +1443,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 
       machine_state_index[nodeId]++;
 
+#ifdef CANOPENSHELL_VERBOSE
       if(machine_state_index[nodeId]
           > next_machine[nodeId][0]->function_size)
       {
@@ -1386,6 +1451,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
             "WARN[%d on node %x state %d]: Qualcuno uscito senza salutare...\n",
             InternalError, nodeId, machine_state_index[nodeId]);
       }
+#endif
 
       if(machine_state_index[nodeId]
           == next_machine[nodeId][0]->function_size)
@@ -1419,10 +1485,12 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                   next_machine[nodeId][0]->param[machine_state_param_index[nodeId]];
             else
             {
+#ifdef CANOPENSHELL_VERBOSE
               printf(
                   "ERR[%d on node %x state %d]: %s (-1 insieme a parametri utente)\n",
                   InternalError, nodeId, machine_state_index[nodeId],
                   next_machine[nodeId][0]->error[1]);
+#endif
 
               result_value = 1;
               goto finalize;
@@ -1463,6 +1531,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
         {
           machine_state_index[nodeId]++;
 
+#ifdef CANOPENSHELL_VERBOSE
           if(machine_state_index[nodeId]
               > next_machine[nodeId][0]->function_size)
           {
@@ -1472,15 +1541,18 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
           }
 
           fflush(stdout);
+#endif
 
           return 0;
         }
         else
         {
+#ifdef CANOPENSHELL_VERBOSE
           printf(
               "ERR[%d on node %x state %d]: %s (writeNetwork error)\n",
               InternalError, nodeId, machine_state_index[nodeId],
               next_machine[nodeId][0]->error[1]);
+#endif
 
           result_value = 1;
           goto finalize;
@@ -1498,18 +1570,18 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
             machine_run[i] = 1;
             lock_value = pthread_mutex_unlock(&machine_mux[i]);
 #else
-          if(motor_active[i] > 0)
-          {
-            lock_value = pthread_mutex_lock(&machine_mux);
+            if(motor_active[i] > 0)
+            {
+              lock_value = pthread_mutex_lock(&machine_mux);
 
-            if(machine_run == 1)
+              if(machine_run == 1)
               pthread_cond_wait(&machine_run_cond, &machine_mux);
-            else
+              else
               machine_run = 1;
 
-            printf("writenetworkdick machine %d\n", nodeId);
+              printf("writenetworkdick machine %d\n", nodeId);
 
-            lock_value = pthread_mutex_unlock(&machine_mux);
+              lock_value = pthread_mutex_unlock(&machine_mux);
 #endif
             machine_state_param_index[i] = machine_state_param_index[nodeId];
             function_call_number[i]++;
@@ -1538,6 +1610,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
             {
               machine_state_index[i]++;
 
+#ifdef CANOPENSHELL_VERBOSE
               if(machine_state_index[i]
                   > next_machine[i][0]->function_size)
               {
@@ -1545,11 +1618,12 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                     "WARN[%d on node %x state %d]: Qualcuno uscito senza salutare...\n",
                     InternalError, nodeId, machine_state_index[i]);
               }
+#endif
             }
           }
 #ifndef SDO_SYNC
           else
-          lock_value = pthread_mutex_unlock(&machine_mux[i]);
+            lock_value = pthread_mutex_unlock(&machine_mux[i]);
 #endif
         }
 
@@ -1581,10 +1655,12 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                   next_machine[nodeId][0]->param[machine_state_param_index[nodeId]];
             else
             {
+#ifdef CANOPENSHELL_VERBOSE
               printf(
                   "ERR[%d on node %x state %d]: %s (-1 insieme a parametri utente)\n",
                   InternalError, nodeId, machine_state_index[nodeId],
                   next_machine[nodeId][0]->error[1]);
+#endif
 
               result_value = 1;
               goto finalize;
@@ -1624,6 +1700,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
         {
           machine_state_index[nodeId]++;
 
+#ifdef CANOPENSHELL_VERBOSE
           if(machine_state_index[nodeId]
               > next_machine[nodeId][0]->function_size)
           {
@@ -1633,6 +1710,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
           }
 
           fflush(stdout);
+#endif
 
           return 0;
         }
@@ -1671,8 +1749,10 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
     }
     else
     {
+#ifdef CANOPENSHELL_VERBOSE
       printf("WARN[%d on node %x state %d]: Funzione utente inaspettata\n",
           InternalError, nodeId, machine_state_index[nodeId]);
+#endif
 
       CustomFunction_t machine_function =
           next_machine[nodeId][0]->function[machine_state_index[nodeId]];
@@ -1683,6 +1763,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
       {
         machine_state_index[nodeId]++;
 
+#ifdef CANOPENSHELL_VERBOSE
         if(machine_state_index[nodeId]
             > next_machine[nodeId][0]->function_size)
         {
@@ -1690,6 +1771,8 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
               "WARN[%d on node %x state %d]: Qualcuno uscito senza salutare...\n",
               InternalError, nodeId, machine_state_index[nodeId]);
         }
+#endif
+
         function_call_number[nodeId]++;
 
         machine_function(d, nodeId, next_machine[nodeId][0]->param,
@@ -1722,9 +1805,12 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 // Nel caso in cui le funzioni siano finite
   if(machine_state_index[nodeId] == next_machine[nodeId][0]->function_size)
   {
+
+#ifdef CANOPENSHELL_VERBOSE
     if(next_machine[nodeId][0]->error[0] != NULL)
       printf("SUCC[node %x]: %s\n", nodeId,
           next_machine[nodeId][0]->error[0]);
+#endif
 
     machine_state_param_index[nodeId] = 0;
 
@@ -1747,6 +1833,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
       goto finalize;
     }
   }
+#ifdef CANOPENSHELL_VERBOSE
   else
   {
     printf(
@@ -1758,6 +1845,8 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
   }
 
   fflush(stdout);
+#endif
+
   return 0;
 
   finalize:
@@ -1794,11 +1883,13 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
         machine_run[i] = 0;
         lock_value = pthread_mutex_unlock(&machine_mux[i]);
 
+#ifdef CANOPENSHELL_VERBOSE
         if(lock_value != 0)
-        printf(
-            "ERR[%d on node %x state %d]: Impossibile sbloccare il mutex 6: %d\n",
-            InternalError,
-            nodeId, machine_state_index[nodeId], lock_value);
+          printf(
+              "ERR[%d on node %x state %d]: Impossibile sbloccare il mutex 6: %d\n",
+              InternalError,
+              nodeId, machine_state_index[nodeId], lock_value);
+#endif
 #endif
       }
     }
@@ -1848,12 +1939,13 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
     machine_run[nodeId] = 0;
     lock_value = pthread_mutex_unlock(&machine_mux[nodeId]);
 
-
+#ifdef CANOPENSHELL_VERBOSE
     if(lock_value != 0)
       printf(
           "ERR[%d on node %x state %d]: Impossibile sbloccare il mutex 7: %d\n",
           InternalError,
           nodeId, machine_state_index[nodeId], lock_value);
+#endif
 #else
     lock_value = pthread_mutex_lock(&machine_mux);
     machine_run = 0;
