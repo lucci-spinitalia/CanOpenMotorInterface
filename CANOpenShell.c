@@ -51,9 +51,131 @@
 //****************************************************************************
 // DEFINES
 #define MOTOR_INDEX_FIRST 0x77
-#define POSITION_FIFO_FILE "SWP.33.05.02.0.0/positions"
+#define POSITION_FIFO_FILE "/tmp/alma_3d_spinitalia_pos_stream_pipe"
 
 #define TABLE_MAX_NUM 6
+
+/*
+ * Studio banda necessaria:
+ *
+ *      oggetto       byte       temp       num. motori
+ * -----------------------------------------------------
+ *      TPDO2         3+5         10 ms     6
+ *      SYNC          3           100 ms    1
+ *      TPDO1         3+5         10  ms    6
+ *      HEARTBEAT     3+1         100 ms    6
+ *      TIMESTAMP     3+4         100 ms    1
+ *
+ * Per 6 motori si ha una richiesta di banda di:
+ *
+ * B = 9940 b/s = 79520 B/s
+ *
+ * In questo calcolo si dovrebbero aggiungere anche i comandi verso il motori, come
+ * la loro configurazione ed i punti di aggiornamento della tabella. In particolare
+ * questi ultimi dipendono da quanto sono distanziati i punti e del tempo utile per
+ * raggiungerli. Punti distanti temporalmente richiederanno meno scambio dati.
+ */
+
+/**
+ * Tabella degli stati:
+ *
+ *               CT0
+ * ACCESO ------> INIZIALIZZATO
+ *
+ *
+ *
+ *     EM2
+ * ? -------> EMERGENZA
+ *
+ *
+ *
+ *                  CT2 P1
+ * INIZIALIZZATO -----------> RICERCA_CENTRO
+ *                  CT2 P3
+ * INIZIALIZZATO -----------> RILASCIATO
+ *                   CT6
+ * INIZIALIZZATO -----------> SPENTO
+ *
+ *
+ *
+ *                  fine
+ * RICERCA_CENTRO -----------> CENTRATO
+ *
+ *
+ *
+ *              CT4
+ * CENTRATO --------------> SIMULAZIONE
+ *             CT2 P3
+ * CENTRATO -----------> RILASCIATO
+ *              CT6
+ * CENTRATO -----------> SPENTO
+ *
+ *
+ *
+ *                   CT5
+ * SIMULAZIONE --------------> FERMO
+ *                   fine
+ * SIMULAZIONE --------------> FERMO
+ *
+ *
+ *
+ *         CT2 P2
+ * FERMO -----------> CENTRAGGIO
+ *          CT2 P3
+ * FERMO -----------> RILASCIATO
+ *           CT6
+ * FERMO -----------> SPENTO
+ *
+ *
+ *
+ *               fine
+ * CENTRAGGIO -----------> CENTRATO
+ *
+ *
+ *             CT2 P4
+ * RILASCIATO ---------> LIBERO
+ *             CT5 && centrato
+ * RILASCIATO ------------------> FERMO
+ *             CT0 && !centrato
+ * RILASCIATO ------------------> INIZIALIZZATO
+ *
+ *
+ *          CT5 && centrato
+ * LIBERO ------------------> FERMO
+ *           CT0 && !centrato
+ * LIBERO ---------------------> INIZIALIZZATO
+ *
+ *
+ *              CT0
+ * EMERGENZA ----------> INIZIALIZZATO
+ *
+ *
+ * Stati in cui i comandi sono validi:
+ *
+ *   CT0:    ACCESO, RILASCIATO, EMERGENZA
+ *   CT2 P1: INIZIALIZZATO
+ *   CT2 P2: FERMO
+ *   CT4:    CENTRATO
+ *   CT5:    SIMULAZIONE
+ *   CT6:    INIZIALIZZATO, FERMO, CENTRATO
+ *
+ *   CT2 P3:    INIZIALIZZATO, CENTRATO, FERMO
+ *   EM2:    X
+ *
+ */
+#define ERRORE_ASINCRONO   0 /**< si è verificato un errore asincrono */
+#define SPENTO             1 /**< tutti i nodi canopen spenti */
+#define EMERGENZA          2 /**< il motore è bello stato EM2 */
+#define ACCESO             3 /**< stato iniziale del motore */
+#define INIZIALIZZATO      4 /**< motore inizializzato */
+#define RICERCA_CENTRO     5 /**< motore in homing */
+#define CENTRATO           6 /**< motore nell'origine */
+#define SIMULAZIONE        8 /**< il motore sta eseguento una simulazione */
+#define FERMO              9 /**< il motore è fermo */
+#define CENTRAGGIO         10 /**< in movimento verso lo zero */
+#define RILASCIATO         11 /**< il controllo dei motori è spento ed è presente il freno motore */
+#define LIBERO             12   /**< i motori sono a coppia zero */
+
 #define cst_str2(c1, c2) ((unsigned int)0 | \
     (char)c2) << 8 | (char)c1
 
@@ -66,6 +188,9 @@
 #define INIT_ERR 2
 #define QUIT 1
 
+static int robot_state = ACCESO;
+pthread_mutex_t robot_state_mux = PTHREAD_MUTEX_INITIALIZER;
+
 void CheckReadRaw(CO_Data* d, UNS8 nodeid);
 void CheckReadStringRaw(CO_Data* d, UNS8 nodeid);
 void CheckWriteRaw(CO_Data* d, UNS8 nodeid);
@@ -77,15 +202,25 @@ void CheckReadProgramDownload(CO_Data* d, UNS8 nodeid);
 void CheckReadProgramUpload(CO_Data* d, UNS8 nodeid);
 UNS32 OnInterpUpdate(CO_Data* d, UNS8 nodeid);
 void SmartStop(UNS8 nodeid, int from_callback);
-void SmartSin1Stop(UNS8 nodeid);
-void SimulationStop(UNS8 nodeid);
-void SmartSin1(CO_Data* d, UNS8 nodeid, int angle_step_grad, long amplitude,
-    int point_number, int from_callback);
 void SimulationTableUpdate(CO_Data* d, UNS8 nodeid, int point_number,
     int from_callback);
+void SimulationTableEnd(CO_Data* d, UNS8 nodeId, int machine_state,
+    UNS32 return_value);
+int MotorTableIndexFromNodeId(UNS8 nodeId);
+void SmartRelease(UNS8 nodeid, int from_callback, int brake);
 
 //****************************************************************************
 // GLOBALS
+
+struct
+{
+  int count;
+  int event[100];
+  int type[100]; /* 0: error async 1: event */
+  int nodeid[100];
+
+  pthread_mutex_t error_mux;
+} event_buffer;
 
 char BoardBusName[31];
 char BoardBaudRate[5];
@@ -93,13 +228,17 @@ s_BOARD Board =
     {BoardBusName, BoardBaudRate};
 CO_Data* CANOpenShellOD_Data;
 static timer_t timer;
+static timer_t fake_update_timer;
 
-pthread_mutex_t sinwave_mux[CANOPEN_NODE_NUMBER];
-pthread_mutex_t position_mux[CANOPEN_NODE_NUMBER];
+pthread_t pipe_handler;
+pthread_mutex_t interpolator_mux[CANOPEN_NODE_NUMBER];
+pthread_mutex_t position_mux = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t exit_from_limit_mux = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t release_mux = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t motor_active_number_mutex = PTHREAD_MUTEX_INITIALIZER;
 char motor_position_write[CANOPEN_NODE_NUMBER]; /**< di chi ho già segnato la posizione */
 static struct timeval position_start_time;
-volatile int sinwave_busy[CANOPEN_NODE_NUMBER];
+volatile int interpolator_busy[CANOPEN_NODE_NUMBER];
 UNS8 raw_response[33];
 int raw_response_flag = -1;
 UNS32 raw_response_size = 0;
@@ -121,6 +260,50 @@ struct table_data motor_table[TABLE_MAX_NUM];
 static int simulation_first_start[CANOPEN_NODE_NUMBER];
 
 FILE *position_fp = NULL;
+
+int fake_flag = 0;
+int exit_from_limit_complete = 0;
+int release_complete = 0;
+int homing_executed = 0;
+
+void add_event(int error, int nodeid, int type)
+{
+  pthread_mutex_lock(&event_buffer.error_mux);
+  if(event_buffer.count < sizeof(event_buffer.event))
+  {
+    event_buffer.event[event_buffer.count] = error;
+    event_buffer.nodeid[event_buffer.count] = nodeid;
+    event_buffer.type[event_buffer.count] = type;
+
+    event_buffer.count++;
+  }
+
+  pthread_mutex_unlock(&event_buffer.error_mux);
+}
+
+void return_event()
+{
+  int error_count;
+
+  pthread_mutex_lock(&event_buffer.error_mux);
+  for(error_count = 0; error_count < event_buffer.count; error_count++)
+  {
+    switch(event_buffer.type[error_count])
+    {
+      case 0: /* errore aisncrono */
+        AERR(event_buffer.event[error_count], event_buffer.nodeid[error_count]);
+        break;
+
+      case 1: /* evento */
+        EVENT(event_buffer.event[error_count],
+            event_buffer.nodeid[error_count]);
+        break;
+    }
+  }
+
+  event_buffer.count = 0;
+  pthread_mutex_unlock(&event_buffer.error_mux);
+}
 
 /**
  * @return: -1: errore, chunk_size: ok, <chunk_size: ultimi byte e fine del file
@@ -172,66 +355,272 @@ int program_file_read(const char *file_path, char *program_chunk,
   return read;
 }
 
+void SmartClear(UNS8 nodeid)
+{
+  if(nodeid == 0)
+  {
+    int motor_index;
+    for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+    {
+      pthread_mutex_lock(&interpolator_mux[motor_table[motor_index].nodeId]);
+      interpolator_busy[motor_table[motor_index].nodeId] = 0;
+      pthread_mutex_unlock(&interpolator_mux[motor_table[motor_index].nodeId]);
+
+      simulation_first_start[motor_table[motor_index].nodeId] = 1;
+      motor_started[motor_table[motor_index].nodeId] = 0;
+    }
+  }
+  else
+  {
+    if(motor_active[nodeid])
+    {
+      pthread_mutex_lock(&interpolator_mux[nodeid]);
+      interpolator_busy[nodeid] = 0;
+      pthread_mutex_unlock(&interpolator_mux[nodeid]);
+
+      simulation_first_start[nodeid] = 1;
+      motor_started[nodeid] = 0;
+    }
+  }
+}
+
+void SmartBusVoltageCallback(CO_Data* d, UNS8 nodeId, int machine_state,
+    UNS32 return_value)
+{
+  int stop_in_progress = 0;
+  int motor_index;
+
+  SmartClear(nodeId);
+
+  for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+    stop_in_progress |= motor_started[motor_table[motor_index].nodeId];
+
+  if(stop_in_progress == 0)
+  {
+    pthread_mutex_lock(&robot_state_mux);
+    robot_state = EMERGENZA;
+    pthread_mutex_unlock(&robot_state_mux);
+  }
+}
+
 void SmartFaultCallback(CO_Data* d, UNS8 nodeId, int machine_state,
     UNS32 return_value)
 {
   if((return_value & 0b0000000000001000) > 0)
-    printf("ERR[%d on node %x]: Servo bus voltage fault\n", SmartMotorError,
-        nodeId);
+  {
+#ifdef CANOPENSHELL_VERBOSE
+    if(verbose_flag)
+    {
+      printf("ERR[%d on node %x]: Servo bus voltage fault\n", SmartMotorError,
+          nodeId);
+    }
+#endif
+    add_event(CERR_BusVoltageFault, nodeId, 0);
+  }
 
   if((return_value & 0b0000000000010000) > 0)
-    printf("ERR[%d on node %x]: Peak over-current occurred\n", SmartMotorError,
-        nodeId);
+  {
+#ifdef CANOPENSHELL_VERBOSE
+    if(verbose_flag)
+    {
+      printf("ERR[%d on node %x]: Peak over-current occurred\n",
+          SmartMotorError,
+          nodeId);
+    }
+#endif
+    add_event(CERR_OverCurrentFault, nodeId, 0);
+  }
 
   if((return_value & 0b0000000000100000) > 0)
-    printf("ERR[%d on node %x]: Excessive temperature\n", SmartMotorError,
-        nodeId);
+  {
+#ifdef CANOPENSHELL_VERBOSE
+    if(verbose_flag)
+    {
+      printf("ERR[%d on node %x]: Excessive temperature\n", SmartMotorError,
+          nodeId);
+    }
+#endif
+
+    add_event(CERR_TemperatureFault, nodeId, 0);
+  }
 
   if((return_value & 0b0000000001000000) > 0)
-    printf("ERR[%d on node %x]: Excessive position error\n", SmartMotorError,
-        nodeId);
+  {
+#ifdef CANOPENSHELL_VERBOSE
+    if(verbose_flag)
+    {
+      printf("ERR[%d on node %x]: Excessive position error\n",
+          SmartMotorError,
+          nodeId);
+    }
+#endif
+
+    add_event(CERR_PositionFault, nodeId, 0);
+  }
 
   if((return_value & 0b0000000010000000) > 0)
-    printf("ERR[%d on node %x]: Velocity limit\n", SmartMotorError, nodeId);
+  {
+#ifdef CANOPENSHELL_VERBOSE
+    if(verbose_flag)
+    {
+      printf("ERR[%d on node %x]: Velocity limit\n", SmartMotorError, nodeId);
+    }
+#endif
+
+    add_event(CERR_VelocityFault, nodeId, 0);
+  }
 
   if((return_value & 0b0000001000000000) > 0)
-    printf(
-        "ERR[%d on node %x]: First derivative (DE/Dt) of position error over limit\n",
-        SmartMotorError, nodeId);
+  {
+#ifdef CANOPENSHELL_VERBOSE
+    if(verbose_flag)
+    {
+      printf(
+          "ERR[%d on node %x]: First derivative (DE/Dt) of position error over limit\n",
+          SmartMotorError, nodeId);
+    }
+#endif
+
+    add_event(CERR_DerivativeFault, nodeId, 0);
+  }
 
   if((return_value & 0b0001000000000000) > 0)
-    printf("ERR[%d on node %x]: Right(+) over travel limit\n", SmartMotorError,
-        nodeId);
+  {
+#ifdef CANOPENSHELL_VERBOSE
+    if(verbose_flag)
+    {
+      printf("ERR[%d on node %x]: Right(+) over travel limit\n",
+          SmartMotorError, nodeId);
+    }
+#endif
+
+    pthread_mutex_lock(&robot_state_mux);
+    if(robot_state == RILASCIATO)
+    {
+      pthread_mutex_unlock(&robot_state_mux);
+
+      add_event(CERR_RightLimitFault, nodeId, 1);
+    }
+    else
+    {
+      pthread_mutex_unlock(&robot_state_mux);
+
+      add_event(CERR_RightLimitFault, nodeId, 0);
+    }
+
+  }
   else if((return_value & 0b0010000000000000) > 0)
-    printf("ERR[%d on node %x]: Left(-) over travel limit\n", SmartMotorError,
-        nodeId);
+  {
+#ifdef CANOPENSHELL_VERBOSE
+    if(verbose_flag)
+    {
+      printf("ERR[%d on node %x]: Left(-) over travel limit\n",
+          SmartMotorError,
+          nodeId);
+    }
+#endif
+    add_event(CERR_LeftLimitFault, nodeId, 0);
+  }
+
+  if((return_value & 0b0011001011111000) == 0)
+  {
+    int stop_in_progress = 0;
+    int motor_index;
+
+    SmartClear(nodeId);
+
+    for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+      stop_in_progress |= motor_started[motor_table[motor_index].nodeId];
+
+    pthread_mutex_lock(&robot_state_mux);
+    if(robot_state == SIMULAZIONE)
+    {
+      int motor_table_index = MotorTableIndexFromNodeId(nodeId);
+      struct table_data_read data_read;
+
+      //for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+      //{
+      QueueLast(&motor_table[motor_table_index], &data_read);
+
+      InterpolationTimePeriod[nodeId - MOTOR_INDEX_FIRST] = 0;
+      InterpolationTimeValue[nodeId - MOTOR_INDEX_FIRST] = 0;
+      InterpolationData[nodeId - MOTOR_INDEX_FIRST] = data_read.position;
+
+      //}
+
+      sendPDOevent(d);
+    }
+
+    pthread_mutex_unlock(&robot_state_mux);
+
+    if(stop_in_progress == 0)
+    {
+      pthread_mutex_lock(&robot_state_mux);
+      switch(robot_state)
+      {
+        case SIMULAZIONE:
+          CERR("CT4", CERR_SimulationError);
+          OK("CT5");
+
+          robot_state = FERMO;
+          break;
+
+        case CENTRAGGIO:
+          robot_state = FERMO;
+          break;
+
+        case EMERGENZA:
+          OK("CT0");
+          break;
+      }
+
+      pthread_mutex_unlock(&robot_state_mux);
+    }
+  }
 }
 
 UNS32 OnPositionUpdate(CO_Data* d, const indextable * indextable_curr,
     UNS8 bSubindex)
 {
   static int motor_basket_num = 0;
+  static float file_complete[CANOPEN_NODE_NUMBER];
+  static float file_complete_min = 0;
+
   static char position_message[256];
   struct timeval position_stop_time;
 
   UNS8 nodeid = NodeId;
 
-  if(Position_Actual_Value != motor_position[nodeid])
-    motor_position[nodeid] = Position_Actual_Value;
+  if(fake_flag == 0)
+  {
+    if(Position_Actual_Value != motor_position[nodeid])
+      motor_position[nodeid] = Position_Actual_Value;
+  }
 
-  pthread_mutex_lock(&position_mux[nodeid]);
+  if(fake_flag == 0)
+    file_complete[nodeid] = FileCompleteGet(nodeid,
+        SMART_TABLE_SIZE - (motor_interp_status[nodeid] & 0x3F));
+  else
+    file_complete[nodeid] = FileCompleteGet(nodeid, 1);
+
+  if((file_complete_min == 0) || (file_complete[nodeid] < file_complete_min))
+    file_complete_min = file_complete[nodeid];
+
+  pthread_mutex_lock(&position_mux);
 
   if(motor_position_write[nodeid] == 0)
   {
     motor_position_write[nodeid] = 1;
     if(position_message[0] == '\0')
-      sprintf(position_message, "%d %li", nodeid, motor_position[nodeid]);
+      sprintf(position_message, "@M%d S%li", nodeid, motor_position[nodeid]);
     else
-      sprintf(position_message, "%s %d %li", position_message, nodeid,
+      sprintf(position_message, "%s @M%d S%li", position_message, nodeid,
           motor_position[nodeid]);
+
     motor_basket_num++;
   }
 
+  fflush(stdout);
   if(motor_basket_num == motor_active_number)
   {
     motor_basket_num = 0;
@@ -241,13 +630,38 @@ UNS32 OnPositionUpdate(CO_Data* d, const indextable * indextable_curr,
     {
       gettimeofday(&position_stop_time, NULL);
 
-      long position_delay = (position_stop_time.tv_sec
+      long position_delay = ((position_stop_time.tv_sec
           - position_start_time.tv_sec) * 1000000 + position_stop_time.tv_usec
-          - position_start_time.tv_usec;
+          - position_start_time.tv_usec) / 1000;
 
-      sprintf(position_message, "%s %li\n", position_message, position_delay);
+      pthread_mutex_lock(&(event_buffer.error_mux));
+      if(event_buffer.count > 0)
+      {
+        pthread_mutex_unlock(&(event_buffer.error_mux));
+        sprintf(position_message, "%s AS0", position_message);
+        pthread_mutex_lock(&robot_state_mux);
+      }
+      else
+      {
+        pthread_mutex_unlock(&(event_buffer.error_mux));
+        pthread_mutex_lock(&robot_state_mux);
+        sprintf(position_message, "%s AS%d", position_message, robot_state);
+      }
+
+      sprintf(position_message, "%s T%li", position_message, position_delay);
+
+      if(robot_state == SIMULAZIONE)
+        sprintf(position_message, "%s C%.0f\n", position_message,
+            file_complete_min);
+      else
+        sprintf(position_message, "%s C0\n", position_message);
+
+      pthread_mutex_unlock(&robot_state_mux);
+
       fputs(position_message, position_fp);
       fflush(position_fp);
+
+      file_complete_min = 0;
 
       gettimeofday(&position_start_time, NULL);
     }
@@ -255,159 +669,9 @@ UNS32 OnPositionUpdate(CO_Data* d, const indextable * indextable_curr,
     position_message[0] = '\0';
   }
 
-  pthread_mutex_unlock(&position_mux[nodeid]);
+  pthread_mutex_unlock(&position_mux);
 
   return 0;
-}
-
-UNS32 OnStatusUpdate(CO_Data* d, const indextable * indextable_curr,
-    UNS8 bSubindex)
-{
-  UNS8 nodeid = NodeId;
-  UNS16 statusword = Statusword;
-
-  /** Fault management **/
-
-  if((statusword & 0b0000000001001111) == 0b0000000000001000)
-  {
-    if(motor_homing[nodeid] == 1)
-      motor_homing[nodeid] = 0;
-
-    if(motor_active[nodeid])
-    {
-      motor_started[nodeid] = 0;
-      simulation_first_start[nodeid] = 1;
-    }
-
-    struct state_machine_struct *fault_machine[] =
-        {&smart_statusword_machine, &smart_reset_statusword_machine};
-
-    _machine_exe(CANOpenShellOD_Data, nodeid, &SmartFaultCallback,
-        fault_machine, 2, 1, 0);
-  }
-
-  // Homing concluso
-  if((statusword & 0b0001010000000000) == 0b0001010000000000)
-  {
-    if(motor_homing[nodeid] == 1)
-    {
-      motor_homing[nodeid] = 0;
-
-      struct state_machine_struct *origin_machine[] =
-          {&smart_origin_machine};
-
-      _machine_exe(CANOpenShellOD_Data, nodeid, NULL, origin_machine, 1, 1, 0);
-    }
-  }
-
-  // Move error
-  if((statusword & 0b0010000000000000) > 0)
-  {
-    printf("ERR[%d on node %x]: Move error\n", SmartMotorError, nodeid);
-
-    if(motor_homing[nodeid] == 1)
-      motor_homing[nodeid] = 0;
-
-    SmartStop(nodeid, 1);
-  }
-
-  if((statusword & 0b0000000001101111) == 0b0000000000000111)
-  {
-    printf("ERR[%d on node %x]: Quick stop active\n", SmartMotorError, nodeid);
-
-    _machine_reset(d, nodeid);
-
-    //writeNetworkDictCallBack(d, NodeId, 0x6040, 0x0, 2, 0, &data, NULL, 1);
-    SmartStop(nodeid, 1);
-  }
-
-  if((Interpolation_Mode_Status & 0b0000000001000000) > 0)
-    printf("ERR[%d on node %x]: Position error tolerance exceeded (IP mode)\n",
-        SmartMotorError, nodeid);
-
-  if((Interpolation_Mode_Status & 0b0000010000000000) > 0)
-    printf("ERR[%d on node %x]: Invalid time units (IP mode)\n",
-        SmartMotorError, nodeid);
-
-  if((Interpolation_Mode_Status & 0b0000100000000000) > 0)
-    printf("ERR[%d on node %x]: Invalid position increment (IP mode)\n",
-        SmartMotorError, nodeid);
-
-  if((Interpolation_Mode_Status & 0b0000100000000000) > 0)
-    printf("ERR[%d on node %x]: Invalid position increment error (IP mode)\n",
-        SmartMotorError,
-        nodeid);
-
-  if((Interpolation_Mode_Status & 0b0100000000000000) > 0)
-    printf("ERR[%d on node %x]: FIFO underflow (IP mode)\n", SmartMotorError,
-        nodeid);
-
-  if((Interpolation_Mode_Status & 0b0010000000000000) > 0)
-    printf("ERR[%d on node %x]: FIFO overflow (IP mode)\n", SmartMotorError,
-        nodeid);
-  else
-    OnInterpUpdate(d, nodeid);
-
-  return 0;
-}
-
-UNS32 OnInterpUpdate(CO_Data* d, UNS8 nodeid)
-{
-  if(motor_status[nodeid] != 0)
-  {
-    if((motor_status[nodeid] & 0b1000000000000000)
-        < (Interpolation_Mode_Status & 0b1000000000000000))
-      printf("INF[%d on node %x]: Interpolation started (sin IP mode)\n",
-          SmartMotorError, nodeid);
-    else if((motor_status[nodeid] & 0b1000000000000000)
-        > (Interpolation_Mode_Status & 0b1000000000000000))
-    {
-      printf("INF[%d on node %x]: Interpolation finished (sin IP mode)\n",
-          SmartMotorError, nodeid);
-
-      motor_status[nodeid] = Interpolation_Mode_Status;
-
-      //SmartSin1Stop(NodeId);
-      SimulationStop(nodeid);
-
-      return 0;
-    }
-  }
-
-  motor_status[nodeid] = Interpolation_Mode_Status;
-
-  if((motor_started[nodeid] == 1)
-  //&& ((Interpolation_Mode_Status & 0x3F) > 0x16)
-  )
-  {
-    //SmartSin1(d, NodeId, 0, 0, Interpolation_Mode_Status & 0x3F, 1);
-    SimulationTableUpdate(d, nodeid, motor_status[nodeid] & 0x3F, 1);
-  }
-
-  return 0;
-}
-
-void SmartUpdateSin1Callback(CO_Data* d, UNS8 nodeid, int machine_state,
-    UNS32 return_value)
-{
-  int i;
-  pthread_mutex_lock(&sinwave_mux[nodeid]);
-  for(i = 0; i < machine_state; i++)
-  {
-    angle_actual_rad[nodeid] += angle_step_rad[nodeid];
-    angle_actual_rad[nodeid] = fmod(angle_actual_rad[nodeid], 2 * M_PI);
-  }
-
-  sinwave_busy[nodeid] = 0;
-  pthread_mutex_unlock(&sinwave_mux[nodeid]);
-}
-
-void SmartSin1Callback(CO_Data* d, UNS8 nodeid, int machine_state,
-    UNS32 return_value)
-{
-  pthread_mutex_lock(&sinwave_mux[nodeid]);
-  sinwave_busy[nodeid] = 0;
-  pthread_mutex_unlock(&sinwave_mux[nodeid]);
 }
 
 int MotorTableIndexFromNodeId(UNS8 nodeId)
@@ -425,9 +689,451 @@ int MotorTableIndexFromNodeId(UNS8 nodeId)
   return -1;
 }
 
+void SmartPositionTargetCallback(CO_Data* d, UNS8 nodeid, int machine_state,
+    UNS32 return_value)
+{
+  if(return_value)
+    return;
+
+  motor_started[nodeid] = 0;
+
+  pthread_mutex_lock(&exit_from_limit_mux);
+  exit_from_limit_complete++;
+
+  if(exit_from_limit_complete == motor_active_number)
+  {
+    exit_from_limit_complete = 0;
+    pthread_mutex_unlock(&exit_from_limit_mux);
+
+    pthread_mutex_lock(&robot_state_mux);
+    if((robot_state == RICERCA_CENTRO) || (robot_state == CENTRAGGIO))
+    {
+      if(robot_state == RICERCA_CENTRO)
+      {
+        homing_executed = 1;
+        OK("CT2 P1");
+        fflush(stdout);
+      }
+      else if(robot_state == CENTRAGGIO)
+      {
+        OK("CT2 P2");
+        fflush(stdout);
+      }
+
+      robot_state = CENTRATO;
+      pthread_mutex_unlock(&robot_state_mux);
+
+    }
+    else if((robot_state == ACCESO) || (robot_state == EMERGENZA)
+        || (robot_state == RILASCIATO) || (robot_state == LIBERO))
+    {
+      robot_state = INIZIALIZZATO;
+      pthread_mutex_unlock(&robot_state_mux);
+      OK("CT0");
+    }
+    else
+      pthread_mutex_unlock(&robot_state_mux);
+  }
+  else
+    pthread_mutex_unlock(&exit_from_limit_mux);
+}
+
+UNS32 OnStatusUpdate(CO_Data* d, const indextable * indextable_curr,
+    UNS8 bSubindex)
+{
+  UNS8 nodeid = NodeId;
+
+  /** Fault management **/
+
+  motor_status[nodeid] = Statusword;
+  motor_mode[nodeid] = Modes_of_operation_display;
+
+  // Bus voltage fault
+  if((motor_status[nodeid] & 0b0000000000010000) == 0)
+  {
+    if(robot_state != EMERGENZA)
+    {
+      add_event(CERR_BusVoltageFault, nodeid, 0);
+
+      if(fake_flag == 0)
+      {
+        struct state_machine_struct *origin_machine[] =
+            {&smart_stop_machine};
+
+        _machine_exe(d, nodeid, &SmartBusVoltageCallback,
+            origin_machine, 1, 1, 0);
+      }
+      else
+      {
+        motor_mode[nodeid] = 0x3;
+#ifdef CANOPENSHELL_VERBOSE
+        if(verbose_flag)
+        {
+          printf("SUCC[node %x]: smart motor stopped\n", nodeid);
+        }
+#endif
+
+        SmartBusVoltageCallback(d, nodeid, 0, 0);
+      }
+    }
+  }
+
+  // se sono in modalità posizione ed il motore è nello stato "operation enabled
+  if((motor_mode[nodeid] == 0x1)
+      && ((motor_status[nodeid] & 0b0000000001101111) == 0b0000000000100111))
+  {
+    // se ha concluso la tragliettoria
+    if((motor_status[nodeid] & 0b0001010000000000) == 0b0001010000000000)
+    {
+      pthread_mutex_lock(&robot_state_mux);
+      if((robot_state == RICERCA_CENTRO) || (robot_state == CENTRAGGIO)
+          || (robot_state == ACCESO) || (robot_state == EMERGENZA)
+          || (robot_state == RILASCIATO) || (robot_state == LIBERO))
+      {
+        pthread_mutex_unlock(&robot_state_mux);
+
+        if(fake_flag == 0)
+        {
+          struct state_machine_struct *machine = &smart_stop_machine;
+
+          _machine_exe(CANOpenShellOD_Data, nodeid,
+              &SmartPositionTargetCallback, &machine, 1, 1, 0);
+        }
+        else
+        {
+          motor_mode[nodeid] = 0x3;
+
+#ifdef CANOPENSHELL_VERBOSE
+          if(verbose_flag)
+          {
+            printf("SUCC[node %x]: smart motor stopped\n", nodeid);
+          }
+#endif
+          SmartPositionTargetCallback(CANOpenShellOD_Data, nodeid, 0, 0);
+        }
+
+      }
+      else
+        pthread_mutex_unlock(&robot_state_mux);
+    }
+  }
+
+  // Se mi trovo in modalità homing
+  if(motor_mode[nodeid] == 0x6)
+  {
+    // Problemi nel concludere l'homing
+    if((motor_status[nodeid] & 0b0010000000000000) > 0)
+    {
+      CERR("CT2 P1", CERR_MoveError);
+
+      if(motor_started[nodeid] == 1)
+      {
+        if(fake_flag == 0)
+        {
+          struct state_machine_struct *stop_machine[] =
+              {&smart_stop_machine};
+
+          _machine_exe(CANOpenShellOD_Data, nodeid, &SmartFaultCallback,
+              stop_machine, 1, 1, 0);
+        }
+        else
+        {
+          motor_mode[nodeid] = 0x3;
+
+#ifdef CANOPENSHELL_VERBOSE
+          if(verbose_flag)
+          {
+            printf("SUCC[node %x]: smart motor stopped\n", nodeid);
+          }
+#endif
+          SmartFaultCallback(d, nodeid, 0, 0);
+        }
+      }
+    }
+
+    // Homing concluso
+    else if((motor_status[nodeid] & 0b0001010000000000) == 0b0001010000000000)
+    {
+      if(motor_started[nodeid] == 1)
+      {
+        int motor_table_index = MotorTableIndexFromNodeId(nodeid);
+
+        struct state_machine_struct *origin_machine[] =
+            {&smart_limit_enable_machine, &smart_position_set_machine};
+
+        _machine_exe(CANOpenShellOD_Data, nodeid, NULL, origin_machine, 2, 1,
+            2, motor_table[motor_table_index].backward_velocity, 0);
+      }
+    }
+  }
+
+  // Stato di fault CiA 402
+  if((motor_status[nodeid] & 0b0000000001001111) == 0b0000000000001000)
+  {
+    // Move error
+    if((motor_status[nodeid] & 0b0010000000000000) > 0)
+    {
+#ifdef CANOPENSHELL_VERBOSE
+      if(verbose_flag)
+      {
+        printf("ERR[%d on node %x]: Move error\n", SmartMotorError, nodeid);
+      }
+#endif
+      add_event(CERR_MoveError, nodeid, 0);
+    }
+
+    pthread_mutex_lock(&robot_state_mux);
+    if((robot_state != ACCESO) && (robot_state != EMERGENZA)
+        && (robot_state != RICERCA_CENTRO) && (robot_state != RILASCIATO))
+    {
+      pthread_mutex_unlock(&robot_state_mux);
+
+      add_event(CERR_MotorFault, nodeid, 0);
+
+      if(fake_flag == 0)
+      {
+        struct state_machine_struct *fault_machine[] =
+            {&smart_statusword_machine, &smart_stop_machine};
+
+        _machine_exe(CANOpenShellOD_Data, 0, &SmartFaultCallback,
+            fault_machine, 2, 1, 0);
+      }
+      else
+      {
+        pthread_mutex_lock(&robot_state_mux);
+        if(robot_state == SIMULAZIONE)
+        {
+          motor_interp_status[nodeid] = 0x122d;
+
+          motor_position[nodeid] =
+              InterpolationData[nodeid - MOTOR_INDEX_FIRST];
+        }
+
+        pthread_mutex_unlock(&robot_state_mux);
+
+        motor_mode[nodeid] = 0x3;
+
+#ifdef CANOPENSHELL_VERBOSE
+        if(verbose_flag)
+        {
+          printf("SUCC[node %x]: smart motor stopped\n", nodeid);
+        }
+#endif
+        SmartFaultCallback(d, nodeid, 0, 0);
+      }
+    }
+    else if(robot_state == RILASCIATO)
+    {
+      pthread_mutex_unlock(&robot_state_mux);
+
+      if(fake_flag == 0)
+      {
+        struct state_machine_struct *fault_machine[] =
+            {&smart_statusword_machine, &smart_off_machine};
+
+        _machine_exe(CANOpenShellOD_Data, nodeid, &SmartFaultCallback,
+            fault_machine,
+            2, 1, 0);
+      }
+      else
+      {
+#ifdef CANOPENSHELL_VERBOSE
+        if(verbose_flag)
+        {
+          printf("SUCC[node %x]: Status word read\n", nodeid);
+          printf("SUCC[node %x]: smartmotor off\n", nodeid);
+        }
+#endif
+        //SmartFaultCallback(d, nodeid, 0, 0);
+      }
+    }
+    else
+      pthread_mutex_unlock(&robot_state_mux);
+  }
+
+  // Quick stop
+  if((motor_status[nodeid] & 0b0000000001101111) == 0b0000000000000111)
+  {
+#ifdef CANOPENSHELL_VERBOSE
+    if(verbose_flag)
+    {
+      printf("ERR[%d on node %x]: Quick stop active\n", SmartMotorError,
+          nodeid);
+    }
+#endif
+    add_event(CERR_QuickStop, nodeid, 0);
+
+    SmartStop(0, 1);
+  }
+
+  if((Interpolation_Mode_Status & 0b0000000001000000) > 0)
+  {
+#ifdef CANOPENSHELL_VERBOSE
+    if(verbose_flag)
+    {
+      printf(
+          "ERR[%d on node %x]: Position error tolerance exceeded (IP mode)\n",
+          SmartMotorError, nodeid);
+    }
+#endif
+    add_event(CERR_InterpPositionError, nodeid, 0);
+  }
+
+  if((Interpolation_Mode_Status & 0b0000010000000000) > 0)
+  {
+#ifdef CANOPENSHELL_VERBOSE
+    if(verbose_flag)
+    {
+      printf("ERR[%d on node %x]: Invalid time units (IP mode)\n",
+          SmartMotorError, nodeid);
+    }
+#endif
+    add_event(CERR_InterpInvalidTimeError, nodeid, 0);
+  }
+
+  if((Interpolation_Mode_Status & 0b0000100000000000) > 0)
+  {
+#ifdef CANOPENSHELL_VERBOSE
+    if(verbose_flag)
+    {
+      printf("ERR[%d on node %x]: Invalid position increment (IP mode)\n",
+          SmartMotorError, nodeid);
+    }
+#endif
+    add_event(CERR_InterpInvalidPositionError, nodeid, 0);
+  }
+
+  if((Interpolation_Mode_Status & 0b0100000000000000) > 0)
+  {
+#ifdef CANOPENSHELL_VERBOSE
+    if(verbose_flag)
+    {
+      printf("ERR[%d on node %x]: FIFO underflow (IP mode)\n",
+          SmartMotorError,
+          nodeid);
+    }
+#endif
+    add_event(CERR_InterpFIFOUnderError, nodeid, 0);
+  }
+
+  if((Interpolation_Mode_Status & 0b0010000000000000) > 0)
+  {
+#ifdef CANOPENSHELL_VERBOSE
+    if(verbose_flag)
+    {
+      printf("ERR[%d on node %x]: FIFO overflow (IP mode)\n", SmartMotorError,
+          nodeid);
+    }
+#endif
+    add_event(CERR_InterpFIFOOverError, nodeid, 0);
+  }
+  else
+    OnInterpUpdate(d, nodeid);
+
+  return 0;
+}
+
+UNS32 OnInterpUpdate(CO_Data* d, UNS8 nodeid)
+{
+  // confronto lo stato precedente dell'interpolazione con quello attuale
+  // per capire se ci sono stati cambiamenti
+  if(motor_interp_status[nodeid] != 0)
+  {
+    if(((motor_interp_status[nodeid] & 0b1000000000000000) > 0)
+        && (motor_mode[nodeid] == 0x7) && (motor_started[nodeid] == 0))
+    {
+      motor_started[nodeid] = 1;
+#ifdef CANOPENSHELL_VERBOSE
+      if(verbose_flag)
+      {
+        printf("INF[%d on node %x]: Interpolation started (sin IP mode)\n",
+            SmartMotorError, nodeid);
+      }
+#endif
+    }
+    else if(((motor_interp_status[nodeid] & 0b1000000100000000) == 0)
+        && (motor_mode[nodeid] == 0x7) && (motor_started[nodeid] == 2))
+    {
+      motor_started[nodeid] = 0;
+
+#ifdef CANOPENSHELL_VERBOSE
+      if(verbose_flag)
+      {
+        printf("INF[%d on node %x]: Interpolation finished (sin IP mode)\n",
+            SmartMotorError, nodeid);
+      }
+#endif
+
+      if(fake_flag == 0)
+      {
+        SimulationTableEnd(d, nodeid, 0, 0);
+
+        /*struct state_machine_struct *interpolation_machine[] =
+         {&smart_stop_machine};
+
+         _machine_exe(CANOpenShellOD_Data, nodeid, &SimulationTableEnd,
+         interpolation_machine, 1, 1, 0);*/
+      }
+      else
+      {
+        //motor_mode[nodeid] = 0x3;
+
+#ifdef CANOPENSHELL_VERBOSE
+        if(verbose_flag)
+        {
+          printf("SUCC[node %x]: smart motor stopped\n", nodeid);
+        }
+#endif
+        SimulationTableEnd(d, nodeid, 0, 0);
+      }
+
+      motor_interp_status[nodeid] = Interpolation_Mode_Status;
+
+      return 0;
+    }
+  }
+
+  motor_interp_status[nodeid] = Interpolation_Mode_Status;
+
+  pthread_mutex_lock(&robot_state_mux);
+  if((motor_mode[nodeid] == 0x7) && (robot_state == SIMULAZIONE))
+  {
+    pthread_mutex_unlock(&robot_state_mux);
+    // Ho bisogno di lasciarmi un posto per un'eventuale chiusura della tabella, dovuta,
+    // per esempio, dalla ricezione di un errore dai motori
+    SimulationTableUpdate(d, nodeid, (motor_interp_status[nodeid] & 0x3F) - 1,
+        1);
+  }
+  else
+    pthread_mutex_unlock(&robot_state_mux);
+
+  return 0;
+}
+
+void SmartUpdateSin1Callback(CO_Data* d, UNS8 nodeid, int machine_state,
+    UNS32 return_value)
+{
+  int i;
+  pthread_mutex_lock(&interpolator_mux[nodeid]);
+  for(i = 0; i < machine_state; i++)
+  {
+    angle_actual_rad[nodeid] += angle_step_rad[nodeid];
+    angle_actual_rad[nodeid] = fmod(angle_actual_rad[nodeid], 2 * M_PI);
+  }
+
+  interpolator_busy[nodeid] = 0;
+  pthread_mutex_unlock(&interpolator_mux[nodeid]);
+}
+
 void SimulationInitCallback(CO_Data* d, UNS8 nodeid, int machine_state,
     UNS32 return_value)
 {
+  if(return_value)
+  {
+    CERR("CT4", InternalError);
+    return;
+  }
+
   int motor_table_index = MotorTableIndexFromNodeId(nodeid);
 
   if(motor_table_index >= 0)
@@ -436,15 +1142,50 @@ void SimulationInitCallback(CO_Data* d, UNS8 nodeid, int machine_state,
     QueueFill(&motor_table[motor_table_index]);
     pthread_mutex_unlock(&motor_table[motor_table_index].table_mutex);
   }
-
-  motor_started[nodeid] = 1;
 }
 
-/**
- * param:
- *   angle_step_grad
- *   point number
- */
+void SimulationTableEnd(CO_Data* d, UNS8 nodeId, int machine_state,
+    UNS32 return_value)
+{
+  int motor_index = 0;
+  int stop_in_progress = 0;
+
+  if(return_value)
+  {
+    CERR("CT4", CERR_InternalError);
+
+    return;
+  }
+
+  SmartClear(nodeId);
+
+  for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+    stop_in_progress |= motor_started[motor_table[motor_index].nodeId];
+
+  if(stop_in_progress == 0)
+  {
+    if(fake_flag)
+    {
+      for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+      {
+        NodeId = motor_table[motor_index].nodeId;
+        motor_status[NodeId] = 0b0000010000110111;
+        motor_interp_status[NodeId] = 0x122d;
+        motor_mode[NodeId] = 0x1;
+      }
+    }
+
+    pthread_mutex_lock(&robot_state_mux);
+    if(robot_state != FERMO)
+    {
+      robot_state = FERMO;
+      OK("CT4");
+      fflush(stdout);
+    }
+    pthread_mutex_unlock(&robot_state_mux);
+  }
+}
+
 void SimulationTableUpdate(CO_Data* d, UNS8 nodeid, int point_number,
     int from_callback)
 {
@@ -452,48 +1193,63 @@ void SimulationTableUpdate(CO_Data* d, UNS8 nodeid, int point_number,
 
   if(motor_table_index < 0)
   {
-    printf("ERR[%d on node %x]: Impossibile trovare la tabella associata. \n",
-        InternalError, nodeid);
+#ifdef CANOPENSHELL_VERBOSE
+    if(verbose_flag)
+    {
+      printf(
+          "ERR[%d on node %x]: Impossibile trovare la tabella associata. \n",
+          InternalError, nodeid);
+    }
+#endif
 
+    CERR("CT4", CERR_InternalError);
     return;
   }
 
-  if(motor_active[nodeid] == 0)
+  if((motor_active[nodeid] == 0) || (point_number < 0))
   {
     return;
   }
 
-  pthread_mutex_lock(&sinwave_mux[nodeid]);
+  pthread_mutex_lock(&interpolator_mux[nodeid]);
 
-  if((sinwave_busy[nodeid] == 0) && (point_number > 0))
-    sinwave_busy[nodeid] = 1;
+  if((interpolator_busy[nodeid] == 0) && (point_number > 0))
+    interpolator_busy[nodeid] = 1;
   else
   {
-    if(sinwave_busy[nodeid] == 1)
-      printf("sinwave busy %d\n", nodeid);
+    if(interpolator_busy[nodeid] == 1)
+      printf("interpolator busy %d\n", nodeid);
 
-    pthread_mutex_unlock(&sinwave_mux[nodeid]);
+    pthread_mutex_unlock(&interpolator_mux[nodeid]);
 
     return;
   }
 
-  pthread_mutex_unlock(&sinwave_mux[nodeid]);
+  pthread_mutex_unlock(&interpolator_mux[nodeid]);
 
   pthread_mutex_lock(&motor_table[motor_table_index].table_mutex);
 
   int i;
   int point_to_send;
+  int valid_point = 0;
+  int get_result = 0;
   struct table_data_read data_read;
 
-  if(point_number > motor_table[motor_table_index].count)
+  if(point_number >= motor_table[motor_table_index].count)
     point_to_send = motor_table[motor_table_index].count;
   else
-    point_to_send = point_number - 1; // mi riservo uno spazio per l'eventuale uscata dall'ip mode
+    point_to_send = point_number;
 
   for(i = 0; i < point_to_send; i++)
   {
-    if(QueueGet(&motor_table[motor_table_index], &data_read, i) == -1)
+    get_result = QueueGet(&motor_table[motor_table_index], &data_read, i);
+
+    if(get_result == -1)
       continue;
+    else if(get_result == -2)
+      break;
+
+    valid_point++;
 
     InterpolationTimePeriod[nodeid - MOTOR_INDEX_FIRST] = -3;
 
@@ -505,12 +1261,12 @@ void SimulationTableUpdate(CO_Data* d, UNS8 nodeid, int point_number,
     }
 
     InterpolationTimeValue[nodeid - MOTOR_INDEX_FIRST] = data_read.time_ms;
+    InterpolationData[nodeid - MOTOR_INDEX_FIRST] = data_read.position + 1;
 
-    InterpolationData[nodeid - MOTOR_INDEX_FIRST] = data_read.position;
-
-    //printf("[%d]: %li\n", nodeid, InterpolationData[nodeid - MOTOR_INDEX_FIRST]);
-
-    sendPDOevent(d);
+    if(fake_flag == 0)
+      sendPDOevent(d);
+    else
+      motor_position[nodeid] = InterpolationData[nodeid - MOTOR_INDEX_FIRST];
   }
 
   // per uscire dalla modalità ip mode devo impostare l'unità temporale a zero
@@ -518,196 +1274,98 @@ void SimulationTableUpdate(CO_Data* d, UNS8 nodeid, int point_number,
   // Devo utilizzare l'sdo perchè altrimenti il dato non partirebbe in quanto è uguale
   // a quello precendente
 
-  if((motor_started[nodeid] == 1)
-      && ((Interpolation_Mode_Status & 0b1000000000000000) == 0))
+  // Se il motore sta elaborando la tabella e il riempitore di tabella ha finito i punti,
+  // significa che posso bloccare il movimento
+  if((motor_table[motor_table_index].count == 0) // tutti i punti letti scritti
+  && (motor_table[motor_table_index].end_reached == 1)        // file concluso
+      && (valid_point < (motor_interp_status[nodeid] & 0x3F)) // punti nella tabella
+      && (motor_started[nodeid] != 2) // non ho ancora finalizzato la tabella
+      && ((motor_interp_status[nodeid] & 0x8000) > 0))
   {
-    struct state_machine_struct *interpolation_machine[] =
-        {&start_interpolation_machine};
-
-    _machine_exe(CANOpenShellOD_Data, nodeid, NULL,
-        interpolation_machine, 1, 1, 0);
-  }
-
-  // Se il motore sta elaborando la tabella e il riempitore di tabella ha finito i punti, significa che posso bloccare il movimento
-  if(((Interpolation_Mode_Status & 0b1000000000000000) > 0)
-      //&& ((Interpolation_Mode_Status & 0x3F) == 45)
-      && (motor_table[motor_table_index].count == 0)
-      && (motor_table[motor_table_index].end_reached == 1))
-  {
+    // devo forzare l'aggiornamento dello stato dell'interpolatore. Il problema
+    // sorge quando ci sono pochi punti e chiudo subito la tabella. In questo caso
+    // all'aggiornamento dello stato tramite callback non passo per lo start.
+    motor_started[nodeid] = 2;
     QueueLast(&motor_table[motor_table_index], &data_read);
 
-    struct state_machine_struct *interpolation_machine[] =
-        {&stop_interpolation_machine};
+    if(fake_flag == 0)
+    {
+      InterpolationTimePeriod[nodeid - MOTOR_INDEX_FIRST] = 0;
+      InterpolationTimeValue[nodeid - MOTOR_INDEX_FIRST] = 0;
+      InterpolationData[nodeid - MOTOR_INDEX_FIRST] = data_read.position;
 
-    _machine_exe(CANOpenShellOD_Data, nodeid, NULL,
-        interpolation_machine, 1, 1, 1, data_read.position);
+      sendPDOevent(d);
 
-    motor_started[nodeid] = 0;
+      struct state_machine_struct *interpolation_machine[] =
+          {&stop_interpolation_machine};
+
+      _machine_exe(CANOpenShellOD_Data, nodeid, NULL,
+          interpolation_machine, 1, 1, 1, data_read.position);
+    }
+    else
+    {
+      motor_interp_status[nodeid] = 0x122d;
+
+      motor_position[nodeid] =
+          InterpolationData[nodeid - MOTOR_INDEX_FIRST];
+    }
   }
 
   QueueUpdate(&motor_table[motor_table_index], point_to_send);
 
+  if(valid_point != 0)
+  {
+    // se la simulazione non è stata avviata ancora
+    if(((motor_interp_status[nodeid] & 0b1000000000000000) == 0))
+    {
+      if(fake_flag == 0)
+      {
+        struct state_machine_struct *interpolation_machine[] =
+            {&start_interpolation_machine};
+
+        _machine_exe(CANOpenShellOD_Data, nodeid, NULL,
+            interpolation_machine, 1, 1, 0);
+      }
+      else
+      {
+        motor_interp_status[nodeid] |= 0b1000000000000000;
+#ifdef CANOPENSHELL_VERBOSE
+        if(verbose_flag)
+        {
+          printf("SUCC[node %x]: smartmotor interpolation mode start\n",
+              nodeid);
+        }
+#endif
+      }
+    }
+  }
+
   pthread_mutex_unlock(&motor_table[motor_table_index].table_mutex);
 
-  pthread_mutex_lock(&sinwave_mux[nodeid]);
-  sinwave_busy[nodeid] = 0;
-  pthread_mutex_unlock(&sinwave_mux[nodeid]);
+  pthread_mutex_lock(&interpolator_mux[nodeid]);
+  interpolator_busy[nodeid] = 0;
+  pthread_mutex_unlock(&interpolator_mux[nodeid]);
 
-}
-
-/**
- * param:
- *   angle_step_grad
- *   point number
- */
-void SmartSin1(CO_Data* d, UNS8 nodeid, int angle_step_grad, long amplitude,
-    int point_number, int from_callback)
-{
-  static struct timeval start_delay[CANOPEN_NODE_NUMBER],
-      stop_delay[CANOPEN_NODE_NUMBER];
-
-  static long int position_max = 0;
-  //float current_angle = 0;
-
-  if(((motor_started[nodeid] == 0) && (angle_step_grad == 0))
-      || (motor_active[nodeid] == 0))
-  {
-    if(motor_started[nodeid])
-    {
-      printf("motor stopped\n");
-      motor_started[nodeid] = 0;
-      angle_step_rad[nodeid] = 0;
-    }
-
-    return;
-  }
-
-  pthread_mutex_lock(&sinwave_mux[nodeid]);
-  if((sinwave_busy[nodeid] == 0) && (point_number > 0))
-    sinwave_busy[nodeid] = 1;
-  else
-  {
-    pthread_mutex_unlock(&sinwave_mux[nodeid]);
-    if(sinwave_busy[nodeid] == 1)
-    {
-      if(start_delay[nodeid].tv_usec == 0)
-      {
-        if(gettimeofday(&start_delay[nodeid], NULL))
-        {
-          perror("gettimeofday()");
-        }
-      }
-
-      printf("sinwave busy %d\n", nodeid);
-    }
-
-    return;
-  }
-
-  if(start_delay[nodeid].tv_usec != 0)
-  {
-    if(gettimeofday(&stop_delay[nodeid], NULL))
-    {
-      perror("gettimeofday()");
-    }
-
-    printf("Time elapsed: %li us\n",
-        (stop_delay[nodeid].tv_sec - start_delay[nodeid].tv_sec) * 1000000
-            + stop_delay[nodeid].tv_usec
-            - start_delay[nodeid].tv_usec);
-
-    start_delay[nodeid].tv_usec = 0;
-  }
-
-  pthread_mutex_unlock(&sinwave_mux[nodeid]);
-
-  if(angle_step_grad != 0)
-  {
-    angle_step_rad[nodeid] = angle_step_grad * M_PI / 180;
-    angle_actual_rad[nodeid] = 0;
-  }
-
-  //current_angle = angle_actual_rad[nodeid];
-
-  if(amplitude != 0)
-    position_max = amplitude;
-
-  int i;
-
-  if(sin_interpolation_function != NULL)
-  {
-    free(sin_interpolation_function);
-    sin_interpolation_function = NULL;
-  }
-
-  if(sin_interpolation_param != NULL)
-  {
-    free(sin_interpolation_param);
-    sin_interpolation_param = NULL;
-  }
-
-  if(point_number)
-  {
-    /*sin_interpolation_function = malloc(point_number * sizeof(void *));
-     sin_interpolation_param = malloc(point_number * 5 * sizeof(UNS32));
-
-     for(i = 0; i < point_number; i++)
-     {
-     sin_interpolation_function[i] = &writeNetworkDictCallBack; // Write data point
-     sin_interpolation_param[i * 5] = 0x60C1;
-     sin_interpolation_param[i * 5 + 1] = 0x1;
-     sin_interpolation_param[i * 5 + 2] = 4;
-     sin_interpolation_param[i * 5 + 3] = 0;
-     sin_interpolation_param[i * 5 + 4] = (long) (position_max
-     * sin(current_angle));
-
-     current_angle += angle_step_rad[nodeid];
-     current_angle = fmod(current_angle, 2 * M_PI);
-     }
-
-     sin_interpolation_machine.function = sin_interpolation_function;
-     sin_interpolation_machine.function_size = point_number;
-     sin_interpolation_machine.param = sin_interpolation_param;
-     sin_interpolation_machine.param_size = point_number * 5;*/
-
-    if(motor_started[nodeid] == 0)
-    {
-      struct state_machine_struct *interpolation_machine[] =
-          {&init_interpolation_machine};
-
-      if(_machine_exe(CANOpenShellOD_Data, nodeid, &SmartSin1Callback,
-          interpolation_machine, 1, from_callback, 0) == 0)
-        motor_started[nodeid] = 1;
-    }
-    else
-    {
-      /*struct state_machine_struct *interpolation_machine[] =
-       {&sin_interpolation_machine};
-
-       if(_machine_exe(CANOpenShellOD_Data, nodeid, &SmartUpdateSin1Callback,
-       interpolation_machine, 1, from_callback, 0) == 1)
-       SmartSin1Stop(nodeid);*/
-
-      for(i = 0; i < point_number; i++)
-      {
-        InterpolationData[nodeid - MOTOR_INDEX_FIRST] = (long) (position_max
-            * sin(angle_actual_rad[nodeid]));
-
-        sendPDOevent(d);
-
-        angle_actual_rad[nodeid] += angle_step_rad[nodeid];
-        angle_actual_rad[nodeid] = fmod(angle_actual_rad[nodeid], 2 * M_PI);
-      }
-
-      sinwave_busy[nodeid] = 0;
-    }
-  }
 }
 
 void SmartVelocityCallback(CO_Data* d, UNS8 nodeId, int machine_state,
     UNS32 return_value)
 {
   printf("INFO[%d on node %x]: VT = %ld\n", SmartMotorError, nodeId,
+      (long) return_value);
+}
+
+void SmartAccelerationCallback(CO_Data* d, UNS8 nodeId, int machine_state,
+    UNS32 return_value)
+{
+  printf("INFO[%d on node %x]: ADT = %ld\n", SmartMotorError, nodeId,
+      (long) return_value);
+}
+
+void SmartFollowingErrorCallback(CO_Data* d, UNS8 nodeId, int machine_state,
+    UNS32 return_value)
+{
+  printf("INFO[%d on node %x]: EL = %ld\n", SmartMotorError, nodeId,
       (long) return_value);
 }
 
@@ -720,46 +1378,22 @@ void SmartVelocityGet(UNS8 nodeid)
       velocity_machine, 1, 0, 0);
 }
 
-void SimulationStop(UNS8 nodeid)
+void SmartAccelerationGet(UNS8 nodeid)
 {
-  pthread_mutex_lock(&sinwave_mux[nodeid]);
-  sinwave_busy[nodeid] = 0;
-  pthread_mutex_unlock(&sinwave_mux[nodeid]);
+  struct state_machine_struct *acceleration_machine[] =
+      {&smart_acceleration_pp_get_machine};
 
-  motor_started[nodeid] = 0;
-
-  //SmartStop(nodeid, 1);
+  _machine_exe(CANOpenShellOD_Data, nodeid, &SmartAccelerationCallback,
+      acceleration_machine, 1, 0, 0);
 }
 
-void SmartSin1Stop(UNS8 nodeid)
+void SmartFollowingErrorGet(UNS8 nodeid)
 {
-  pthread_mutex_lock(&sinwave_mux[nodeid]);
-  sinwave_busy[nodeid] = 0;
-  pthread_mutex_unlock(&sinwave_mux[nodeid]);
+  struct state_machine_struct *following_error_machine[] =
+      {&smart_following_error_get_machine};
 
-  motor_started[nodeid] = 0;
-}
-
-void SinFunction(char *sdo)
-{
-  int ret;
-
-  int nodeid;
-  int angle_step_grad = 0x00;
-  int point_number = 0x00;
-  long amplitude = 0;
-
-  ret = sscanf(sdo, "sin1#%2x,%2x,%4lx,%2x", &nodeid, &angle_step_grad,
-      &amplitude, &point_number);
-
-  if(ret >= 4)
-  {
-    SmartSin1(CANOpenShellOD_Data, nodeid, angle_step_grad, amplitude,
-        point_number, 0);
-  }
-  else
-    printf("Wrong command  : %s\n", sdo);
-
+  _machine_exe(CANOpenShellOD_Data, nodeid, &SmartFollowingErrorCallback,
+      following_error_machine, 1, 0, 0);
 }
 
 void SmartVelocitySet(char *sdo)
@@ -781,41 +1415,64 @@ void SmartVelocitySet(char *sdo)
   }
 }
 
+void SmartCheckCallback(CO_Data* d, UNS8 nodeId, int machine_state,
+    UNS32 return_value)
+{
+  if(return_value)
+  {
+    pthread_mutex_lock(&robot_state_mux);
+
+    switch(robot_state)
+    {
+      case INIZIALIZZATO:
+        CERR("CT2 P1", CERR_InternalError);
+        break;
+    }
+
+    pthread_mutex_unlock(&robot_state_mux);
+  }
+}
+
 void SmartHome(char *sdo)
 {
   int ret;
 
   int nodeid;
   long home_offset = 0;
+  long forward_velocity = 0;
+  long backward_velocity = 0;
 
-  ret = sscanf(sdo, "shom#%2x,%4lx", &nodeid, &home_offset);
+  ret = sscanf(sdo, "shom#%2x,%lx,%lx,%lx", &nodeid, &home_offset,
+      &forward_velocity, &backward_velocity);
 
   if(ret >= 2)
   {
     if(nodeid == 0)
     {
-      int i;
-      for(i = 0; i < CANOPEN_NODE_NUMBER; i++)
+      int motor_index;
+      for(motor_index = 0; motor_index < motor_active_number; motor_index++)
       {
-        if(motor_active[i])
-        {
-          simulation_first_start[i] = 1;
-          motor_homing[i] = 1;
-        }
+        simulation_first_start[motor_table[motor_index].nodeId] = 1;
+        motor_started[motor_table[motor_index].nodeId] = 1;
       }
     }
     else
     {
       if(motor_active[nodeid])
       {
-        motor_homing[nodeid] = 1;
+        motor_started[nodeid] = 1;
         simulation_first_start[nodeid] = 1;
       }
     }
 
+    pthread_mutex_lock(&exit_from_limit_mux);
+    exit_from_limit_complete = 0;
+    pthread_mutex_unlock(&exit_from_limit_mux);
+
     struct state_machine_struct *machine = &smart_homing_machine;
-    _machine_exe(CANOpenShellOD_Data, nodeid, NULL, &machine, 1, 0, 1,
-        home_offset);
+
+    _machine_exe(CANOpenShellOD_Data, nodeid, &SmartCheckCallback, &machine,
+        1, 0, 3, forward_velocity, backward_velocity, home_offset);
   }
   else
     printf("Wrong command  : %s\n", sdo);
@@ -854,15 +1511,15 @@ int GenerateSawData(int nodeid, long amplitude, long half_period, long pause,
   }
 
   // genero il primo punto, assumendo che il motore si trovi nell'origine
-  fprintf(file, "0 100\n");
+  fprintf(file, "CT1 M%d S0 T100\n", nodeid);
 
   for(j = 0; j < num_of_period; j++)
   {
-    fprintf(file, "%li %li\n", amplitude, half_period);
-    fprintf(file, "0 %li\n", half_period);
+    fprintf(file, "CT1 M%d S%li T%li\n", nodeid, amplitude, half_period);
+    fprintf(file, "CT1 M%d S0 T%li\n", nodeid, half_period);
 
     if(pause > 0)
-      fprintf(file, "1 %li\n", pause);
+      fprintf(file, "CT1 M%d S1 T%li\n", nodeid, pause);
   }
 
   fclose(file);
@@ -931,8 +1588,8 @@ int GenerateSinData(int nodeid, long amplitude, long period, long tsamp,
 
   angle_step_rad = 2 * M_PI / num_of_points;
 
-  // genero il primo punto, assumendo che il motore si trova nell'origine
-  fprintf(file, "%li 100\n", position);
+  // genero il primo punto, assumendo che il motore si trovi nell'origine
+  fprintf(file, "CT1 M%d S%li T100\n", nodeid, position);
   angle_rad += angle_step_rad;
 
   for(j = 0; j < num_of_period; j++)
@@ -947,19 +1604,19 @@ int GenerateSinData(int nodeid, long amplitude, long period, long tsamp,
       // Quindi, la differenza tra il punto corrente e quello precedente divisa per il tempo
       // richiesto per percorrerla, deve essere minore di 120.
 
-      if((labs(position - position_prev) / tsamp) >= 120)
-      {
-        printf(
-            "ERR[%d on node %x]: Velocità richiesta troppo elevata (GenerateSinData)\n",
-            InternalError, nodeid);
-        fclose(file);
-        return -1;
-      }
-      else
-      {
-        fprintf(file, "%li %li\n", position, tsamp);
-        position_prev = position;
-      }
+      /*if((labs(position - position_prev) / tsamp) >= 120)
+       {
+       printf(
+       "ERR[%d on node %x]: Velocità richiesta troppo elevata (GenerateSinData)\n",
+       InternalError, nodeid);
+       fclose(file);
+       return -1;
+       }
+       else
+       {*/
+      fprintf(file, "CT1 M%d S%li T%li\n", nodeid, position, tsamp);
+      position_prev = position;
+      /*}*/
     }
   }
 
@@ -1016,7 +1673,8 @@ void GenerateMotorData(char *sdo)
         if(param_count < 4)
           goto fail;
 
-        if(GenerateSinData(nodeid, param[0], param[1], param[2], param[3]) >= 0)
+        if(GenerateSinData(nodeid, param[0], param[1], param[2], param[3])
+            >= 0)
           printf("sin function generated\n");
         else
           goto fail;
@@ -1039,7 +1697,8 @@ void GenerateMotorData(char *sdo)
         if(param_count < 4)
           goto fail;
 
-        if(GenerateSawData(nodeid, param[0], param[1], param[2], param[3]) >= 0)
+        if(GenerateSawData(nodeid, param[0], param[1], param[2], param[3])
+            >= 0)
           printf("saw function generated\n");
         else
           goto fail;
@@ -1076,7 +1735,7 @@ void SmartFileComplete(UNS8 nodeid)
       if(motor_active[i] > 0)
       {
         complete_percent = FileCompleteGet(i,
-            SMART_TABLE_SIZE - (motor_status[i] & 0x3F));
+            SMART_TABLE_SIZE - (motor_interp_status[i] & 0x3F));
 
         printf("INFO[%d on node %x]: Percentuale completamento: %.0f%%\n",
             InternalError, nodeid, complete_percent);
@@ -1086,7 +1745,7 @@ void SmartFileComplete(UNS8 nodeid)
   else
   {
     complete_percent = FileCompleteGet(nodeid,
-        SMART_TABLE_SIZE - (motor_status[nodeid] & 0x3F));
+        SMART_TABLE_SIZE - (motor_interp_status[nodeid] & 0x3F));
 
     printf("INFO[%d on node %x]: Percentuale completamento: %.0f%%\n",
         InternalError, nodeid, complete_percent);
@@ -1097,6 +1756,41 @@ void SmartIntTest1(UNS8 nodeid)
 {
   struct state_machine_struct *machine = &smart_interpolation_test1_machine;
   _machine_exe(CANOpenShellOD_Data, nodeid, NULL, &machine, 1, 0, 0);
+}
+
+void FakeStatusUpdate(sigval_t val)
+{
+  static int timeout_count = 0;
+  int motor_index;
+
+  timeout_count++;
+
+  if(timeout_count == 10)
+  {
+    // MAP TPDO 1 (COB-ID 180) to transmit "node id" (8-bit), "status word" (16-bit), "interpolation mode status" (16-bit), "modes of operation" (8-bit)
+
+    for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+    {
+      simulation_first_start[motor_table[motor_index].nodeId] = 1;
+
+      NodeId = motor_table[motor_index].nodeId;
+      Statusword = motor_status[NodeId];
+      Interpolation_Mode_Status = motor_interp_status[NodeId]; //9201
+      Modes_of_operation_display = motor_mode[NodeId];
+
+      OnStatusUpdate(CANOpenShellOD_Data, NULL, 0);
+    }
+
+    timeout_count = 0;
+  }
+
+  for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+  {
+    NodeId = motor_table[motor_index].nodeId;
+    OnPositionUpdate(CANOpenShellOD_Data, NULL, 0);
+  }
+
+  //timer_delete(fake_update_timer);
 }
 
 void SimulationStart(UNS8 nodeid)
@@ -1110,7 +1804,7 @@ void SimulationStart(UNS8 nodeid)
       simulation_first_start[nodeid] = 0;
       struct state_machine_struct *machine = &init_interpolation_machine;
       _machine_exe(CANOpenShellOD_Data, nodeid, &SimulationInitCallback,
-          &machine, 1, 0, 0);
+          &machine, 1, 0, 1, motor_position[nodeid]);
     }
     else
     {
@@ -1123,26 +1817,49 @@ void SimulationStart(UNS8 nodeid)
   {
     gettimeofday(&position_start_time, NULL);
 
-    int i;
+    //int i;
     struct state_machine_struct *init_interpolation =
         &init_interpolation_machine;
+
     struct state_machine_struct *resume_interpolation =
         &resume_interpolation_machine;
 
-    for(i = 1; i < CANOPEN_NODE_NUMBER; i++)
+    int motor_index;
+    for(motor_index = 0; motor_index < motor_active_number; motor_index++)
     {
-      if(motor_active[i] > 0)
+      if(simulation_first_start[motor_table[motor_index].nodeId])
       {
-        if(simulation_first_start[i])
-        {
-          simulation_first_start[i] = 0;
-          _machine_exe(CANOpenShellOD_Data, i, &SimulationInitCallback,
-              &init_interpolation, 1, 0, 0);
-        }
+        simulation_first_start[motor_table[motor_index].nodeId] = 0;
+
+        if(fake_flag == 0)
+          _machine_exe(CANOpenShellOD_Data, motor_table[motor_index].nodeId,
+              &SimulationInitCallback, &init_interpolation, 1, 0, 0);
         else
         {
-          _machine_exe(CANOpenShellOD_Data, i, &SimulationInitCallback,
-              &resume_interpolation, 1, 0, 1, motor_position[i]);
+          SimulationInitCallback(CANOpenShellOD_Data,
+              motor_table[motor_index].nodeId, 0, 0);
+
+          NodeId = motor_table[motor_index].nodeId;
+          motor_status[NodeId] = 0b0000000000110111;
+          motor_interp_status[NodeId] = 0x122d;
+          motor_mode[NodeId] = 0x7;
+        }
+      }
+      else
+      {
+        if(fake_flag == 0)
+          _machine_exe(CANOpenShellOD_Data, motor_table[motor_index].nodeId,
+              &SimulationInitCallback, &resume_interpolation, 1, 0, 1,
+              motor_position[motor_table[motor_index].nodeId]);
+        else
+        {
+          SimulationInitCallback(CANOpenShellOD_Data,
+              motor_table[motor_index].nodeId, 0, 0);
+
+          NodeId = motor_table[motor_index].nodeId;
+          motor_status[NodeId] = 0b0000000000110111;
+          motor_interp_status[NodeId] = 0x122d;
+          motor_mode[NodeId] = 0x7;
         }
       }
     }
@@ -1159,16 +1876,33 @@ void SmartOrigin(UNS8 nodeid)
 {
   int motor_table_index;
 
+  struct state_machine_struct *machine[] =
+      {&smart_position_set_machine};
+
   if(nodeid == 0)
   {
-    int i;
-    for(i = 0; i < CANOPEN_NODE_NUMBER; i++)
+    int motor_index;
+    for(motor_index = 0; motor_index < motor_active_number; motor_index++)
     {
-      if(motor_active[i])
+      QueueInit(motor_table[motor_index].nodeId, &motor_table[motor_index]);
+
+      simulation_first_start[motor_table[motor_index].nodeId] = 1;
+
+      if(fake_flag == 0)
+        _machine_exe(CANOpenShellOD_Data, motor_table[motor_index].nodeId,
+            NULL, machine, 1, 0, 2, 300000, 0);
+      else
       {
-        motor_table_index = MotorTableIndexFromNodeId(i);
-        QueueInit(i, &motor_table[motor_table_index]);
-        simulation_first_start[i] = 1;
+        motor_mode[motor_table[motor_index].nodeId] = 0x1;
+        motor_position[motor_table[motor_index].nodeId] = 0;
+
+#ifdef CANOPENSHELL_VERBOSE
+        if(verbose_flag)
+        {
+          printf("SUCC[node %x]: smart motor go to target point. . .\n",
+              motor_table[motor_index].nodeId);
+        }
+#endif
       }
     }
   }
@@ -1177,35 +1911,321 @@ void SmartOrigin(UNS8 nodeid)
     if(motor_active[nodeid])
     {
       motor_table_index = MotorTableIndexFromNodeId(nodeid);
+
       QueueInit(nodeid, &motor_table[motor_table_index]);
+
       simulation_first_start[nodeid] = 1;
     }
+
+    if(fake_flag == 0)
+      _machine_exe(CANOpenShellOD_Data, nodeid, NULL, machine, 1, 0, 2,
+          100000, 0);
+    else
+    {
+#ifdef CANOPENSHELL_VERBOSE
+      if(verbose_flag)
+      {
+        printf("SUCC[node %x]: smart motor go to target point. . .\n", nodeid);
+      }
+#endif
+      motor_mode[nodeid] = 0x1;
+      motor_position[nodeid] = 0;
+    }
+  }
+}
+
+void SmartEmergencyCallback(CO_Data* d, UNS8 nodeId, int machine_state,
+    UNS32 return_value)
+{
+  int stop_in_progress = 0;
+  int motor_index;
+
+  if(return_value)
+  {
+    pthread_mutex_lock(&robot_state_mux);
+    CERR("EM2", CERR_InternalError);
+    pthread_mutex_unlock(&robot_state_mux);
+
+    return;
   }
 
-  struct state_machine_struct *machine = &smart_position_zero_machine;
-  _machine_exe(CANOpenShellOD_Data, nodeid, NULL, &machine, 1, 0, 0);
+  SmartClear(nodeId);
+
+  for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+    stop_in_progress |= motor_started[motor_table[motor_index].nodeId];
+
+  if(stop_in_progress == 0)
+  {
+    if(fake_flag)
+    {
+      for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+      {
+        NodeId = motor_table[motor_index].nodeId;
+        motor_status[NodeId] = 0b0000000000110111;
+        motor_interp_status[NodeId] = 0x122d;
+        motor_mode[NodeId] = 0x1;
+      }
+    }
+
+    pthread_mutex_lock(&robot_state_mux);
+    if(robot_state == SIMULAZIONE)
+      CERR("CT4", CERR_SimulationError);
+
+    if(robot_state != EMERGENZA)
+    {
+      robot_state = EMERGENZA;
+      OK("EM2");
+    }
+
+    pthread_mutex_unlock(&robot_state_mux);
+  }
+}
+
+void SmartStopCallback(CO_Data* d, UNS8 nodeId, int machine_state,
+    UNS32 return_value)
+{
+  int stop_in_progress = 0;
+  int motor_index;
+
+  if(return_value)
+  {
+    pthread_mutex_lock(&robot_state_mux);
+    if(robot_state == SIMULAZIONE)
+    {
+      pthread_mutex_unlock(&robot_state_mux);
+
+      CERR("CT5", CERR_InternalError);
+    }
+    else if(robot_state == INIZIALIZZATO)
+    {
+      pthread_mutex_unlock(&robot_state_mux);
+
+      CERR("CT2 P1", CERR_InternalError);
+    }
+    else
+    {
+      pthread_mutex_unlock(&robot_state_mux);
+      add_event(InternalError, nodeId, 0);
+    }
+
+    return;
+  }
+
+  SmartClear(nodeId);
+
+  for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+    stop_in_progress |= motor_started[motor_table[motor_index].nodeId];
+
+  pthread_mutex_lock(&robot_state_mux);
+  if(robot_state == SIMULAZIONE)
+  {
+    int motor_table_index = MotorTableIndexFromNodeId(nodeId);
+    struct table_data_read data_read;
+
+    //for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+    //{
+    QueueLast(&motor_table[motor_table_index], &data_read);
+
+    InterpolationTimePeriod[nodeId - MOTOR_INDEX_FIRST] = 0;
+    InterpolationTimeValue[nodeId - MOTOR_INDEX_FIRST] = 0;
+    InterpolationData[nodeId - MOTOR_INDEX_FIRST] = data_read.position;
+    //}
+
+    sendPDOevent(d);
+  }
+
+  pthread_mutex_unlock(&robot_state_mux);
+
+  if(stop_in_progress == 0)
+  {
+    if(fake_flag)
+    {
+      for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+      {
+        NodeId = motor_table[motor_index].nodeId;
+        motor_status[NodeId] = 0b0000010000110111;
+        motor_interp_status[NodeId] = 0x122d;
+        motor_mode[NodeId] = 0x1;
+      }
+    }
+
+    pthread_mutex_lock(&robot_state_mux);
+    if((robot_state == SIMULAZIONE) || (robot_state == RILASCIATO)
+        || (robot_state == LIBERO))
+    {
+      if(robot_state == SIMULAZIONE)
+        CERR("CT4", CERR_SimulationError);
+
+      OK("CT5");
+      robot_state = FERMO;
+    }
+
+    /*else if(robot_state == INIZIALIZZATO)
+     {
+     CERR("CT2 P1", CERR_ConfigError);
+     }*/
+    pthread_mutex_unlock(&robot_state_mux);
+  }
 }
 
 void SmartStop(UNS8 nodeid, int from_callback)
 {
-  if(nodeid == 0)
+  if(fake_flag == 0)
   {
-    int i;
-    for(i = 0; i < CANOPEN_NODE_NUMBER; i++)
+    struct state_machine_struct *machine = &smart_stop_machine;
+    _machine_exe(CANOpenShellOD_Data, nodeid, &SmartStopCallback, &machine, 1,
+        from_callback, 0);
+  }
+  else
+  {
+    if(nodeid == 0)
     {
-      if(motor_active[i])
-        simulation_first_start[i] = 1;
+      int motor_index;
+      for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+      {
+        motor_mode[motor_table[motor_index].nodeId] = 0x3;
+
+#ifdef CANOPENSHELL_VERBOSE
+        if(verbose_flag)
+        {
+          printf("SUCC[node %x]: smart motor stopped\n",
+              motor_table[motor_index].nodeId);
+        }
+#endif
+        SmartStopCallback(CANOpenShellOD_Data, motor_table[motor_index].nodeId,
+            0, 0);
+      }
+    }
+    else
+    {
+      motor_mode[nodeid] = 0x3;
+
+#ifdef CANOPENSHELL_VERBOSE
+      if(verbose_flag)
+      {
+        printf("SUCC[node %x]: smart motor stopped\n", nodeid);
+      }
+#endif
+
+      SmartStopCallback(CANOpenShellOD_Data, nodeid, 0, 0);
+    }
+  }
+}
+
+void SmartReleaseBrakeCallback(CO_Data* d, UNS8 Node_ID, int machine_state,
+    UNS32 return_value)
+{
+  if(return_value)
+  {
+    pthread_mutex_lock(&robot_state_mux);
+    CERR("CT2 P3", InternalError);
+    pthread_mutex_unlock(&robot_state_mux);
+
+    return;
+  }
+
+  pthread_mutex_lock(&release_mux);
+  release_complete++;
+
+  if(release_complete == motor_active_number)
+  {
+    release_complete = 0;
+    pthread_mutex_unlock(&release_mux);
+
+    OK("CT2 P3");
+    pthread_mutex_lock(&robot_state_mux);
+    robot_state = RILASCIATO;
+    pthread_mutex_unlock(&robot_state_mux);
+  }
+  else
+    pthread_mutex_unlock(&release_mux);
+}
+
+void SmartReleaseCallback(CO_Data* d, UNS8 Node_ID, int machine_state,
+    UNS32 return_value)
+{
+  if(return_value)
+  {
+    pthread_mutex_lock(&robot_state_mux);
+    CERR("CT2 P4", InternalError);
+    pthread_mutex_unlock(&robot_state_mux);
+
+    return;
+  }
+
+  pthread_mutex_lock(&release_mux);
+  release_complete++;
+
+  if(release_complete == motor_active_number)
+  {
+    release_complete = 0;
+    pthread_mutex_unlock(&release_mux);
+
+    OK("CT2 P4");
+    pthread_mutex_lock(&robot_state_mux);
+    robot_state = LIBERO;
+    pthread_mutex_unlock(&robot_state_mux);
+  }
+  else
+    pthread_mutex_unlock(&release_mux);
+}
+
+void SmartRelease(UNS8 nodeid, int from_callback, int brake)
+{
+  if(fake_flag == 0)
+  {
+    pthread_mutex_lock(&release_mux);
+    release_complete = 0;
+    pthread_mutex_unlock(&release_mux);
+
+    if(brake == 0)
+    {
+      struct state_machine_struct *machine[] =
+          {&smart_limit_disable_machine, &torque_machine};
+
+      _machine_exe(CANOpenShellOD_Data, nodeid, &SmartReleaseCallback, machine,
+          2, from_callback, 1, 0);
+    }
+    else
+    {
+      struct state_machine_struct *machine[] =
+          {&smart_limit_enable_machine, &smart_off_machine};
+
+      _machine_exe(CANOpenShellOD_Data, nodeid, &SmartReleaseBrakeCallback,
+          machine, 2, from_callback, 1, 0);
     }
   }
   else
   {
-    if(motor_active[nodeid])
-      simulation_first_start[nodeid] = 1;
+    if(nodeid == 0)
+    {
+      pthread_mutex_lock(&release_mux);
+      release_complete = 0;
+      pthread_mutex_unlock(&release_mux);
+
+      if(brake == 0)
+      {
+        int motor_index;
+        for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+        {
+          motor_mode[motor_table[motor_index].nodeId] = 0x4;
+
+          SmartReleaseCallback(CANOpenShellOD_Data,
+              motor_table[motor_index].nodeId, 0, 0);
+        }
+      }
+    }
+    else
+    {
+      if(brake == 0)
+      {
+        motor_mode[nodeid] = 0x4;
+
+        SmartReleaseCallback(CANOpenShellOD_Data, nodeid, 0, 0);
+      }
+    }
   }
 
-  struct state_machine_struct *machine = &smart_stop_machine;
-  _machine_exe(CANOpenShellOD_Data, nodeid, NULL, &machine, 1, from_callback,
-      0);
 }
 
 /* Start heartbeat producer on smartmotor */
@@ -1219,7 +2239,8 @@ void StartHeart(char* sdo)
   if(ret == 2)
   {
     struct state_machine_struct *machine = &heart_start_machine;
-    _machine_exe(CANOpenShellOD_Data, nodeid, NULL, &machine, 1, 0, 1, time_ms);
+    _machine_exe(CANOpenShellOD_Data, nodeid, NULL, &machine, 1, 0, 1,
+        time_ms);
   }
   else
     printf("Wrong command  : %s\n", sdo);
@@ -1572,14 +2593,19 @@ void StartNode(UNS8 nodeid)
 void ResetNode(UNS8 nodeid)
 {
   motor_active_number = 0;
-  masterSendNMTstateChange(CANOpenShellOD_Data, nodeid, NMT_Reset_Node);
+
+  if(fake_flag == 0)
+    masterSendNMTstateChange(CANOpenShellOD_Data, nodeid, NMT_Reset_Node);
 }
 
 /* Reset all nodes on the network and print message when boot-up*/
 void DiscoverNodes()
 {
 #ifdef CANOPENSHELL_VERBOSE
-  printf("Wait for Slave nodes bootup...\n\n");
+  if(verbose_flag)
+  {
+    printf("Wait for Slave nodes bootup...\n\n");
+  }
 #endif
   ResetNode(0x00);
 }
@@ -1719,11 +2745,16 @@ void CheckWriteSDO(CO_Data* d, UNS8 nodeid)
 
   if(getWriteResultNetworkDict(CANOpenShellOD_Data, nodeid,
       &abortCode) != SDO_FINISHED)
+  {
+#ifdef CANOPENSHELL_VERBOSE
     printf(
         "\nResult : Failed in getting information for slave %2.2x, AbortCode :%4.4x \n",
         nodeid, abortCode);
-//else
-//  printf("\nSend data OK\n");
+#endif
+    add_event(InternalError, nodeid, 0);
+  }
+  else
+    OK("PR5");
 
   /* Finalize last SDO transfer with this node */
   closeSDOtransfer(CANOpenShellOD_Data, nodeid, SDO_CLIENT);
@@ -1743,6 +2774,7 @@ void WriteDeviceEntry(char* sdo)
       &size, &data);
   if(ret == 5)
   {
+#ifdef CANOPENSHELL_VERBOSE
     printf("##################################\n");
     printf("#### Write SDO                ####\n");
     printf("##################################\n");
@@ -1751,6 +2783,7 @@ void WriteDeviceEntry(char* sdo)
     printf("SubIndex : %2.2x\n", subindex);
     printf("Size     : %2.2x\n", size);
     printf("Data     : %x\n", data);
+#endif
 
     writeNetworkDictCallBack(CANOpenShellOD_Data, nodeid, index, subindex,
         size, 0, &data, CheckWriteSDO, 0);
@@ -1822,7 +2855,7 @@ void DownloadToMotor(char* sdo)
     return;
   }
 
-  ret = sscanf(sdo, "prog#%2x,%s", &nodeid, program_file_path);
+  ret = sscanf(sdo, "prog#%2x,%s\n", &nodeid, program_file_path);
 
   if(ret == 2)
   {
@@ -1839,38 +2872,64 @@ void DownloadToMotor(char* sdo)
     printf("Wrong command  : %s\n", sdo);
 }
 
+void ExitFromLimitCallback(CO_Data* d, UNS8 nodeId, int machine_state,
+    UNS32 return_value)
+{
+  if(return_value == 1)
+  {
+    CERR("CT0", CERR_InternalError);
+    return;
+  }
+
+  if(fake_flag == 0)
+  {
+    struct state_machine_struct *position_machine[] =
+        {&smart_position_set_machine};
+
+    if((return_value & 0b0100000000000000) > 0) // right(+) limit
+    {
+      _machine_exe(d, nodeId, NULL, position_machine, 1, 1,
+          2, 100000, -4000);
+
+      return;
+    }
+    else if((return_value & 0b0100000000000000) > 0)  // left(-) limit
+    {
+      _machine_exe(d, nodeId, NULL, position_machine, 1, 1,
+          2, 100000, 4000);
+      return;
+    }
+  }
+
+  pthread_mutex_lock(&exit_from_limit_mux);
+  exit_from_limit_complete++;
+
+  if(exit_from_limit_complete == motor_active_number)
+  {
+    exit_from_limit_complete = 0;
+    pthread_mutex_unlock(&exit_from_limit_mux);
+
+    pthread_mutex_lock(&robot_state_mux);
+    robot_state = INIZIALIZZATO;
+    pthread_mutex_unlock(&robot_state_mux);
+    OK("CT0");
+  }
+  else
+    pthread_mutex_unlock(&exit_from_limit_mux);
+}
+
 void ConfigureSlaveNodeCallback(CO_Data* d, UNS8 nodeId, int machine_state,
     UNS32 return_value)
 {
   if(return_value)
     CERR("CT0", CERR_InternalError);
   else
-    printf("@M A%2x\n", nodeId);
+    printf("@M A%d\n", nodeId);
 }
 
-/*
- * Studio banda necessaria:
- *
- *      oggetto       byte       temp       num. motori
- * -----------------------------------------------------
- *      TPDO2         3+5         10 ms     6
- *      SYNC          3           100 ms    1
- *      TPDO1         3+5         10  ms    6
- *      HEARTBEAT     3+1         100 ms    6
- *      TIMESTAMP     3+4         100 ms    1
- *
- * Per 6 motori si ha una richiesta di banda di:
- *
- * B = 9940 b/s = 79520 B/s
- *
- * In questo calcolo si dovrebbero aggiungere anche i comandi verso il motori, come
- * la loro configurazione ed i punti di aggiornamento della tabella. In particolare
- * questi ultimi dipendono da quanto sono distanziati i punti e del tempo utile per
- * raggiungerli. Punti distanti temporalmente richiederanno meno scambio dati.
- */
 void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
 {
-  SmartSin1Stop(nodeid);
+  SmartClear(nodeid);
   _machine_reset(d, nodeid);
 
   if(motor_active[nodeid] == 0)
@@ -1885,28 +2944,68 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
     {
       pthread_mutex_unlock(&motor_active_number_mutex);
 
+      if(fake_flag)
+      {
+        ConfigureSlaveNodeCallback(d, nodeid, 0, 0);
+
+        struct sigevent sigev;
+
+        // Creo il timer e lo avvio
+        memset(&sigev, 0, sizeof(struct sigevent));
+        sigev.sigev_value.sival_int = 0;
+        sigev.sigev_notify = SIGEV_THREAD;
+        sigev.sigev_notify_attributes = NULL;
+        sigev.sigev_notify_function = FakeStatusUpdate;
+
+        if(timer_create(CLOCK_REALTIME, &sigev, &fake_update_timer))
+        {
+#ifdef CANOPENSHELL_VERBOSE
+          perror("timer_create()");
+#endif
+          CERR("CT0", CERR_InternalError);
+        }
+
+        long tv_nsec = 10000000;
+        time_t tv_sec = 0;
+        struct itimerspec timerValues;
+        timerValues.it_value.tv_sec = tv_sec;
+        timerValues.it_value.tv_nsec = tv_nsec;
+        timerValues.it_interval.tv_sec = tv_sec;
+        timerValues.it_interval.tv_nsec = tv_nsec;
+
+        timer_settime(fake_update_timer, 0, &timerValues, NULL);
+
+        motor_mode[nodeid] = 0x3;
+        motor_status[NodeId] = 0x1637;
+        motor_interp_status[NodeId] = 0X102d;
+        goto fake_jump;
+      }
+
       // CONFIGURE HEARTBEAT TO 100 ms
-      // MAP TPDO 1 (COB-ID 180) to transmit "node id" (8-bit), "status word" (16-bit), "interpolation mode status" (16-bit)
+      // MAP TPDO 1 (COB-ID 180) to transmit "node id" (8-bit), "status word" (16-bit), "interpolation mode status" (16-bit), "modes of operation" (8-bit)
       // MAP TPDO 2 (COB-ID 280) to transmit "node id" (8-bit), "position actual value" (32-bit)
       // MAP TPDO 3 (COB-ID 380) to receive high resolution timestamp
 
       // MAP RPDO 1 (COB-ID 200 + nodeid) to receive "Interpolation Time Index" (8-bit)" (0x06c2 sub2)
       // MAP RPDO 2 (COB-ID 300 + nodeid) to receive "Interpolation Time Units" (8-bit)" (0x06c2 sub1)
       // MAP RPDO 3 (COB-ID 400 + nodeid) to receive "Interpolation Data" (32-bit)" (0x06c1 sub1)
+      // MAP RPD0 4 (COB-ID 500 + nodeid) to receive "Control Word (16-bit)" (0x6040 sub0)
 
       struct state_machine_struct *configure_pdo_machine[] =
           {
-              &heart_start_machine, &map3_pdo_machine, &map2_pdo_machine,
+              &heart_start_machine, &map4_pdo_machine, &map2_pdo_machine,
               &map1_pdo_machine, &map1_pdo_machine, &map1_pdo_machine,
               &map1_pdo_machine, &smart_start_machine
           };
 
       _machine_exe(d, nodeid, &ConfigureSlaveNodeCallback,
-          configure_pdo_machine, 8, 1, 79, 100,
+          configure_pdo_machine, 8, 1, 81,
+
+          100,
 
           0x1800, 0xC0000180, 0x1A00, 0x1A00, 0x20000008, 0x1A00, 0x60410010,
-          0x1A00, 0x24000010, 0x1A00, 0x1800, 0x40000180, 0x1800, 0xFE, 0x1800,
-          0x32,
+          0x1A00, 0x24000010, 0x1A00, 0x60610008, 0x1A00, 0x1800, 0x40000180,
+          0x1800, 0xFE, 0x1800, 0x32,
 
           0x1801, 0xC0000280, 0x1A01, 0x1A01, 0x20000008, 0x1A01, 0x60630020,
           0x1A01, 0x1801, 0x40000280, 0x1801, 0xFE, 0x1801, 0xa,
@@ -1914,40 +3013,51 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
           0x1802, 0xC0000380, 0x1A02, 0x1A02, 0x10130020, 0x1A02, 0x1802,
           0x40000380, 0x1802, 10, 0x1802, 0,
 
-          0x1400, 0xC0000200 + nodeid, 0x1600, 0x1600, 0x60c20208, 0x1600,
-          0x1400,
-          0x40000200 + nodeid, 0x1400, 0xFE, 0x1400, 0,
+          0x1400, 0xC0000300 + nodeid, 0x1600, 0x1600, 0x60c20108, 0x1600,
+          0x1400, 0x40000300 + nodeid, 0x1400, 0xFE, 0x1400, 0,
 
-          0x1401, 0xC0000300 + nodeid, 0x1601, 0x1601, 0x60c20108, 0x1601,
-          0x1401,
-          0x40000300 + nodeid, 0x1401, 0xFE, 0x1401, 0,
+          0x1401, 0xC0000200 + nodeid, 0x1601, 0x1601, 0x60c20208, 0x1601,
+          0x1401, 0x40000200 + nodeid, 0x1401, 0xFE, 0x1401, 0,
 
           0x1402, 0xC0000400 + nodeid, 0x1602, 0x1602, 0x60c10120, 0x1602,
-          0x1402,
-          0x40000400 + nodeid, 0x1402, 0xFE, 0x1402, 0
+          0x1402, 0x40000400 + nodeid, 0x1402, 0xFE, 0x1402, 0
+
+          /*0x1403, 0xC0000500 + nodeid, 0x1603, 0x1603, 0x60400010, 0x1603,
+           0x1403, 0x40000500 + nodeid, 0x1403, 0xFE, 0x1403, 0,*/
 
           );
 
-      canopen_abort_code = RegisterSetODentryCallBack(d, 0x2400, 0,
+      canopen_abort_code = RegisterSetODentryCallBack(d, 0x6061, 0,
           &OnStatusUpdate);
 
       if(canopen_abort_code)
       {
 #ifdef CANOPENSHELL_VERBOSE
-        printf(
-            "Error[%d on node %x]: Impossibile registrare il callback per l'oggetto 0x2400 (Canopen abort code %x)\n",
-            CANOpenError, nodeid, canopen_abort_code);
+        if(verbose_flag)
+        {
+          printf(
+              "Error[%d on node %x]: Impossibile registrare il callback per l'oggetto 0x2400 (Canopen abort code %x)\n",
+              CANOpenError, nodeid, canopen_abort_code);
+        }
 #endif
-
+        CERR("CT0", CERR_InternalError);
       }
 
       canopen_abort_code = RegisterSetODentryCallBack(d, 0x6063, 0,
           &OnPositionUpdate);
 
       if(canopen_abort_code)
-        printf(
-            "Error[%d on node %x]: Impossibile registrare il callback per l'oggetto 0x2400 (Canopen abort code %x)\n",
-            CANOpenError, nodeid, canopen_abort_code);
+      {
+#ifdef CANOPENSHELL_VERBOSE
+        if(verbose_flag)
+        {
+          printf(
+              "Error[%d on node %x]: Impossibile registrare il callback per l'oggetto 0x2400 (Canopen abort code %x)\n",
+              CANOpenError, nodeid, canopen_abort_code);
+        }
+#endif
+        CERR("CT0", CERR_InternalError);
+      }
 
       fflush(stdout);
     }
@@ -1955,56 +3065,67 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
     {
       pthread_mutex_unlock(&motor_active_number_mutex);
 
+      if(fake_flag)
+      {
+        ConfigureSlaveNodeCallback(d, nodeid, 0, 0);
+
+        motor_mode[nodeid] = 0x3;
+        motor_status[NodeId] = 0x1637;
+        motor_interp_status[NodeId] = 0X102d;
+        goto fake_jump;
+      }
+
       // CONFIGURE HEARTBEAT TO 100 ms
       // MAP TPDO 1 (COB-ID 180) to transmit "node id" (8-bit), "status word" (16-bit), "interpolation mode status" (16-bit)
       // MAP TPDO 2 (COB-ID 280) to transmit "node id" (8-bit), "position actual value" (32-bit)
 
-      // MAP RPDO 1 (COB-ID 200 + nodeid) to receive "Interpolation Time Index" (8-bit)" (0x06c2 sub2)
-      // MAP RPDO 2 (COB-ID 300 + nodeid) to receive "Interpolation Time Units" (8-bit)" (0x06c2 sub1)
-      // MAP RPDO 3 (COB-ID 400 + nodeid) to receive "Interpolation Data" (32-bit)" (0x06c1 sub1)
-      // MAP RPDO 4 (COB-ID 380) to receive high resolution timestamp
+      // MAP RPDO 1 (COB-ID 200 + nodeid) to receive "Interpolation Time Index" (8-bit)" (0x60c2 sub2)
+      // MAP RPDO 2 (COB-ID 300 + nodeid) to receive "Interpolation Time Units" (8-bit)" (0x60c2 sub1)
+      // MAP RPDO 3 (COB-ID 400 + nodeid) to receive "Interpolation Data" (32-bit)" (0x60c1 sub1)
+      // MAP RPD0 4 (COB-ID 500 + nodeid) to receive "Control Word (16-bit)" (0x6040 sub0)
+      // MAP RPDO 5 (COB-ID 380) to receive high resolution timestamp
+
       struct state_machine_struct *configure_slave_machine[] =
           {
-              &heart_start_machine, &map3_pdo_machine, &map2_pdo_machine,
+              &heart_start_machine, &map4_pdo_machine, &map2_pdo_machine,
               &map1_pdo_machine, &map1_pdo_machine, &map1_pdo_machine,
               &map1_pdo_machine, &smart_start_machine
           };
 
       _machine_exe(d, nodeid, &ConfigureSlaveNodeCallback,
-          configure_slave_machine, 8, 1, 79,
+          configure_slave_machine, 8, 1, 81,
           100,
 
           0x1800, 0xC0000180, 0x1A00, 0x1A00, 0x20000008, 0x1A00, 0x60410010,
-          0x1A00, 0x24000010, 0x1A00, 0x1800, 0x40000180, 0x1800, 0xFE, 0x1800,
-          0x32,
+          0x1A00, 0x24000010, 0x1A00, 0x60610008, 0x1A00, 0x1800, 0x40000180,
+          0x1800, 0xFE, 0x1800, 0x32,
 
           0x1801, 0xC0000280, 0x1A01, 0x1A01, 0x20000008, 0x1A01, 0x60630020,
           0x1A01, 0x1801, 0x40000280, 0x1801, 0xFE, 0x1801, 0xa,
 
-          0x1400, 0xC0000200 + nodeid, 0x1600, 0x1600, 0x60c20208, 0x1600,
-          0x1400,
-          0x40000200 + nodeid, 0x1400, 0xFE, 0x1400, 0,
+          0x1400, 0xC0000300 + nodeid, 0x1600, 0x1600, 0x60c20108, 0x1600,
+          0x1400, 0x40000300 + nodeid, 0x1400, 0xFE, 0x1400, 0,
 
-          0x1401, 0xC0000300 + nodeid, 0x1601, 0x1601, 0x60c20108, 0x1601,
-          0x1401,
-          0x40000300 + nodeid, 0x1401, 0xFE, 0x1401, 0,
+          0x1401, 0xC0000200 + nodeid, 0x1601, 0x1601, 0x60c20208, 0x1601,
+          0x1401, 0x40000200 + nodeid, 0x1401, 0xFE, 0x1401, 0,
 
           0x1402, 0xC0000400 + nodeid, 0x1602, 0x1602, 0x60c10120, 0x1602,
-          0x1402,
-          0x40000400 + nodeid, 0x1402, 0xFE, 0x1402, 0,
+          0x1402, 0x40000400 + nodeid, 0x1402, 0xFE, 0x1402, 0,
 
-          0x1403, 0xC0000380, 0x1603, 0x1603, 0x10130020, 0x1603, 0x1403,
-          0x40000380, 0x1403, 0xFE, 0x1403, 0);
+          /*0x1403, 0xC0000500 + nodeid, 0x1603, 0x1603, 0x60400010, 0x1603,
+           0x1403, 0x40000500 + nodeid, 0x1403, 0xFE, 0x1403, 0,*/
+
+          0x1404, 0xC0000380, 0x1604, 0x1604, 0x10130020, 0x1604, 0x1404,
+          0x40000380, 0x1404, 0xFE, 0x1404, 0
+
+          );
     }
 
+    fake_jump:
     motor_active[nodeid] = 1;
   }
 
-  motor_started[nodeid] = 0;
-  simulation_first_start[nodeid] = 1;
-
-  pthread_mutex_init(&sinwave_mux[nodeid], NULL);
-  pthread_mutex_init(&position_mux[nodeid], NULL);
+  pthread_mutex_init(&interpolator_mux[nodeid], NULL);
 
 // Controllo se una tabella sia stata già assegnata, altrimenti ne
 // trovo una libera
@@ -2025,9 +3146,7 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
   }
   else
   {
-    pthread_mutex_lock(&motor_table[motor_table_index].table_mutex);
     QueueInit(nodeid, &motor_table[motor_table_index]);
-    pthread_mutex_unlock(&motor_table[motor_table_index].table_mutex);
   }
 }
 
@@ -2040,7 +3159,10 @@ void CANOpenShellOD_post_Emcy(CO_Data* d, UNS8 nodeID, UNS16 errCode,
 void CANOpenShellOD_post_SlaveBootup(CO_Data* d, UNS8 nodeid)
 {
 #ifdef CANOPENSHELL_VERBOSE
-  printf("Slave %x boot up\n", nodeid);
+  if(verbose_flag)
+  {
+    printf("Slave %x boot up\n", nodeid);
+  }
 #endif
 
   ConfigureSlaveNode(d, nodeid);
@@ -2245,8 +3367,13 @@ void CheckWriteRaw(CO_Data* d, UNS8 nodeid)
 
 void CANOpenShellOD_initialisation(CO_Data* d)
 {
-  printf("Node_initialisation\n");
-  fflush(stdout);
+#ifdef CANOPENSHELL_VERBOSE
+  if(verbose_flag)
+  {
+    printf("Node_initialisation\n");
+    fflush(stdout);
+  }
+#endif
 
   /*UNS32 PDO1_COBID = 0x0182;
    UNS32 size = sizeof(UNS32);
@@ -2275,20 +3402,35 @@ void CANOpenShellOD_initialisation(CO_Data* d)
 
 void CANOpenShellOD_preOperational(CO_Data* d)
 {
-  printf("Node_preOperational\n");
-  fflush(stdout);
+#ifdef CANOPENSHELL_VERBOSE
+  if(verbose_flag)
+  {
+    printf("Node_preOperational\n");
+    fflush(stdout);
+  }
+#endif
 }
 
 void CANOpenShellOD_operational(CO_Data* d)
 {
-  printf("Node_operational\n");
-  fflush(stdout);
+#ifdef CANOPENSHELL_VERBOSE
+  if(verbose_flag)
+  {
+    printf("Node_operational\n");
+    fflush(stdout);
+  }
+#endif
 }
 
 void CANOpenShellOD_stopped(CO_Data* d)
 {
-  printf("Node_stopped\n");
-  fflush(stdout);
+#ifdef CANOPENSHELL_VERBOSE
+  if(verbose_flag)
+  {
+    printf("Node_stopped\n");
+    fflush(stdout);
+  }
+#endif
 }
 
 void CANOpenShellOD_post_sync(CO_Data* d)
@@ -2329,8 +3471,11 @@ int NodeInit(int NodeID)
 {
   CANOpenShellOD_Data = &CANOpenShellMasterOD_Data;
 
-  /* Load can library */
-  LoadCanDriver(LibraryPath);
+  if(fake_flag == 0)
+  {
+    /* Load can library */
+    LoadCanDriver(LibraryPath);
+  }
 
   /* Define callback functions */
   CANOpenShellOD_Data->initialisation = CANOpenShellOD_initialisation;
@@ -2343,9 +3488,11 @@ int NodeInit(int NodeID)
   CANOpenShellOD_Data->heartbeatError = CANOpenShellOD_heartbeatError;
   CANOpenShellOD_Data->post_emcy = CANOpenShellOD_post_Emcy;
 
-  if(!canOpen(&Board, CANOpenShellOD_Data))
-    return INIT_ERR;
-
+  if(fake_flag == 0)
+  {
+    if(!canOpen(&Board, CANOpenShellOD_Data))
+      return INIT_ERR;
+  }
   /* Defining the node Id */
   setNodeId(CANOpenShellOD_Data, NodeID);
   /* Start Timer thread */
@@ -2356,10 +3503,14 @@ int NodeInit(int NodeID)
 void
 help_menu(void)
 {
-  printf("   MANDATORY COMMAND (must be the first command):\n");
+  printf("   MANDATORY COMMAND:\n");
   printf("     load#CanLibraryPath,channel,baudrate,nodeid\n");
   printf("       ex: load#libcanfestival_can_socket.so,0,1M,8\n");
   printf("\n");
+  printf("   OPTIONAL COMMAND:\n");
+  printf("     fake : run with fake motor\n");
+  printf("     verb : activate debug messages\n");
+  printf("       ex: load#libcanfestival_can_socket.so,0,1M,8\n");
   printf("   NETWORK: (if nodeid=0x00 : broadcast)\n");
   printf("     srst#nodeid : Reset a node\n");
   printf("     spre#nodeid : Enter in pre-operational mode\n");
@@ -2375,6 +3526,40 @@ help_menu(void)
   printf("   SMART MOTOR:\n");
   printf(
       "     CT0 M<num_mot> : Discover nodes and check if there's num_mot motors\n");
+  printf(
+      "     CT2 P1 : start homing procedure for all motors. Parameters has been read by motor's file \n");
+  printf(
+      "     CT2 P2 : all motors returns to the center point \n");
+  printf(
+      "     CT2 P3 : release motors with brake \n");
+  printf(
+      "     CT2 P4 : release motors without brake \n");
+  printf("     CT4 : starts simulation \n");
+  printf("     CT5 : stops simulation (valid only in simulation state) \n");
+  printf("     CT6 : quit application \n");
+
+  printf("     EM2 : stop all motors \n");
+  printf("     PR1: ottiene lo stato\n");
+  printf(
+      "     PR5 M<mot_num> O<index_hex> S<subindex> T<bit_num><tipo> <valore> :\n");
+  printf("        imposta il valore dell'oggetto canopen indicato \n");
+  printf("        ex : PR5 M119 O6065 S0 T32U 100\n");
+
+  printf(
+      "     shom#nodeid,offset,vel_forw,vel_back : start homing for nodeid with forward velocity vel_forw, backward velocity vel_back and distance from limit equal to offset\n");
+  printf("        ex : shom#77,7d0,2710,2710\n");
+  printf("     sgen#nodeid,type,<param> : generate simulation data\n");
+  printf(
+      "                 type: sin,amplitude,period[ms],tsamp[ms],num of period\n");
+  printf(
+      "                 type: saw,amplitude,half_period[ms],pause[ms],num of period\n");
+  printf("        ex : sgen#77,sin,3e0,3e8,a,1\n");
+  printf("        ex : sgen#77,saw,4e200,3e8,3e8,10\n");
+  printf(
+      "     simu#nodeid : start simulation reading data from tables/<nodeid>.mot file\n");
+  printf(
+      "     prog#nodeid,file_name : download file_name firmware to motor nodeid\n");
+  printf("     uplo#nodeid : read firmware from motor\n");
 
   printf("     ssta#nodeid : Reset error and make motor operative\n");
   printf("     ssto#nodeid : Stop a node and motor\n");
@@ -2383,26 +3568,17 @@ help_menu(void)
   printf(
       "     tpdo#nodeid,pdo_num - 1,cob_id,map1,map2,entry_num,type,time : map tpdo\n");
   printf("        ex : tpdo#3f,1,182,60410010,606c0020,2,FE,64\n");
-  printf("     shrt#nodeid,cycle : set and start heartbeat time cycle [ms]\n");
+  printf(
+      "     shrt#nodeid,cycle : set and start heartbeat time cycle [ms]\n");
   printf("     szer#nodeid : set motor at origin\n");
   printf("     int1#nodeid : interpolation test 1\n");
   printf("     int2#nodeid : interpolation test 2\n");
   printf(
       "     sin1#nodeid,angle step,amplitude,point number : generate sin wave\n");
   printf("     ints#nodeid : start interpolated movement \n");
-  printf("     shom#nodeid : homing\n");
   printf("     svel#nodeid : read the target velocity\n");
   printf("     sVTS#nodeid,VT : set target velocity to VT\n");
-  printf(
-      "     simu#nodeid : start simulation reading data from tables/<nodeid>.mot file\n");
   printf("     sprg#nodeid : get actual simulation progress in %%\n");
-  printf("     sgen#nodeid,type,<param> : generate simulation data\n");
-  printf(
-      "                 type: sin,amplitude,period[ms],tsamp[ms],num of period\n");
-  printf(
-      "                 type: saw,amplitude,half_period[ms],pause[ms],num of period\n");
-  printf("        ex : sgen#77,sin,3e0,3e8,a,1\n");
-  printf("        ex : sgen#77,saw,4e200,3e8,3e8,10\n");
   printf("\n");
   printf("   Note: All numbers are hex\n");
   printf("\n");
@@ -2422,22 +3598,112 @@ int ExtractNodeId(char *command)
 void DiscoverTimeout(sigval_t val)
 {
   pthread_mutex_lock(&motor_active_number_mutex);
-
   if(motor_active_number != val.sival_int)
-    CERR("CT0", CERR_ConfigError);
-  else
-    OK("CT0");
+  {
+    pthread_mutex_unlock(&motor_active_number_mutex);
 
-  pthread_mutex_unlock(&motor_active_number_mutex);
+    CERR("CT0", CERR_ConfigError);
+  }
+  else
+  {
+    pthread_mutex_unlock(&motor_active_number_mutex);
+
+    pthread_mutex_lock(&exit_from_limit_mux);
+    exit_from_limit_complete = 0;
+    pthread_mutex_unlock(&exit_from_limit_mux);
+
+    struct state_machine_struct *exit_from_limit_machine[] =
+        {&smart_limit_enable_machine, &smart_statusword_machine};
+
+    int motor_index;
+    for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+    {
+      // se il motore è alimentato
+      if((motor_status[motor_table[motor_index].nodeId] & 0b0000000000010000)
+          > 0)
+      {
+        if(fake_flag == 0)
+        {
+          _machine_exe(CANOpenShellOD_Data, motor_table[motor_index].nodeId,
+              &ExitFromLimitCallback, exit_from_limit_machine, 2, 0, 0);
+        }
+        else
+        {
+#ifdef CANOPENSHELL_VERBOSE
+          if(verbose_flag)
+          {
+            printf("SUCC[node %x]: smartmotor enable limits\n",
+                motor_table[motor_index].nodeId);
+            printf("SUCC[node %x]: Status word read\n",
+                motor_table[motor_index].nodeId);
+          }
+#endif
+          ExitFromLimitCallback(CANOpenShellOD_Data,
+              motor_table[motor_index].nodeId, 0, 0);
+        }
+      }
+    }
+  }
 
   timer_delete(timer);
 }
 
-void ProcessCommandTripode(char* command)
+void ProcessEmergencyTripode(char* command)
+{
+  switch(command[2] - '0')
+  {
+    case 2:
+      if((robot_state == EMERGENZA) || (robot_state == ACCESO))
+      {
+        pthread_mutex_unlock(&robot_state_mux);
+        goto permission_denied;
+      }
+
+      if(fake_flag == 0)
+      {
+        struct state_machine_struct *machine[] =
+            {&smart_limit_disable_machine, &smart_stop_machine};
+
+        _machine_exe(CANOpenShellOD_Data, 0, &SmartEmergencyCallback, machine,
+            2, 0, 0);
+      }
+      else
+      {
+        int motor_index;
+        for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+        {
+#ifdef CANOPENSHELL_VERBOSE
+          if(verbose_flag)
+          {
+            printf("SUCC[node %x]: smart motor stopped\n",
+                motor_table[motor_index].nodeId);
+          }
+#endif
+
+          SmartEmergencyCallback(CANOpenShellOD_Data,
+              motor_table[motor_index].nodeId, 0, 0);
+        }
+      }
+      break;
+
+    default:
+      CERR(command, CERR_NotFound);
+      break;
+  }
+
+  return;
+
+  permission_denied:
+  CERR(command, CERR_PermissionDenied);
+  return;
+}
+
+int ProcessCommandTripode(char* command)
 {
   struct sigevent sigev;
   int parse_num = 0;
   int parse_int = 0;
+  char parse_str[256];
 
   switch(command[2] - '0')
   {
@@ -2447,6 +3713,19 @@ void ProcessCommandTripode(char* command)
 
       if(parse_num == 1)
       {
+        pthread_mutex_lock(&robot_state_mux);
+        if((robot_state != ACCESO) && (robot_state != EMERGENZA)
+            && ((robot_state != RILASCIATO)
+                || ((robot_state == RILASCIATO) && (homing_executed == 1)))
+            && ((robot_state != LIBERO)
+                || ((robot_state == LIBERO) && (homing_executed == 1))))
+        {
+          pthread_mutex_unlock(&robot_state_mux);
+          goto permission_denied;
+        }
+
+        pthread_mutex_unlock(&robot_state_mux);
+
         // Creo il timer e lo avvio
         memset(&sigev, 0, sizeof(struct sigevent));
         sigev.sigev_value.sival_int = parse_int;
@@ -2471,6 +3750,21 @@ void ProcessCommandTripode(char* command)
         timer_settime(timer, 0, &timerValues, NULL);
 
         DiscoverNodes();
+
+        if(fake_flag)
+        {
+          ConfigureSlaveNode(CANOpenShellOD_Data, 119);
+          ConfigureSlaveNode(CANOpenShellOD_Data, 120);
+          ConfigureSlaveNode(CANOpenShellOD_Data, 121);
+          ConfigureSlaveNode(CANOpenShellOD_Data, 122);
+
+          for(parse_num = 0; parse_num < motor_active_number; parse_num++)
+          {
+            motor_mode[motor_table[parse_num].nodeId] = 0x3;
+            motor_status[motor_table[parse_num].nodeId] = 0x1637;
+            motor_interp_status[motor_table[parse_num].nodeId] = 0X102d;
+          }
+        }
       }
       else
         goto fail;
@@ -2482,13 +3776,138 @@ void ProcessCommandTripode(char* command)
         case cst_str2('P', '1'):
           // leggo i parametri dal file e li passo alla
           // funzione di homing
-          for(parse_num = 1; parse_num <= motor_active_number; parse_num++)
-          {
-            int motor_table_index = MotorTableIndexFromNodeId(parse_num);
 
-            QueueInit(parse_num, &motor_table[motor_table_index]);
-            SmartHome("shom#0,%4lx");
+          pthread_mutex_lock(&robot_state_mux);
+          if(robot_state != INIZIALIZZATO)
+          {
+            pthread_mutex_unlock(&robot_state_mux);
+            goto permission_denied;
           }
+
+          pthread_mutex_unlock(&robot_state_mux);
+
+          // inizializzo la coda e controllo che il file motore esista
+          for(parse_num = 0; parse_num < motor_active_number; parse_num++)
+          {
+            QueueInit(motor_table[parse_num].nodeId, &motor_table[parse_num]);
+
+            pthread_mutex_lock(&motor_table[parse_num].table_mutex);
+            parse_int = QueuePut(&motor_table[parse_num], 1);
+            pthread_mutex_unlock(&motor_table[parse_num].table_mutex);
+
+            if(parse_int != 1)
+            {
+#ifdef CANOPENSHELL_VERBOSE
+              if(verbose_flag)
+              {
+                printf("%d\n", parse_int);
+                printf("ERR[%d on node %x]: Errore nel file.\n",
+                    InternalError,
+                    motor_table[parse_num].nodeId);
+              }
+#endif
+
+              CERR("CT2 P1", CERR_ConfigError);
+              return 0;
+            }
+          }
+
+          // verifico che le informazioni nel file siano secondo il protocollo
+          for(parse_num = 0; parse_num < motor_active_number; parse_num++)
+          {
+            // per leggere i parametri di homing non ho bisogno di utilizzare la funzione
+            // QueueGet perché non vado ad incidere sul buffer circolare
+            if(motor_table[parse_num].type != 'H')
+            {
+#ifdef CANOPENSHELL_VERBOSE
+              if(verbose_flag)
+              {
+                printf("ERR[%d on node %x]: Errore nella riga di homing.\n",
+                    InternalError,
+                    motor_table[parse_num].nodeId);
+              }
+#endif
+
+              CERR("CT2 P1", CERR_ConfigError);
+              return 0;
+            }
+          }
+
+          pthread_mutex_lock(&robot_state_mux);
+          robot_state = RICERCA_CENTRO;
+          pthread_mutex_unlock(&robot_state_mux);
+
+          for(parse_num = 0; parse_num < motor_active_number; parse_num++)
+          {
+            sprintf(parse_str, "shom#%x,%lx,%lx,%lx",
+                motor_table[parse_num].nodeId,
+                motor_table[parse_num].offset,
+                motor_table[parse_num].forward_velocity,
+                motor_table[parse_num].backward_velocity);
+
+            if(fake_flag == 0)
+              SmartHome(parse_str);
+            else
+            {
+              motor_started[motor_table[parse_num].nodeId] = 1;
+              simulation_first_start[motor_table[parse_num].nodeId] = 1;
+            }
+          }
+
+          if(fake_flag)
+          {
+            pthread_mutex_lock(&exit_from_limit_mux);
+            exit_from_limit_complete = 0;
+            pthread_mutex_unlock(&exit_from_limit_mux);
+
+            for(parse_num = 0; parse_num < motor_active_number; parse_num++)
+              SmartPositionTargetCallback(CANOpenShellOD_Data,
+                  motor_table[parse_num].nodeId, 0, 0);
+          }
+          break;
+
+        case cst_str2('P', '2'):
+          // leggo i parametri dal file e li passo alla
+          // funzione di homing
+
+          pthread_mutex_lock(&robot_state_mux);
+          if(robot_state != FERMO)
+          {
+            pthread_mutex_unlock(&robot_state_mux);
+            goto permission_denied;
+          }
+
+          robot_state = CENTRAGGIO;
+          pthread_mutex_unlock(&robot_state_mux);
+          SmartOrigin(0);
+
+          break;
+
+        case cst_str2('P', '3'):
+          pthread_mutex_lock(&robot_state_mux);
+          if((robot_state != INIZIALIZZATO) && (robot_state != CENTRATO)
+              && (robot_state != FERMO))
+          {
+            pthread_mutex_unlock(&robot_state_mux);
+            goto permission_denied;
+          }
+
+          pthread_mutex_unlock(&robot_state_mux);
+
+          SmartRelease(0, 0, 1);
+          break;
+
+        case cst_str2('P', '4'):
+          pthread_mutex_lock(&robot_state_mux);
+          if(robot_state != RILASCIATO)
+          {
+            pthread_mutex_unlock(&robot_state_mux);
+            goto permission_denied;
+          }
+
+          pthread_mutex_unlock(&robot_state_mux);
+
+          SmartRelease(0, 0, 0);
           break;
 
         default:
@@ -2497,15 +3916,177 @@ void ProcessCommandTripode(char* command)
       }
       break;
 
+    case 4:
+      pthread_mutex_lock(&robot_state_mux);
+      if(robot_state != CENTRATO)
+      {
+        pthread_mutex_unlock(&robot_state_mux);
+        goto permission_denied;
+      }
+
+      robot_state = SIMULAZIONE;
+      pthread_mutex_unlock(&robot_state_mux);
+
+      SimulationStart(0);
+      break;
+
+    case 5:
+      pthread_mutex_lock(&robot_state_mux);
+      if((robot_state != SIMULAZIONE)
+          && ((robot_state != RILASCIATO)
+              || ((robot_state == RILASCIATO) && (homing_executed == 0)))
+          && ((robot_state != LIBERO)
+              || ((robot_state == LIBERO) && (homing_executed == 0))))
+      {
+        pthread_mutex_unlock(&robot_state_mux);
+        goto permission_denied;
+      }
+
+      pthread_mutex_unlock(&robot_state_mux);
+
+      SmartStop(0, 0);
+      break;
+
+    case 6:
+      pthread_mutex_lock(&robot_state_mux);
+      if((robot_state == EMERGENZA) && (robot_state == RICERCA_CENTRO)
+          && (robot_state == SIMULAZIONE) && (robot_state == CENTRAGGIO))
+      {
+        pthread_mutex_unlock(&robot_state_mux);
+        goto permission_denied;
+      }
+
+      pthread_mutex_unlock(&robot_state_mux);
+      return QUIT;
+      break;
+
     default:
       CERR(command, CERR_NotFound);
       break;
   }
 
-  return;
+  return 0;
 
   fail:
   CERR(command, CERR_ParamError);
+  return 0;
+
+  permission_denied:
+  CERR(command, CERR_PermissionDenied);
+  return 0;
+}
+
+int ProcessParameterTripode(char* command)
+{
+  char parse_str[256];
+  int parse_num = 0;
+  int nodeid = 0;
+  long index = 0;
+  int subindex = 0;
+  int size = 0;
+  char type;
+  long value = 0;
+
+  switch(command[2] - '0')
+  {
+    case 1:
+      pthread_mutex_lock(&robot_state_mux);
+      switch(robot_state)
+      {
+        case SPENTO:
+          sprintf(parse_str, "PR1: %d, Spento\n", robot_state);
+          break;
+
+        case EMERGENZA:
+          sprintf(parse_str, "PR1: %d, Emergenza\n", robot_state);
+          break;
+
+        case ACCESO:
+          sprintf(parse_str, "PR1: %d, Attivo\n", robot_state);
+          break;
+
+        case INIZIALIZZATO:
+          sprintf(parse_str, "PR1: %d, Inizializzato\n", robot_state);
+          break;
+
+        case RICERCA_CENTRO:
+          sprintf(parse_str, "PR1: %d, In ricerca del centro\n", robot_state);
+          break;
+
+        case CENTRATO:
+          sprintf(parse_str, "PR1: %d, Centrato\n", robot_state);
+          break;
+
+        case SIMULAZIONE:
+          sprintf(parse_str, "PR1: %d, Simulazione\n", robot_state);
+          break;
+
+        case FERMO:
+          sprintf(parse_str, "PR1: %d, Fermo\n", robot_state);
+          break;
+
+        case CENTRAGGIO:
+          sprintf(parse_str, "PR1: %d, In centraggio\n", robot_state);
+          break;
+
+        case RILASCIATO:
+          sprintf(parse_str, "PR1: %d, Rilasciato\n", robot_state);
+          break;
+
+        case LIBERO:
+          sprintf(parse_str, "PR1: %d, Libero\n", robot_state);
+          break;
+      }
+      pthread_mutex_unlock(&robot_state_mux);
+
+      OK(parse_str);
+      break;
+
+    case 5:
+      pthread_mutex_lock(&robot_state_mux);
+      if((robot_state == RICERCA_CENTRO) || (robot_state == SIMULAZIONE)
+          || (robot_state == CENTRAGGIO))
+      {
+        pthread_mutex_unlock(&robot_state_mux);
+        goto permission_denied;
+      }
+
+      pthread_mutex_unlock(&robot_state_mux);
+
+      //0x2101, 0x3, 2, 0, 0x2
+      parse_num = sscanf(command, "PR5 M%d O%lx S%d T%d%c %ld", &nodeid, &index,
+          &subindex, &size, &type, &value);
+
+      //printf("parse %d node %d index %ld subindex %d, size %d, type %c, value %ld\n", parse_num,
+      //    nodeid, index, subindex, size, type, value);
+      if(parse_num == 6)
+      {
+        if(nodeid == 0)
+          goto permission_denied;
+
+        size = size / 8;
+        sprintf(parse_str, "wsdo#%x,%lx,%x,%x,%lx", nodeid, index, subindex,
+            size, value);
+        WriteDeviceEntry(parse_str);
+      }
+      else
+        goto fail;
+      break;
+
+    default:
+      CERR(command, CERR_NotFound);
+      break;
+  }
+
+  return 0;
+
+  fail:
+  CERR(command, CERR_ParamError);
+  return 0;
+
+  permission_denied:
+  CERR(command, CERR_PermissionDenied);
+  return 0;
 }
 
 int ProcessCommand(char* command)
@@ -2513,10 +4094,20 @@ int ProcessCommand(char* command)
   int ret = 0;
   int NodeID;
 
+  return_event();
+
   switch(cst_str2(command[0], command[1]))
   {
+    case cst_str2('E', 'M'):
+      ProcessEmergencyTripode(command);
+      break;
+
     case cst_str2('C', 'T'):
-      ProcessCommandTripode(command);
+      return ProcessCommandTripode(command);
+      break;
+
+    case cst_str2('P', 'R'):
+      return ProcessParameterTripode(command);
       break;
 
     default:
@@ -2524,9 +4115,17 @@ int ProcessCommand(char* command)
 
       switch(cst_str4(command[0], command[1], command[2], command[3]))
       {
+        case cst_str4('f', 'a', 'k', 'e'):
+          fake_flag = 1;
+          break;
+
+        case cst_str4('v', 'e', 'r', 'b'):
+          verbose_flag = 1;
+          break;
+
         case cst_str4('l', 'o', 'a', 'd'): // Library Interface
-          ret = sscanf(command, "load#%100[^,],%30[^,],%4[^,],%d", LibraryPath,
-              BoardBusName, BoardBaudRate, &NodeID);
+          ret = sscanf(command, "load#%100[^,],%30[^,],%4[^,],%d",
+              LibraryPath, BoardBusName, BoardBaudRate, &NodeID);
 
           if(ret == 4)
           {
@@ -2538,6 +4137,70 @@ int ProcessCommand(char* command)
           {
             printf("Invalid load parameters\n");
           }
+          break;
+
+        case cst_str4('s', 'h', 'o', 'm'):
+          LeaveMutex();
+          SmartHome(command);
+          break;
+
+        case cst_str4('s', 'g', 'e', 'n'):
+          LeaveMutex();
+          GenerateMotorData(command);
+          break;
+
+        case cst_str4('s', 'i', 'm', 'u'):
+          LeaveMutex();
+          SimulationStart(ExtractNodeId(command + 5));
+          break;
+
+        case cst_str4('s', 's', 't', 'o'): // Smart Stop
+          LeaveMutex();
+          SmartStop(ExtractNodeId(command + 5), 0);
+          break;
+
+        case cst_str4('s', 'r', 'a', 'w'): // RAW command
+          RawCmdMotor(command);
+          break;
+
+        case cst_str4('h', 'e', 'l', 'p'): // Display Help
+          help_menu();
+          break;
+
+        case cst_str4('s', 'z', 'e', 'r'): // OK
+          LeaveMutex();
+          SmartOrigin(ExtractNodeId(command + 5));
+          break;
+
+        case cst_str4('p', 'r', 'o', 'g'): // download program to motor
+          DownloadToMotor(command);
+          break;
+
+        case cst_str4('u', 'p', 'l', 'o'): // download program from motor
+          UploadFromMotor(ExtractNodeId(command + 5));
+          break;
+
+        case cst_str4('w', 's', 'd', 'o'): // Write device entry
+          WriteDeviceEntry(command);
+          break;
+
+        case cst_str4('r', 's', 'd', 'o'): // Read device entry
+          ReadDeviceEntry(command);
+          break;
+
+        case cst_str4('s', 'v', 'e', 'l'):
+          LeaveMutex();
+          SmartVelocityGet(ExtractNodeId(command + 5));
+          break;
+
+        case cst_str4('s', 'a', 'c', 'c'):
+          LeaveMutex();
+          SmartAccelerationGet(ExtractNodeId(command + 5));
+          break;
+
+        case cst_str4('s', 'f', 'o', 'l'):
+          LeaveMutex();
+          SmartFollowingErrorGet(ExtractNodeId(command + 5));
           break;
 
         case cst_str4('q', 'u', 'i', 't'): // Quit application
@@ -2556,33 +4219,10 @@ int ProcessCommand(char* command)
   /*EnterMutex();
    switch(cst_str4(command[0], command[1], command[2], command[3]))
    {
-   case cst_str4('h', 'e', 'l', 'p'): // Display Help
-   help_menu();
-   break;
-
-   case cst_str4('s', 'z', 'e', 'r'): // OK
-   LeaveMutex();
-   SmartOrigin(ExtractNodeId(command + 5));
-   break;
 
    case cst_str4('i', 'n', 't', 's'):
    LeaveMutex();
    SmartIntStart(ExtractNodeId(command + 5));
-   break;
-
-   case cst_str4('s', 'i', 'm', 'u'): // OK
-   LeaveMutex();
-   SimulationStart(ExtractNodeId(command + 5));
-   break;
-
-   case cst_str4('s', 'g', 'e', 'n'):
-   LeaveMutex();
-   GenerateMotorData(command);
-   break;
-
-   case cst_str4('s', 'v', 'e', 'l'):
-   LeaveMutex();
-   SmartVelocityGet(ExtractNodeId(command + 5));
    break;
 
    case cst_str4('s', 'V', 'T', 'S'):
@@ -2630,11 +4270,6 @@ int ProcessCommand(char* command)
    StartNode(ExtractNodeId(command + 5));
    break;
 
-   case cst_str4('s', 's', 't', 'o'): // Slave Stop
-   LeaveMutex();
-   SmartStop(ExtractNodeId(command + 5), 0);
-   break;
-
    case cst_str4('s', 'r', 's', 't'): // Slave Reset
    ResetNode(ExtractNodeId(command + 5));
    break;
@@ -2651,26 +4286,6 @@ int ProcessCommand(char* command)
    GetSlaveNodeInfo(ExtractNodeId(command + 5));
    break;
 
-   case cst_str4('r', 's', 'd', 'o'): // Read device entry
-   ReadDeviceEntry(command);
-   break;
-
-   case cst_str4('w', 's', 'd', 'o'): // Write device entry
-   WriteDeviceEntry(command);
-   break;
-
-   case cst_str4('s', 'r', 'a', 'w'): // RAW command
-   RawCmdMotor(command);
-   break;
-
-   case cst_str4('p', 'r', 'o', 'g'): // download program to motor
-   DownloadToMotor(command);
-   break;
-
-   case cst_str4('u', 'p', 'l', 'o'): // download program from motor
-   UploadFromMotor(ExtractNodeId(command + 5));
-   break;
-
    default:
    if(*command != '\n')
    help_menu();
@@ -2683,23 +4298,75 @@ int ProcessCommand(char* command)
 
 void signal_handler(int signum)
 {
-// Garbage collection
-  printf("Terminating program...\n");
+  switch(signum)
+  {
+    case SIGINT:
+      // Garbage collection
+#ifdef CANOPENSHELL_VERBOSE
+      if(verbose_flag)
+      {
+        printf("Terminating program...\n");
 
-  printf("Finishing.\n");
+        printf("Finishing.\n");
+      }
+#endif
 
-  stopSYNC(CANOpenShellOD_Data);
-  heartbeatStop(CANOpenShellOD_Data);
+      if(position_fp > 0)
+        fclose(position_fp);
+
+      if(fake_flag == 0)
+        remove(POSITION_FIFO_FILE);
+      else
+        remove("/tmp/fake_alma_3d_spinitalia_pos_stream_pipe");
+
+      _machine_destroy();
+
+      if(fake_flag == 0)
+      {
+        stopSYNC(CANOpenShellOD_Data);
+//heartbeatStop(CANOpenShellOD_Data);
 
 // Stop timer thread
-  StopTimerLoop(&Exit);
+        StopTimerLoop(&Exit);
 
-  /* Close CAN board */
-  canClose(CANOpenShellOD_Data);
+        /* Close CAN board */
+        canClose(CANOpenShellOD_Data);
+      }
 
-  TimerCleanup();
+      TimerCleanup();
 
-  exit(signum);
+      exit(signum);
+      break;
+
+    case SIGPIPE:
+      printf("sigpipe\n");
+      fflush(stdout);
+      break;
+  }
+}
+
+void *PipeHandler()
+{
+#ifdef CANOPENSHELL_VERBOSE
+  if(verbose_flag)
+  {
+    printf("Waiting for someone who wants to read positions. . .\n");
+    fflush(stdout);
+  }
+#endif
+
+  if(fake_flag == 0)
+    position_fp = fopen(POSITION_FIFO_FILE, "w");
+  else
+    position_fp = fopen("/tmp/fake_alma_3d_spinitalia_pos_stream_pipe", "w");
+
+  if(position_fp == NULL)
+    perror("position pipe");
+
+  fflush(stdout);
+  signal(SIGPIPE, SIG_IGN);
+
+  return NULL;
 }
 
 /****************************************************************************/
@@ -2722,38 +4389,52 @@ int main(int argc, char** argv)
     exit(1);
   }
 
-//signal(SIGINT, signal_handler);
-//signal(SIGTERM, signal_handler);
+  signal(SIGINT, signal_handler);
+  //signal(SIGTERM, signal_handler);
 
-  // inizializzo la named pipe per i dati di posizione
+  //load#libcanfestival_can_socket.so,0,1M,8
+  /* Strip command-line*/
 
-  umask(0);
-  mknod(POSITION_FIFO_FILE, S_IFIFO | 0666, 0);
-
-  printf("Waiting for someone who wants to read positions. . .\n");
-
-  position_fp = fopen(POSITION_FIFO_FILE, "w");
-
-  if(position_fp == NULL)
-    perror("position pipe");
-
-  printf("Starting. . .\n");
+  event_buffer.count = 0;
+  pthread_mutex_init(&(event_buffer.error_mux), NULL);
 
   /* Init stack timer */
   TimerInit();
 
-  /* Strip command-line*/
   for(i = 1; i < argc; i++)
   {
     if(ProcessCommand(argv[i]) == INIT_ERR)
       goto init_fail;
   }
 
+  // inizializzo la named pipe per i dati di posizione
+  umask(0);
+  if(fake_flag == 0)
+    mknod(POSITION_FIFO_FILE, S_IFIFO | 0666, 0);
+  else
+    mknod("/tmp/fake_alma_3d_spinitalia_pos_stream_pipe", S_IFIFO | 0666, 0);
+
+  int err;
+  err = pthread_create(&pipe_handler, NULL, &PipeHandler, NULL);
+
+  if(err != 0)
+    printf("can't create thread:[%s]", strerror(err));
+
+#ifdef CANOPENSHELL_VERBOSE
+  if(verbose_flag)
+  {
+    printf("Starting. . .\n");
+  }
+#endif
+
   _machine_init();
 
+  if(fake_flag == 0)
+  {
 //heartbeatInit(CANOpenShellOD_Data);
-  startSYNC(CANOpenShellOD_Data);
-  PDOInit(CANOpenShellOD_Data);
+    startSYNC(CANOpenShellOD_Data);
+    PDOInit(CANOpenShellOD_Data);
+  }
 
   /* Enter in a loop to read stdin command until "quit" is called */
   while(ret != QUIT)
@@ -2761,30 +4442,46 @@ int main(int argc, char** argv)
     // wait on stdin for string command
     res = fgets(command, sizeof(command), stdin);
 
-    if(res != NULL)
+    if((res != NULL) && (strlen(command) > 1))
     {
       //sysret = system(CLEARSCREEN);
       command[strlen(command) - 1] = '\0';
+
       ret = ProcessCommand(command);
       fflush(stdout);
     }
   }
 
-  printf("Finishing.\n");
+#ifdef CANOPENSHELL_VERBOSE
+  if(verbose_flag)
+  {
+    printf("Finishing.\n");
+  }
+#endif
+
+  if(fake_flag == 0)
+  {
+    stopSYNC(CANOpenShellOD_Data);
+    //heartbeatStop(CANOpenShellOD_Data);
+
+    // Stop timer thread
+    StopTimerLoop(&Exit);
+
+    /* Close CAN board */
+    canClose(CANOpenShellOD_Data);
+  }
+  else if(fake_update_timer)
+    timer_delete(fake_update_timer);
+
+  _machine_destroy();
 
   if(position_fp > 0)
     fclose(position_fp);
 
-  _machine_destroy();
-
-  stopSYNC(CANOpenShellOD_Data);
-//heartbeatStop(CANOpenShellOD_Data);
-
-// Stop timer thread
-  StopTimerLoop(&Exit);
-
-  /* Close CAN board */
-  canClose(CANOpenShellOD_Data);
+  if(fake_flag == 0)
+    unlink(POSITION_FIFO_FILE);
+  else
+    unlink("/tmp/fake_alma_3d_spinitalia_pos_stream_pipe");
 
   init_fail: TimerCleanup();
   return 0;

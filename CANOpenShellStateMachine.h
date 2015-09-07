@@ -29,7 +29,9 @@ extern int motor_active_number;
 extern int motor_homing[CANOPEN_NODE_NUMBER];
 extern volatile int motor_started[CANOPEN_NODE_NUMBER];
 extern long motor_position[CANOPEN_NODE_NUMBER];
-extern UNS32 motor_status[CANOPEN_NODE_NUMBER];
+extern UNS32 motor_interp_status[CANOPEN_NODE_NUMBER];
+extern UNS16 motor_status[CANOPEN_NODE_NUMBER];
+extern UNS8 motor_mode[CANOPEN_NODE_NUMBER];
 
 extern void **sin_interpolation_function;
 extern UNS32 *sin_interpolation_param;
@@ -45,9 +47,10 @@ extern struct state_machine_struct smart_start_machine;
 extern struct state_machine_struct map1_pdo_machine;
 extern struct state_machine_struct map2_pdo_machine;
 extern struct state_machine_struct map3_pdo_machine;
+extern struct state_machine_struct map4_pdo_machine;
 extern struct state_machine_struct heart_start_machine;
 extern struct state_machine_struct smart_stop_machine;
-extern struct state_machine_struct smart_position_zero_machine;
+extern struct state_machine_struct smart_position_set_machine;
 extern struct state_machine_struct smart_interpolation_test1_machine;
 extern struct state_machine_struct smart_interpolation_test2_machine;
 extern struct state_machine_struct stop_interpolation_machine;
@@ -60,6 +63,12 @@ extern struct state_machine_struct smart_origin_machine;
 extern struct state_machine_struct resume_interpolation_machine;
 extern struct state_machine_struct smart_velocity_pp_get_machine;
 extern struct state_machine_struct smart_velocity_pp_set_machine;
+extern struct state_machine_struct torque_machine;
+extern struct state_machine_struct smart_limit_enable_machine;
+extern struct state_machine_struct smart_limit_disable_machine;
+extern struct state_machine_struct smart_following_error_get_machine;
+extern struct state_machine_struct smart_acceleration_pp_get_machine;
+extern struct state_machine_struct smart_off_machine;
 
 typedef UNS8 (*writeNetworkDictCallBack_t)(CO_Data* d, UNS8 nodeId, UNS16 index,
     UNS8 subIndex, UNS32 count, UNS8 dataType, void *data,

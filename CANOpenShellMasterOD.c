@@ -25,15 +25,6 @@ UNS16 Motor_Control = 0x0;		/* Mapped at index 0x2305, subindex 0x00 */
 INTEGER16 Motor_Subroutine_Index = 0x0;		/* Mapped at index 0x2306, subindex 0x00 */
 UNS16 Sample_Period = 0x0;		/* Mapped at index 0x2307, subindex 0x00 */
 UNS16 Interpolation_Mode_Status = 0x0;		/* Mapped at index 0x2400, subindex 0x00 */
-INTEGER8 InterpolationTimePeriod[] =		/* Mapped at index 0x2500, subindex 0x01 - 0x06 */
-  {
-    0x0,	/* 0 */
-    0x0,	/* 0 */
-    0x0,	/* 0 */
-    0x0,	/* 0 */
-    0x0,	/* 0 */
-    0x0	/* 0 */
-  };
 UNS8 InterpolationTimeValue[] =		/* Mapped at index 0x2501, subindex 0x01 - 0x06 */
   {
     0x0,	/* 0 */
@@ -44,6 +35,15 @@ UNS8 InterpolationTimeValue[] =		/* Mapped at index 0x2501, subindex 0x01 - 0x06
     0x0	/* 0 */
   };
 INTEGER32 InterpolationData[] =		/* Mapped at index 0x2502, subindex 0x01 - 0x06 */
+  {
+    0x0,	/* 0 */
+    0x0,	/* 0 */
+    0x0,	/* 0 */
+    0x0,	/* 0 */
+    0x0,	/* 0 */
+    0x0	/* 0 */
+  };
+INTEGER8 InterpolationTimePeriod[] =		/* Mapped at index 0x2600, subindex 0x01 - 0x06 */
   {
     0x0,	/* 0 */
     0x0,	/* 0 */
@@ -2002,19 +2002,21 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                      };
 
 /* index 0x1600 :   Receive PDO 1 Mapping. */
-                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1600 = 3; /* number of subindex - 1*/
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1600 = 4; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj1600[] = 
                     {
                       0x20000008,	/* 536870920 */
                       0x60410010,	/* 1614872592 */
-                      0x24000010	/* 603979792 */
+                      0x24000010,	/* 603979792 */
+                      0x60610008	/* 1616969736 */
                     };
                     subindex CANOpenShellMasterOD_Index1600[] = 
                      {
                        { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1600 },
                        { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1600[0] },
                        { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1600[1] },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1600[2] }
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1600[2] },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1600[3] }
                      };
 
 /* index 0x1601 :   Receive PDO 2 Mapping. */
@@ -2034,7 +2036,7 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 /* index 0x1800 :   Transmit PDO 1 Parameter. */
                     UNS8 CANOpenShellMasterOD_highestSubIndex_obj1800 = 6; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj1800_COB_ID_used_by_PDO = 0x277;	/* 631 */
-                    UNS8 CANOpenShellMasterOD_obj1800_Transmission_Type = 0xFE;	/* 254 */
+                    UNS8 CANOpenShellMasterOD_obj1800_Transmission_Type = 0xFF;	/* 255 */
                     UNS16 CANOpenShellMasterOD_obj1800_Inhibit_Time = 0x0;	/* 0 */
                     UNS8 CANOpenShellMasterOD_obj1800_Compatibility_Entry = 0x0;	/* 0 */
                     UNS16 CANOpenShellMasterOD_obj1800_Event_Timer = 0x0;	/* 0 */
@@ -2063,7 +2065,7 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 /* index 0x1801 :   Transmit PDO 2 Parameter. */
                     UNS8 CANOpenShellMasterOD_highestSubIndex_obj1801 = 6; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj1801_COB_ID_used_by_PDO = 0x278;	/* 632 */
-                    UNS8 CANOpenShellMasterOD_obj1801_Transmission_Type = 0xFE;	/* 254 */
+                    UNS8 CANOpenShellMasterOD_obj1801_Transmission_Type = 0xFF;	/* 255 */
                     UNS16 CANOpenShellMasterOD_obj1801_Inhibit_Time = 0x0;	/* 0 */
                     UNS8 CANOpenShellMasterOD_obj1801_Compatibility_Entry = 0x0;	/* 0 */
                     UNS16 CANOpenShellMasterOD_obj1801_Event_Timer = 0x0;	/* 0 */
@@ -2557,7 +2559,7 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A00 = 1; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj1A00[] = 
                     {
-                      0x25000108	/* 620757256 */
+                      0x26000108	/* 637534472 */
                     };
                     subindex CANOpenShellMasterOD_Index1A00[] = 
                      {
@@ -2569,7 +2571,7 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A01 = 1; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj1A01[] = 
                     {
-                      0x25000208	/* 620757512 */
+                      0x26000208	/* 637534728 */
                     };
                     subindex CANOpenShellMasterOD_Index1A01[] = 
                      {
@@ -2581,7 +2583,7 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A02 = 1; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj1A02[] = 
                     {
-                      0x25000308	/* 620757768 */
+                      0x26000308	/* 637534984 */
                     };
                     subindex CANOpenShellMasterOD_Index1A02[] = 
                      {
@@ -2593,7 +2595,7 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A03 = 1; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj1A03[] = 
                     {
-                      0x25000408	/* 620758024 */
+                      0x26000408	/* 637535240 */
                     };
                     subindex CANOpenShellMasterOD_Index1A03[] = 
                      {
@@ -2605,7 +2607,7 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A04 = 1; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj1A04[] = 
                     {
-                      0x25000508	/* 620758280 */
+                      0x26000508	/* 637535496 */
                     };
                     subindex CANOpenShellMasterOD_Index1A04[] = 
                      {
@@ -2617,7 +2619,7 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A05 = 1; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj1A05[] = 
                     {
-                      0x25000608	/* 620758536 */
+                      0x26000608	/* 637535752 */
                     };
                     subindex CANOpenShellMasterOD_Index1A05[] = 
                      {
@@ -2875,29 +2877,6 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                        { RW, uint16, sizeof (UNS16), (void*)&Interpolation_Mode_Status }
                      };
 
-/* index 0x2500 :   Mapped variable InterpolationTimePeriod */
-                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj2500 = 6; /* number of subindex - 1*/
-                    ODCallback_t InterpolationTimePeriod_callbacks[] = 
-                     {
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                     };
-                    subindex CANOpenShellMasterOD_Index2500[] = 
-                     {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj2500 },
-                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[0] },
-                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[1] },
-                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[2] },
-                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[3] },
-                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[4] },
-                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[5] }
-                     };
-
 /* index 0x2501 :   Mapped variable InterpolationTimeValue */
                     UNS8 CANOpenShellMasterOD_highestSubIndex_obj2501 = 6; /* number of subindex - 1*/
                     ODCallback_t InterpolationTimeValue_callbacks[] = 
@@ -2944,7 +2923,34 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                        { RW, int32, sizeof (INTEGER32), (void*)&InterpolationData[5] }
                      };
 
+/* index 0x2600 :   Mapped variable InterpolationTimePeriod */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj2600 = 6; /* number of subindex - 1*/
+                    ODCallback_t InterpolationTimePeriod_callbacks[] = 
+                     {
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                     };
+                    subindex CANOpenShellMasterOD_Index2600[] = 
+                     {
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj2600 },
+                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[0] },
+                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[1] },
+                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[2] },
+                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[3] },
+                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[4] },
+                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[5] }
+                     };
+
 /* index 0x6040 :   Mapped variable Controlword */
+                    ODCallback_t Controlword_callbacks[] = 
+                     {
+                       NULL,
+                     };
                     subindex CANOpenShellMasterOD_Index6040[] = 
                      {
                        { RW, uint16, sizeof (UNS16), (void*)&Controlword }
@@ -2979,6 +2985,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                      };
 
 /* index 0x6061 :   Mapped variable Modes of operation display */
+                    ODCallback_t Modes_of_operation_display_callbacks[] = 
+                     {
+                       NULL,
+                     };
                     subindex CANOpenShellMasterOD_Index6061[] = 
                      {
                        { RO, int8, sizeof (INTEGER8), (void*)&Modes_of_operation_display }
@@ -3425,9 +3435,9 @@ const indextable CANOpenShellMasterOD_objdict[] =
   { (subindex*)CANOpenShellMasterOD_Index2306,sizeof(CANOpenShellMasterOD_Index2306)/sizeof(CANOpenShellMasterOD_Index2306[0]), 0x2306},
   { (subindex*)CANOpenShellMasterOD_Index2307,sizeof(CANOpenShellMasterOD_Index2307)/sizeof(CANOpenShellMasterOD_Index2307[0]), 0x2307},
   { (subindex*)CANOpenShellMasterOD_Index2400,sizeof(CANOpenShellMasterOD_Index2400)/sizeof(CANOpenShellMasterOD_Index2400[0]), 0x2400},
-  { (subindex*)CANOpenShellMasterOD_Index2500,sizeof(CANOpenShellMasterOD_Index2500)/sizeof(CANOpenShellMasterOD_Index2500[0]), 0x2500},
   { (subindex*)CANOpenShellMasterOD_Index2501,sizeof(CANOpenShellMasterOD_Index2501)/sizeof(CANOpenShellMasterOD_Index2501[0]), 0x2501},
   { (subindex*)CANOpenShellMasterOD_Index2502,sizeof(CANOpenShellMasterOD_Index2502)/sizeof(CANOpenShellMasterOD_Index2502[0]), 0x2502},
+  { (subindex*)CANOpenShellMasterOD_Index2600,sizeof(CANOpenShellMasterOD_Index2600)/sizeof(CANOpenShellMasterOD_Index2600[0]), 0x2600},
   { (subindex*)CANOpenShellMasterOD_Index6040,sizeof(CANOpenShellMasterOD_Index6040)/sizeof(CANOpenShellMasterOD_Index6040[0]), 0x6040},
   { (subindex*)CANOpenShellMasterOD_Index6041,sizeof(CANOpenShellMasterOD_Index6041)/sizeof(CANOpenShellMasterOD_Index6041[0]), 0x6041},
   { (subindex*)CANOpenShellMasterOD_Index605A,sizeof(CANOpenShellMasterOD_Index605A)/sizeof(CANOpenShellMasterOD_Index605A[0]), 0x605A},
@@ -3671,15 +3681,15 @@ const indextable * CANOpenShellMasterOD_scanIndexOD (UNS16 wIndex, UNS32 * error
 		case 0x2306: i = 193;break;
 		case 0x2307: i = 194;break;
 		case 0x2400: i = 195;*callbacks = Interpolation_Mode_Status_callbacks; break;
-		case 0x2500: i = 196;*callbacks = InterpolationTimePeriod_callbacks; break;
-		case 0x2501: i = 197;*callbacks = InterpolationTimeValue_callbacks; break;
-		case 0x2502: i = 198;*callbacks = InterpolationData_callbacks; break;
-		case 0x6040: i = 199;break;
+		case 0x2501: i = 196;*callbacks = InterpolationTimeValue_callbacks; break;
+		case 0x2502: i = 197;*callbacks = InterpolationData_callbacks; break;
+		case 0x2600: i = 198;*callbacks = InterpolationTimePeriod_callbacks; break;
+		case 0x6040: i = 199;*callbacks = Controlword_callbacks; break;
 		case 0x6041: i = 200;*callbacks = Statusword_callbacks; break;
 		case 0x605A: i = 201;break;
 		case 0x605D: i = 202;break;
 		case 0x6060: i = 203;break;
-		case 0x6061: i = 204;break;
+		case 0x6061: i = 204;*callbacks = Modes_of_operation_display_callbacks; break;
 		case 0x6063: i = 205;*callbacks = Position_Actual_Value_callbacks; break;
 		case 0x6065: i = 206;break;
 		case 0x606C: i = 207;break;

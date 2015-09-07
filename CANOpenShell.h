@@ -27,6 +27,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 #include <canfestival.h>
 
+extern int fake_flag;
+
 void help(void);
 void StartNode(UNS8);
 void StopNode(UNS8);
