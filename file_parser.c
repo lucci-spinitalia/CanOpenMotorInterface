@@ -86,6 +86,8 @@ void *QueueRefiller(void *args)
 
   row_total[data->nodeId] = FileLineCount(data->nodeId);
 
+  data->end_reached = 0;
+
   while(1)
   {
     pthread_testcancel();
@@ -118,6 +120,8 @@ void *QueueRefiller(void *args)
     }
     else
       pthread_mutex_unlock(&data->table_mutex);
+
+    usleep(10000);
   }
 
   return NULL;

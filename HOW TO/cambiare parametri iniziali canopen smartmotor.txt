@@ -1,0 +1,88 @@
+All'avvio del programma, ogni motore viene configurato in modo da ottenere 
+degli specifici oggetti PDO.
+
+Tutto questo viene eseguito dentro la funzione presente nel file CANOpenShell.c
+
+	void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
+
+in particolare dalla funzione
+
+	_machine_exe()
+
+che prende in ingresso la struttura configure_pdo_machine. _machine_exe viene
+richiamata due volte: una per il primo motore che si dichiare, che si occuperà
+anche di tenere sincronizzati tutti gli altri, e la seconda per i rimanenti 
+smartmotors.
+
+
+Cambiare il periodo di invio della posizione dai motori
+=======================================================
+
+Questa impostazione fa sì che i motori mandino la loro posizione ogni x ms (10 ms
+di default).
+Per modificare questo valore basta cambiare il numero nella funzione _machine_exe
+
+      _machine_exe(d, nodeid, &ConfigureSlaveNodeCallback,
+          configure_pdo_machine, 8, 1, 81,
+
+          100,
+
+          0x1800, 0xC0000180, 0x1A00, 0x1A00, 0x20000008, 0x1A00, 0x60410010,
+          0x1A00, 0x24000010, 0x1A00, 0x60610008, 0x1A00, 0x1800, 0x40000180,
+          0x1800, 0xFE, 0x1800, 0x32,
+
+          0x1801, 0xC0000280, 0x1A01, 0x1A01, 0x20000008, 0x1A01, 0x60630020,
+          0x1A01, 0x1801, 0x40000280, 0x1801, 0xFE, 0x1801, 10, <------------------------------ da cambiare
+
+          0x1802, 0xC0000380, 0x1A02, 0x1A02, 0x10130020, 0x1A02, 0x1802,
+          0x40000380, 0x1802, 10, 0x1802, 0,
+
+          0x1400, 0xC0000300 + nodeid, 0x1600, 0x1600, 0x60c20108, 0x1600,
+          0x1400, 0x40000300 + nodeid, 0x1400, 0xFE, 0x1400, 0,
+
+          0x1401, 0xC0000200 + nodeid, 0x1601, 0x1601, 0x60c20208, 0x1601,
+          0x1401, 0x40000200 + nodeid, 0x1401, 0xFE, 0x1401, 0,
+
+          0x1402, 0xC0000400 + nodeid, 0x1602, 0x1602, 0x60c10120, 0x1602,
+          0x1402, 0x40000400 + nodeid, 0x1402, 0xFE, 0x1402, 0
+
+          /*0x1403, 0xC0000500 + nodeid, 0x1603, 0x1603, 0x60400010, 0x1603,
+           0x1403, 0x40000500 + nodeid, 0x1403, 0xFE, 0x1403, 0,*/
+
+          );
+
+Eseguire la stessa operazione anche nella seconda chiamata dedicata ai motori
+successivi al primo dichiarato.
+
+
+
+
+
+Cambiare il limite di errore d'inseguimento in posizione
+=========================================================
+Questo limite blocca i motori nel momento in cui l'errore d'inseguimento in posizione
+diventi troppo alto.
+
+A differenza del periodo d'invio della posizione dei motori, questo parametro non è passato
+come argomento alla funzione _machine_exe(), bensì è dichiarato direttamente nell'array
+dei parametri UNS32 smart_start_param[56], presente nel file CANOpenShellStateMachine.c.
+
+Per modificarne il valore, cambiare il campo indicato
+
+UNS32 smart_start_param[56] =
+    {
+        NMT_Start_Node,  // Start canopen node
+        0x6040, 0x0, 2, 0, 0x0,  // Change state: switched off
+        0x6040, 0x0, 2, 0, 0x80,  // Reset status word
+        0x6040, 0x0, 2, 0, 0x0,  // Change state: switched off
+        0x6060, 0x0, 1, 0, 0x3,  // Set mode velocity
+        0x60FF, 0x0, 4, 0, 0x0,  // Set velocity in PV mode
+        0x6083, 0x0, 4, 0, 0x1000,  // Set acceleration
+        0x6084, 0x0, 4, 0, 0xa,  // Set deceleration
+        0x6065, 0x0, 4, 0, 2000,  // Set following error window   <--------------------- da cambiare
+        0x6040, 0x0, 2, 0, 0x6,  // Change state: ready to switch on
+        0x6040, 0x0, 2, 0, 0x7,  // Change state: switched on
+        0x6040, 0x0, 2, 0, 0xF,  // Start command
+    };
+
+Di default il limite è impostato a 2000

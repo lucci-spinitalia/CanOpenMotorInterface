@@ -606,6 +606,9 @@ UNS32 OnPositionUpdate(CO_Data* d, const indextable * indextable_curr,
   if((file_complete_min == 0) || (file_complete[nodeid] < file_complete_min))
     file_complete_min = file_complete[nodeid];
 
+  if((position_start_time.tv_sec == 0) && (position_start_time.tv_usec == 0))
+    gettimeofday(&position_start_time, NULL);
+
   pthread_mutex_lock(&position_mux);
 
   if(motor_position_write[nodeid] == 0)
@@ -628,12 +631,6 @@ UNS32 OnPositionUpdate(CO_Data* d, const indextable * indextable_curr,
 
     if(position_fp != NULL)
     {
-      gettimeofday(&position_stop_time, NULL);
-
-      long position_delay = ((position_stop_time.tv_sec
-          - position_start_time.tv_sec) * 1000000 + position_stop_time.tv_usec
-          - position_start_time.tv_usec) / 1000;
-
       pthread_mutex_lock(&(event_buffer.error_mux));
       if(event_buffer.count > 0)
       {
@@ -648,7 +645,13 @@ UNS32 OnPositionUpdate(CO_Data* d, const indextable * indextable_curr,
         sprintf(position_message, "%s AS%d", position_message, robot_state);
       }
 
-      sprintf(position_message, "%s T%li", position_message, position_delay);
+      gettimeofday(&position_stop_time, NULL);
+
+      long position_delay_us = ((position_stop_time.tv_sec
+          - position_start_time.tv_sec) * 1000000 + position_stop_time.tv_usec
+          - position_start_time.tv_usec);
+
+      sprintf(position_message, "%s T%.2f", position_message, ((float)position_delay_us) / 1000);
 
       if(robot_state == SIMULAZIONE)
         sprintf(position_message, "%s C%.0f\n", position_message,
@@ -1815,8 +1818,6 @@ void SimulationStart(UNS8 nodeid)
   }
   else
   {
-    gettimeofday(&position_start_time, NULL);
-
     //int i;
     struct state_machine_struct *init_interpolation =
         &init_interpolation_machine;
@@ -3008,7 +3009,7 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
           0x1800, 0xFE, 0x1800, 0x32,
 
           0x1801, 0xC0000280, 0x1A01, 0x1A01, 0x20000008, 0x1A01, 0x60630020,
-          0x1A01, 0x1801, 0x40000280, 0x1801, 0xFE, 0x1801, 0xa,
+          0x1A01, 0x1801, 0x40000280, 0x1801, 0xFE, 0x1801, 10,
 
           0x1802, 0xC0000380, 0x1A02, 0x1A02, 0x10130020, 0x1A02, 0x1802,
           0x40000380, 0x1802, 10, 0x1802, 0,
@@ -3101,7 +3102,7 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
           0x1800, 0xFE, 0x1800, 0x32,
 
           0x1801, 0xC0000280, 0x1A01, 0x1A01, 0x20000008, 0x1A01, 0x60630020,
-          0x1A01, 0x1801, 0x40000280, 0x1801, 0xFE, 0x1801, 0xa,
+          0x1A01, 0x1801, 0x40000280, 0x1801, 0xFE, 0x1801, 10,
 
           0x1400, 0xC0000300 + nodeid, 0x1600, 0x1600, 0x60c20108, 0x1600,
           0x1400, 0x40000300 + nodeid, 0x1400, 0xFE, 0x1400, 0,

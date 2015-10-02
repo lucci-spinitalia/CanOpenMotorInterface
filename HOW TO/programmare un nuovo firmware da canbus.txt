@@ -1,0 +1,60 @@
+E' possibile programmare in modo sicuro un nuovo firmware dei motori utilizzando il protocollo canopen.
+
+Prima di tutto, generare il file .smx tramite lo SMI: questa procedura è essenziale in quanto
+l'interfaccia genera anche una riga di checksum. Una volta ottenuti i file, copiarli nella cartella della
+raspberry "/home/spinitalia/firmware_motori". Il nome dei file non deve contenere spazi.
+
+Successivamente avviare il programma canopenshell "/opt/spinitalia/alma3d_canopenshell"
+con l'opzione "verb load#libcanfestival_can_socket.so,0,1M,8"
+
+	/opt/spinitalia/alma3d_canopenshell verb load#libcanfestival_can_socket.so,0,1M,8
+
+Il comando per scaricare il programma sul motore è
+
+	prog#nodeid,filename
+
+dove:
+	nodeid: è l'indirizzo del motore da programmare scritto in esadecimale
+	filename: è il nome del firmware con il path assoluto
+
+Per esempio:
+
+	prog#77,/home/spinitalia/firmware_motori/SWP.33.05.02.0.0_119.smx
+
+scarica il firmware "SWP.33.05.02.0.0_119.smx" sul motore 119 (0x77). Una volta programmato il firmware
+il programma risponderà con "Motor programmed".
+
+Nel caso si volevve controllare la corretta scrittura del firmware, eseguire il comando 
+
+	uplo#nodeid
+
+dove:
+	nodeid: è l'indirizzo del motore da programmare scritto in esadecimale
+
+Per esempio:
+
+ 	uplo#77
+
+legge il firmware dal motore 119 e lo scrive sullo standart output. Un esempio di firmware è il 
+seguente:
+
+	##################################
+	### Upload firmware from motor ###
+	##################################
+	GN(3)
+	ZS
+	CADDR=119
+	CBAUD=1000000
+	KP=3800
+	KI=2600
+	KD=19000
+	KL=27200
+	KS=1
+	KV=7000
+	KA=0
+	KG=-600000
+	MTB
+	END
+
+Per uscire dal programma, digitare "quit".
+
