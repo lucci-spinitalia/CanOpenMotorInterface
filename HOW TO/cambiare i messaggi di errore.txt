@@ -1,0 +1,59 @@
+I messaggi di errore sono suddivisi in C(ommand)ERR e A(sync)ERR. Entrambi i tipi sono descritti da un numero 
+e da una descrizione.
+
+CAMBIARE IL FORMATO DEI MESSAGGI
+=================================
+
+Il formato del messaggio è determinato da una macro presente in "CANOpenShellMasterError.h":
+
+		#define CERR(cmd, num)            \
+			  printf("CERR %s %d: %s\n", cmd, num, cerr_descr[num])
+
+		#define AERR(num, nodeid)            \
+			  printf("AERR %d @M%d: %s\n", num, nodeid, cerr_descr[num])
+
+		#define EVENT(num, nodeid)            \
+			  printf("EVENT %d @M%d: %s\n", num, nodeid, cerr_descr[num])
+
+		#define OK(cmd)            \
+			  printf("OK %s\n", cmd)
+
+Modificare tali macro per cambiare il formato.
+
+CAMBIARE I NUMERI E LE DESCRIZIONE DEGLI ERRORI DEI MESSAGGI
+============================================================
+I codici identificativi degli errori CERR e AERR sono definiti in un'unica struttura chiamata enum_err presente
+nel file "CANOpenShellMasterError.h".
+
+		enum enum_cerr
+		{
+		  CERR_NotFound  = 0x00, /**< Comando non riconosciuto */
+		  CERR_InternalError = 0x01, /**< Errore interno */
+		  CERR_ParamError = 0x02, /**< Errore nei parametri passati */
+		  CERR_ConfigError = 0x03, /**< Errore di configurazione */
+		  CERR_BusVoltageFault = 0x04, /**< Tensione motore troppo bassa */
+		  CERR_OverCurrentFault = 0x05, /**< Picco di corrente eccessivo */
+		  CERR_TemperatureFault = 0x06,  /**< Raggiunta temperatura limite */
+		  CERR_PositionFault = 0x07, /**< Errore di inseguimento posizione */
+		  CERR_VelocityFault = 0x08, /**< Errore in velocità */
+		  CERR_DerivativeFault = 0x09, /**< Errore nella derivata prima dell'errore in posizione */
+		  CERR_RightLimitFault = 0x0a, /**< Raggiunto limite destro */
+		  CERR_LeftLimitFault = 0x0b,  /**< Raggiunto limite destro */
+		  CERR_MoveError = 0x0c,  /**< Errore generico di movimento */
+		  CERR_QuickStop = 0x0d, /**< Quick stop */
+		  CERR_InterpPositionError = 0x0e, /**< Errore d'inseguimento di posizione nella modalità interpolazione */
+		  CERR_InterpInvalidTimeError = 0x0f, /**< Intervallo temporale impostato non valido */
+		  CERR_InterpInvalidPositionError = 0x10, /**< Posizione impostata non valida */
+		  CERR_InterpFIFOUnderError = 0x11, /**< FIFO underflow */
+		  CERR_InterpFIFOOverError = 0x12,  /**< FIFO overflow */
+		  CERR_PermissionDenied = 0x13, /**< Inviato comando dallo stato sbalgiato */
+		  CERR_SimulationError = 0x14, /**< Errore nella simulazione */
+		  CERR_MotorFault = 0x15 /**< Canopen entrato nello stato "Fault" */
+		};
+
+I valori di ogni errore vengono utilizzati per ottenere la descrizione corrispondente dall'array cerr_desc, dichiarato
+in "CANOpenShellMasterError.h", ma definito in "CANOpenShellMasterError.c". Quindi i codici errore equivalgono agli
+indici dell'array: modificare un codice errore comporta spostare la sua descrizione nell'array delle descrizioni.
+Utilizzare il suddetto array per modificare le descrizioni agli errori.
+
+
