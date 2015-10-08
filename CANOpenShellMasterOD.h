@@ -33,6 +33,7 @@ extern UNS16 Sample_Period;		/* Mapped at index 0x2307, subindex 0x00*/
 extern UNS16 Interpolation_Mode_Status;		/* Mapped at index 0x2400, subindex 0x00*/
 extern UNS8 InterpolationTimeValue[6];		/* Mapped at index 0x2501, subindex 0x01 - 0x06 */
 extern INTEGER32 InterpolationData[6];		/* Mapped at index 0x2502, subindex 0x01 - 0x06 */
+extern UNS16 InterpolationStart;		/* Mapped at index 0x2503, subindex 0x00*/
 extern INTEGER8 InterpolationTimePeriod[6];		/* Mapped at index 0x2600, subindex 0x01 - 0x06 */
 extern UNS16 Controlword;		/* Mapped at index 0x6040, subindex 0x00*/
 extern UNS16 Statusword;		/* Mapped at index 0x6041, subindex 0x00*/

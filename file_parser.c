@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <string.h>
+#include <unistd.h>
 #include "CANOpenShellMasterError.h"
 #include "file_parser.h"
 #include "CANOpenShell.h"
@@ -130,6 +131,8 @@ void *QueueRefiller(void *args)
 void QueueInit(int nodeid, struct table_data *data)
 {
   void *res;
+
+  // chiude eventuali processi in esecuzione
   if(data->table_refiller != 0)
   {
     if(pthread_cancel(data->table_refiller) == 0)

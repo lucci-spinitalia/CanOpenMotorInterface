@@ -51,7 +51,6 @@ void *smart_start[12] =
         &writeNetworkDictCallBack, // Change state: switched on
         &writeNetworkDictCallBack, // Start command
     };
-
 UNS32 smart_start_param[56] =
     {
         NMT_Start_Node,  // Start canopen node
@@ -551,13 +550,13 @@ void *stop_interpolation_function[2] =
     {
         &writeNetworkDictCallBack, // Write zero-length segment
         &writeNetworkDictCallBack, // Repeat final data
-        //&writeNetworkDictCallBack // leave drive on but holding at the ending position
+    //&writeNetworkDictCallBack // leave drive on but holding at the ending position
     };
 UNS32 stop_interpolation_param[10] =
     {
         0x60C2, 0x1, 1, 0, 0x0, // Write zero-length segment
         0x60C1, 0x1, 4, 0, 0xFFFFFFFF, // Repeat final data
-        //0x6040, 0x0, 2, 0, 0x0F, // leave drive on but holding at the ending position
+    //0x6040, 0x0, 2, 0, 0x0F, // leave drive on but holding at the ending position
     };
 
 char *stop_interpolation_error[2] =
@@ -604,13 +603,12 @@ void *smart_off_function[3] =
         &writeNetworkDictCallBack, // Change state: switched off
         &writeNetworkDictCallBack, // Change state: switched off
     };
-
 UNS32 smart_off_param[15] =
-{
-    0x6040, 0x0, 2, 0, 0x0,  // Change state: switched off
-    0x6040, 0x0, 2, 0, 0x80,  // Change state: switched off
-    0x6040, 0x0, 2, 0, 0x0,  // Change state: switched off
-};
+    {
+        0x6040, 0x0, 2, 0, 0x0,  // Change state: switched off
+        0x6040, 0x0, 2, 0, 0x80,  // Change state: switched off
+        0x6040, 0x0, 2, 0, 0x0,  // Change state: switched off
+    };
 
 char *smart_off_error[2] =
     {
@@ -622,7 +620,6 @@ struct state_machine_struct smart_off_machine =
     {
         smart_off_function, 3, smart_off_param, 15, smart_off_error
     };
-
 
 void *torque_function[9] =
     {
@@ -776,7 +773,6 @@ struct state_machine_struct smart_acceleration_pp_get_machine =
     {smart_acceleration_pp_get_function, 1, smart_acceleration_pp_get_param, 3,
         smart_acceleration_pp_get_error};
 
-
 void *smart_following_error_get_function[1] =
     {
         &readNetworkDictCallback // Read smartmotor EL
@@ -795,8 +791,6 @@ char *smart_following_error_get_error[2] =
 struct state_machine_struct smart_following_error_get_machine =
     {smart_following_error_get_function, 1, smart_following_error_get_param, 3,
         smart_following_error_get_error};
-
-
 
 void *smart_velocity_pp_get_function[1] =
     {
@@ -1072,9 +1066,11 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
             if(verbose_flag)
             {
               printf(
-                  "ERR[%d on node %x state %d]: %s (Operazione in corso)\n",
+                  "ERR[%d on node %x state %d]: %s (Operazione in corso node 0)\n",
                   InternalError, i, machine_state_index[i],
                   machine[0]->error[1]);
+
+              printf("callback num: %d\n", callback_num);
             }
 #endif
 
@@ -2016,6 +2012,18 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
               }
 #endif
             }
+            else
+            {
+#ifdef CANOPENSHELL_VERBOSE
+              if(verbose_flag)
+              {
+                printf(
+                    "ERR[%d on node %x state %d]: %s (writeNetwork error)\n",
+                    InternalError, i, machine_state_index[i],
+                    next_machine[i][0]->error[1]);
+              }
+#endif
+            }
           }
 #ifndef SDO_SYNC
           else
@@ -2132,6 +2140,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
           if((motor_active[i] > 0) && machine_run[i] == 0)
           {
             machine_run[i] = 1;
+
             lock_value = pthread_mutex_unlock(&machine_mux[i]);
 #else
             if(motor_active[i] > 0)

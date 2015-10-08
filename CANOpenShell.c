@@ -190,6 +190,7 @@
 
 static int robot_state = ACCESO;
 pthread_mutex_t robot_state_mux = PTHREAD_MUTEX_INITIALIZER;
+volatile int simulation_ready[TABLE_MAX_NUM];
 
 void CheckReadRaw(CO_Data* d, UNS8 nodeid);
 void CheckReadStringRaw(CO_Data* d, UNS8 nodeid);
@@ -208,6 +209,7 @@ void SimulationTableEnd(CO_Data* d, UNS8 nodeId, int machine_state,
     UNS32 return_value);
 int MotorTableIndexFromNodeId(UNS8 nodeId);
 void SmartRelease(UNS8 nodeid, int from_callback, int brake);
+void SimulationTableStart(CO_Data* d);
 
 //****************************************************************************
 // GLOBALS
@@ -542,13 +544,13 @@ void SmartFaultCallback(CO_Data* d, UNS8 nodeId, int machine_state,
       //{
       QueueLast(&motor_table[motor_table_index], &data_read);
 
-      InterpolationTimePeriod[nodeId - MOTOR_INDEX_FIRST] = 0;
-      InterpolationTimeValue[nodeId - MOTOR_INDEX_FIRST] = 0;
-      InterpolationData[nodeId - MOTOR_INDEX_FIRST] = data_read.position;
+      //InterpolationTimePeriod[nodeId - MOTOR_INDEX_FIRST] = 0;
+      //InterpolationTimeValue[nodeId - MOTOR_INDEX_FIRST] = 0;
+      //InterpolationData[nodeId - MOTOR_INDEX_FIRST] = data_read.position;
 
       //}
 
-      sendPDOevent(d);
+      //sendPDOevent(d);
     }
 
     pthread_mutex_unlock(&robot_state_mux);
@@ -651,7 +653,8 @@ UNS32 OnPositionUpdate(CO_Data* d, const indextable * indextable_curr,
           - position_start_time.tv_sec) * 1000000 + position_stop_time.tv_usec
           - position_start_time.tv_usec);
 
-      sprintf(position_message, "%s T%.2f", position_message, ((float)position_delay_us) / 1000);
+      sprintf(position_message, "%s T%.2f", position_message,
+          ((float) position_delay_us) / 1000);
 
       if(robot_state == SIMULAZIONE)
         sprintf(position_message, "%s C%.0f\n", position_message,
@@ -836,7 +839,7 @@ UNS32 OnStatusUpdate(CO_Data* d, const indextable * indextable_curr,
           struct state_machine_struct *stop_machine[] =
               {&smart_stop_machine};
 
-          _machine_exe(CANOpenShellOD_Data, nodeid, &SmartFaultCallback,
+          _machine_exe(d, nodeid, &SmartFaultCallback,
               stop_machine, 1, 1, 0);
         }
         else
@@ -898,7 +901,7 @@ UNS32 OnStatusUpdate(CO_Data* d, const indextable * indextable_curr,
         struct state_machine_struct *fault_machine[] =
             {&smart_statusword_machine, &smart_stop_machine};
 
-        _machine_exe(CANOpenShellOD_Data, 0, &SmartFaultCallback,
+        _machine_exe(d, 0, &SmartFaultCallback,
             fault_machine, 2, 1, 0);
       }
       else
@@ -1102,6 +1105,9 @@ UNS32 OnInterpUpdate(CO_Data* d, UNS8 nodeid)
   if((motor_mode[nodeid] == 0x7) && (robot_state == SIMULAZIONE))
   {
     pthread_mutex_unlock(&robot_state_mux);
+
+    SimulationTableStart(d);
+
     // Ho bisogno di lasciarmi un posto per un'eventuale chiusura della tabella, dovuta,
     // per esempio, dalla ricezione di un errore dai motori
     SimulationTableUpdate(d, nodeid, (motor_interp_status[nodeid] & 0x3F) - 1,
@@ -1135,15 +1141,6 @@ void SimulationInitCallback(CO_Data* d, UNS8 nodeid, int machine_state,
   {
     CERR("CT4", InternalError);
     return;
-  }
-
-  int motor_table_index = MotorTableIndexFromNodeId(nodeid);
-
-  if(motor_table_index >= 0)
-  {
-    pthread_mutex_lock(&motor_table[motor_table_index].table_mutex);
-    QueueFill(&motor_table[motor_table_index]);
-    pthread_mutex_unlock(&motor_table[motor_table_index].table_mutex);
   }
 }
 
@@ -1186,6 +1183,36 @@ void SimulationTableEnd(CO_Data* d, UNS8 nodeId, int machine_state,
       fflush(stdout);
     }
     pthread_mutex_unlock(&robot_state_mux);
+  }
+}
+void SimulationTableStart(CO_Data* d)
+{
+  int motor_index = 0;
+  int ready = 0;
+
+  for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+  {
+    if(simulation_ready[motor_index])
+      ready++;
+  }
+
+  if(ready == motor_active_number)
+  {
+    if(fake_flag == 0)
+    {
+      InterpolationStart = 0x1f;
+
+      //d->PDO_status[0].last_message.cob_id = 0;
+      //sendPDOevent(d);
+
+      for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+        simulation_ready[motor_index] = 0;
+    }
+    else
+    {
+      for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+        motor_interp_status[motor_index] |= 0b1000000000000000;
+    }
   }
 }
 
@@ -1267,7 +1294,10 @@ void SimulationTableUpdate(CO_Data* d, UNS8 nodeid, int point_number,
     InterpolationData[nodeid - MOTOR_INDEX_FIRST] = data_read.position + 1;
 
     if(fake_flag == 0)
+    {
+      d->PDO_status[0].last_message.cob_id = 0;
       sendPDOevent(d);
+    }
     else
       motor_position[nodeid] = InterpolationData[nodeid - MOTOR_INDEX_FIRST];
   }
@@ -1297,6 +1327,7 @@ void SimulationTableUpdate(CO_Data* d, UNS8 nodeid, int point_number,
       InterpolationTimeValue[nodeid - MOTOR_INDEX_FIRST] = 0;
       InterpolationData[nodeid - MOTOR_INDEX_FIRST] = data_read.position;
 
+      d->PDO_status[0].last_message.cob_id = 0;
       sendPDOevent(d);
 
       struct state_machine_struct *interpolation_machine[] =
@@ -1321,25 +1352,29 @@ void SimulationTableUpdate(CO_Data* d, UNS8 nodeid, int point_number,
     // se la simulazione non è stata avviata ancora
     if(((motor_interp_status[nodeid] & 0b1000000000000000) == 0))
     {
-      if(fake_flag == 0)
-      {
-        struct state_machine_struct *interpolation_machine[] =
-            {&start_interpolation_machine};
+      int motor_table_index = MotorTableIndexFromNodeId(nodeid);
+      simulation_ready[motor_table_index] = 1;
 
-        _machine_exe(CANOpenShellOD_Data, nodeid, NULL,
-            interpolation_machine, 1, 1, 0);
-      }
-      else
-      {
-        motor_interp_status[nodeid] |= 0b1000000000000000;
-#ifdef CANOPENSHELL_VERBOSE
-        if(verbose_flag)
-        {
-          printf("SUCC[node %x]: smartmotor interpolation mode start\n",
-              nodeid);
-        }
-#endif
-      }
+      //SimulationTableStart(d);
+      /*if(fake_flag == 0)
+       {
+       struct state_machine_struct *interpolation_machine[] =
+       {&start_interpolation_machine};
+
+       _machine_exe(CANOpenShellOD_Data, nodeid, NULL,
+       interpolation_machine, 1, 1, 0);
+       }
+       else
+       {
+       motor_interp_status[nodeid] |= 0b1000000000000000;
+       #ifdef CANOPENSHELL_VERBOSE
+       if(verbose_flag)
+       {
+       printf("SUCC[node %x]: smartmotor interpolation mode start\n",
+       nodeid);
+       }
+       #endif
+       }*/
     }
   }
 
@@ -1798,10 +1833,22 @@ void FakeStatusUpdate(sigval_t val)
 
 void SimulationStart(UNS8 nodeid)
 {
+  InterpolationStart = 0xF;
+
   // devo distinguere il caso di broadcast dagli altri per i parametri strettamente
   // legati al motore
   if(nodeid != 0)
   {
+    int motor_table_index = MotorTableIndexFromNodeId(nodeid);
+    simulation_ready[motor_table_index] = 0;
+
+    if(motor_table_index >= 0)
+    {
+      pthread_mutex_lock(&motor_table[motor_table_index].table_mutex);
+      QueueFill(&motor_table[motor_table_index]);
+      pthread_mutex_unlock(&motor_table[motor_table_index].table_mutex);
+    }
+
     if(simulation_first_start[nodeid])
     {
       simulation_first_start[nodeid] = 0;
@@ -1828,6 +1875,12 @@ void SimulationStart(UNS8 nodeid)
     int motor_index;
     for(motor_index = 0; motor_index < motor_active_number; motor_index++)
     {
+      simulation_ready[motor_index] = 0;
+
+      pthread_mutex_lock(&motor_table[motor_index].table_mutex);
+      QueueFill(&motor_table[motor_index]);
+      pthread_mutex_unlock(&motor_table[motor_index].table_mutex);
+
       if(simulation_first_start[motor_table[motor_index].nodeId])
       {
         simulation_first_start[motor_table[motor_index].nodeId] = 0;
@@ -1888,6 +1941,7 @@ void SmartOrigin(UNS8 nodeid)
       QueueInit(motor_table[motor_index].nodeId, &motor_table[motor_index]);
 
       simulation_first_start[motor_table[motor_index].nodeId] = 1;
+      motor_started[motor_table[motor_index].nodeId] = 0;
 
       if(fake_flag == 0)
         _machine_exe(CANOpenShellOD_Data, motor_table[motor_index].nodeId,
@@ -1916,6 +1970,7 @@ void SmartOrigin(UNS8 nodeid)
       QueueInit(nodeid, &motor_table[motor_table_index]);
 
       simulation_first_start[nodeid] = 1;
+      motor_started[nodeid] = 0;
     }
 
     if(fake_flag == 0)
@@ -2032,6 +2087,7 @@ void SmartStopCallback(CO_Data* d, UNS8 nodeId, int machine_state,
     InterpolationData[nodeId - MOTOR_INDEX_FIRST] = data_read.position;
     //}
 
+    d->PDO_status[0].last_message.cob_id = 0;
     sendPDOevent(d);
   }
 
@@ -2977,8 +3033,8 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
         timer_settime(fake_update_timer, 0, &timerValues, NULL);
 
         motor_mode[nodeid] = 0x3;
-        motor_status[NodeId] = 0x1637;
-        motor_interp_status[NodeId] = 0X102d;
+        motor_status[nodeid] = 0x1637;
+        motor_interp_status[nodeid] = 0X102d;
         goto fake_jump;
       }
 
@@ -2990,29 +3046,29 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
       // MAP RPDO 1 (COB-ID 200 + nodeid) to receive "Interpolation Time Index" (8-bit)" (0x06c2 sub2)
       // MAP RPDO 2 (COB-ID 300 + nodeid) to receive "Interpolation Time Units" (8-bit)" (0x06c2 sub1)
       // MAP RPDO 3 (COB-ID 400 + nodeid) to receive "Interpolation Data" (32-bit)" (0x06c1 sub1)
-      // MAP RPD0 4 (COB-ID 500 + nodeid) to receive "Control Word (16-bit)" (0x6040 sub0)
+      // MAP RPD0 4 (COB-ID 400) to receive "Control Word (16-bit)" (0x6040 sub0)
 
       struct state_machine_struct *configure_pdo_machine[] =
           {
               &heart_start_machine, &map4_pdo_machine, &map2_pdo_machine,
               &map1_pdo_machine, &map1_pdo_machine, &map1_pdo_machine,
-              &map1_pdo_machine, &smart_start_machine
+              &map1_pdo_machine, &map1_pdo_machine, &smart_start_machine
           };
 
       _machine_exe(d, nodeid, &ConfigureSlaveNodeCallback,
-          configure_pdo_machine, 8, 1, 81,
+          configure_pdo_machine, 9, 1, 93,
 
           100,
 
           0x1800, 0xC0000180, 0x1A00, 0x1A00, 0x20000008, 0x1A00, 0x60410010,
           0x1A00, 0x24000010, 0x1A00, 0x60610008, 0x1A00, 0x1800, 0x40000180,
-          0x1800, 0xFE, 0x1800, 0x32,
+          0x1800, 0xFE, 0x1800, 200, /*19*/
 
           0x1801, 0xC0000280, 0x1A01, 0x1A01, 0x20000008, 0x1A01, 0x60630020,
-          0x1A01, 0x1801, 0x40000280, 0x1801, 0xFE, 0x1801, 10,
+          0x1A01, 0x1801, 0x40000280, 0x1801, 0xfe, 0x1801, 10, /*33*/
 
           0x1802, 0xC0000380, 0x1A02, 0x1A02, 0x10130020, 0x1A02, 0x1802,
-          0x40000380, 0x1802, 10, 0x1802, 0,
+          0x40000380, 0x1802, 100, 0x1802, 0,
 
           0x1400, 0xC0000300 + nodeid, 0x1600, 0x1600, 0x60c20108, 0x1600,
           0x1400, 0x40000300 + nodeid, 0x1400, 0xFE, 0x1400, 0,
@@ -3021,11 +3077,10 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
           0x1401, 0x40000200 + nodeid, 0x1401, 0xFE, 0x1401, 0,
 
           0x1402, 0xC0000400 + nodeid, 0x1602, 0x1602, 0x60c10120, 0x1602,
-          0x1402, 0x40000400 + nodeid, 0x1402, 0xFE, 0x1402, 0
+          0x1402, 0x40000400 + nodeid, 0x1402, 0xFE, 0x1402, 0,
 
-          /*0x1403, 0xC0000500 + nodeid, 0x1603, 0x1603, 0x60400010, 0x1603,
-           0x1403, 0x40000500 + nodeid, 0x1403, 0xFE, 0x1403, 0,*/
-
+          0x1403, 0xC0000400, 0x1603, 0x1603, 0x60400010, 0x1603,
+          0x1403, 0x40000400, 0x1403, 0xFE, 0x1403, 0
           );
 
       canopen_abort_code = RegisterSetODentryCallBack(d, 0x6061, 0,
@@ -3083,23 +3138,23 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
       // MAP RPDO 1 (COB-ID 200 + nodeid) to receive "Interpolation Time Index" (8-bit)" (0x60c2 sub2)
       // MAP RPDO 2 (COB-ID 300 + nodeid) to receive "Interpolation Time Units" (8-bit)" (0x60c2 sub1)
       // MAP RPDO 3 (COB-ID 400 + nodeid) to receive "Interpolation Data" (32-bit)" (0x60c1 sub1)
-      // MAP RPD0 4 (COB-ID 500 + nodeid) to receive "Control Word (16-bit)" (0x6040 sub0)
+      // MAP RPD0 4 (COB-ID 400) to receive "Control Word (16-bit)" (0x6040 sub0)
       // MAP RPDO 5 (COB-ID 380) to receive high resolution timestamp
 
       struct state_machine_struct *configure_slave_machine[] =
           {
               &heart_start_machine, &map4_pdo_machine, &map2_pdo_machine,
               &map1_pdo_machine, &map1_pdo_machine, &map1_pdo_machine,
-              &map1_pdo_machine, &smart_start_machine
+              &map1_pdo_machine, &map1_pdo_machine, &smart_start_machine
           };
 
       _machine_exe(d, nodeid, &ConfigureSlaveNodeCallback,
-          configure_slave_machine, 8, 1, 81,
+          configure_slave_machine, 9, 1, 93,
           100,
 
           0x1800, 0xC0000180, 0x1A00, 0x1A00, 0x20000008, 0x1A00, 0x60410010,
           0x1A00, 0x24000010, 0x1A00, 0x60610008, 0x1A00, 0x1800, 0x40000180,
-          0x1800, 0xFE, 0x1800, 0x32,
+          0x1800, 0xFE, 0x1800, 200,
 
           0x1801, 0xC0000280, 0x1A01, 0x1A01, 0x20000008, 0x1A01, 0x60630020,
           0x1A01, 0x1801, 0x40000280, 0x1801, 0xFE, 0x1801, 10,
@@ -3113,8 +3168,8 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
           0x1402, 0xC0000400 + nodeid, 0x1602, 0x1602, 0x60c10120, 0x1602,
           0x1402, 0x40000400 + nodeid, 0x1402, 0xFE, 0x1402, 0,
 
-          /*0x1403, 0xC0000500 + nodeid, 0x1603, 0x1603, 0x60400010, 0x1603,
-           0x1403, 0x40000500 + nodeid, 0x1403, 0xFE, 0x1403, 0,*/
+          0x1403, 0xC0000400, 0x1603, 0x1603, 0x60400010, 0x1603,
+          0x1403, 0x40000400, 0x1403, 0xFE, 0x1403, 0,
 
           0x1404, 0xC0000380, 0x1604, 0x1604, 0x10130020, 0x1604, 0x1404,
           0x40000380, 0x1404, 0xFE, 0x1404, 0

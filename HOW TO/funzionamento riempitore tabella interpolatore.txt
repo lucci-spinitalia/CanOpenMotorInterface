@@ -1,0 +1,265 @@
+INTRODUZIONE
+============
+
+L'interpolatore della SmartMotors consiste in una tabella da riempire continuamente fino alla fine del
+movimento desiderato. I campi scritti vengono svuotati con una logica FIFO man mano che i motori raggiungano
+la posizone comandata. Ci sono un numero limitato di righe (per la precisione 45) ed ognuna di esse memorizza
+la posizione da raggiungere ed il tempo in cui raggiungerla. Una volta finita la serie di movimenti, la tabella 
+deve essere chiusa scrivedo una riga con il tempo pari a zero e l'ultima posizione comandanta. Nel caso in cui
+venissero scritti più punti delle celle libere, si riceverà un errore del tipo "buffer Overflow". 
+Allo stesso modo, se la tabella si svuotasse senza che sia stata chiusa, si riceverà un errore di tipo "buffer
+underflow".
+
+
+IL RIEMPITORE
+=============
+Il motodo utilizzato per riempire la tabella consiste nell'avviare un processo che legga i dati dal file .mot
+e li metta a disposizione in un buffer circolare. Dopodichè il processo principale andrà a scaricare dal buffer
+circolare il numero di posizioni adatto da inserire nella tabella.
+Il buffer circolare e l'id del processo del riempitore sono memorizzati nell'array
+
+	struct table_data motor_table[TABLE_MAX_NUM];
+
+con
+
+	struct table_data
+	{
+	  int nodeId;
+	  long position[POSITION_DATA_NUM_MAX]; /**< posizione da raggiungere in passi encoder */
+	  long time_ms[POSITION_DATA_NUM_MAX]; /**< tempo per arrivare alla posizione in ms (solo per comando posizione/interpolazione */
+
+	  long offset; /**< offset dal limite di giunto (solo per comando homing) */
+	  long forward_velocity; /**< velocità di ricerca limite di giunto (solo per comando di homing) */
+	  long backward_velocity; /**< velocità di spostamento nello zero dal limite di giunto (solo per comando homing) */
+
+	  char type; /**< tipo di dato letto "H": riga di homing, "S": riga tabella */
+
+	  int write_pointer; /**< dove sono arrivato a scrivere */
+	  int read_pointer; /**< dove sono arrivato a leggere */
+	  int count; /**< numero di elementi presenti nel buffer */
+
+	  int cursor_position; /**< dove sono arrivato nel file delle posizioni */
+	  int end_reached; /**< indica se non ci sono più punti da inserire nella tabella */
+
+	  pthread_mutex_t table_mutex; /**< sincro tra diversi thread */
+	  pthread_t table_refiller; /**< thread per tenere la tabella piena */
+	};
+
+
+La struttura dati viene inizializzata tramite la funzione QueueInit, richiamata nel momento in cui i motori si dichiarano
+(dopo il comando CT0, nella funzione ConfigureSlaveNode), quando viene inviato il comando CT2 P1 o CT2 P2. Lo scopo della
+suddetta funzione è l'inizializzare il buffer circolare e chiudere eventuali processi riempitori in esecuzione.
+
+Per mantenere la struttura più flessibile possibile, ad ogni elemento della struttura motor_table viene associato un motore
+ed è possibile riconoscere quale dal campo "nodeid".
+Delle volte si conosce l'id del motore e si vuole sapere quel'è l'indice di motor_table a cui è associato. Per questo
+si usa la funzione MotorTableIndexFromNodeId().
+
+COME FUNZIONA IL RIEMPITORE DI TABELLA
+======================================
+Il presente documento è scritto come guida al codice per risolvere eventuali problemi di buffer. Verranno descritte
+tutte le azioni svolte dal programma canopenshell in ordine cronologico da quando viene inviato il comando di avvio
+simulazione CT4. Se non specificato, le funzioni descritte si intendono presenti nel file "CANOpenShell.c"
+
+AVVIO DELLA SIMULAZIONE
+-----------------------
+Quando viene inserito il comando CT4, questo viene raccolto ed interpretato dalla funzione
+
+	int ProcessCommand(char* command)
+
+che, a sua volta, richiama la funzione ProcessCommandTripode. Quest'ultima eseguirà la parte di codice:
+
+    case 4:
+      pthread_mutex_lock(&robot_state_mux);
+      if(robot_state != CENTRATO)
+      {
+        pthread_mutex_unlock(&robot_state_mux);
+        goto permission_denied;
+      }
+
+      robot_state = SIMULAZIONE;
+      pthread_mutex_unlock(&robot_state_mux);
+
+      SimulationStart(0);
+      break;
+
+controllando di fatto che il comando sia accettato solo dallo stato CENTRATO e, quindi, passando al nuovo stato 
+SIMULAZIONE. Infine viene chiamata la funzione SimulationStart con parametro 0, che avvia la simulazione per
+tutti i motori dichiarati (0 è l'indirizzo di broadcast).
+
+
+INIZIALIZZAZIONE DELLA SIMULAZIONE
+-----------------------------------
+SimulationStart inizializza tutti i motori e li prepara per accogliere i dati nella tabella. Precisamente viene
+richiamata la macchina a stati init_interpolation_machine che resetta la tabella dell'interpolatore, inizializza
+il motore in modalità "Interpolation" e scrive la prima riga della tabella con i seguenti dati:
+
+	TEMPO: 1s POSIZIONE: posizione corrente
+
+Da notare che la variabile "simulation_first_start[nodeid]" dovrebbe essere sempre pari ad 1 quando viene richiamata
+questa funzione, in quanto viene impostata ogni volta che si ritorna allo stato di centrato (azione obbligatoria).
+
+Quando la macchina a stati ha concluso le suddette azioni, viene richiamata la funzione SimulationInitCallback
+(specificata tra i parametri di _machine_exe)
+
+      _machine_exe(CANOpenShellOD_Data, nodeid, &SimulationInitCallback,
+          &machine, 1, 0, 1, motor_position[nodeid]);
+
+
+AVVIO DEL PROCESSO RIEMPITORE
+-----------------------------
+La lettura continua delle posizioni dal file .mot del motore viene gestita da un processo che viene avviato
+alla fine dell'inizializzazione della simulazione, in SimulationInitCallback. Il suo compito è quello di leggere
+i file .mot e riempire una buffer circolare con in punti da scrivere sulla tabella dell'interpolatore.
+
+		void SimulationInitCallback(CO_Data* d, UNS8 nodeid, int machine_state,
+		    UNS32 return_value)
+		{
+		  if(return_value)
+		  {
+		    CERR("CT4", InternalError);
+		    return;
+		  }
+
+		  int motor_table_index = MotorTableIndexFromNodeId(nodeid);
+
+		  if(motor_table_index >= 0)
+		  {
+		    pthread_mutex_lock(&motor_table[motor_table_index].table_mutex);
+		    QueueFill(&motor_table[motor_table_index]);
+		    pthread_mutex_unlock(&motor_table[motor_table_index].table_mutex);
+		  }
+		}
+
+Dopo aver gestito eventuali errori della macchina a stati, prima si ottiene l'indice di motor_table a cui è associato
+il motore, dopodichè si avvia il processo riempitore attraverso QueueFill. Quest'ultima funzione azzera di nuovo il
+buffer circolare ed avvia QueueRefiller.
+
+
+IL PROCESSO RIEMPITORE
+----------------------
+La funzione QueueRefiller, presente in file_parser.c, richiama periodicamente la funzione QueuePut, la quale legge il file .mot,
+verifica la correttezza dei dati e li aggiunge al buffer circolare. 
+
+AVANZAMENTO DELLA SIMULAZIONE
+-----------------------------
+La simulazione viene completamente gestita tramite i messaggi asincroni provenienti dai motori. In particolare, i dati come lo stato
+del motore, lo stato dell'interpolatore e l'attuale modalità di funzionamento sono inviati automaticamente ogni 50 ms (vedi 
+configurazione in ConfigureSlaveNode). Ogni volta che se ne riceve uno, viene richiamata la funzione OnStatusUpdate(), che
+richiama a sua volta OnInterpUpdate(), che rappresenta il centro di controllo della simulazione.
+
+Infatti, nel caso in cui il motore si trovi nella modalità interpolazione (0x07) e lo stato del tripode è SIMULAZIONE
+
+	  if((motor_mode[nodeid] == 0x7) && (robot_state == SIMULAZIONE))
+	  {
+	    pthread_mutex_unlock(&robot_state_mux);
+	    // Ho bisogno di lasciarmi un posto per un'eventuale chiusura della tabella, dovuta,
+	    // per esempio, dalla ricezione di un errore dai motori
+	    SimulationTableUpdate(d, nodeid, (motor_interp_status[nodeid] & 0x3F) - 1,
+		1);
+	  }
+
+viene richiamata la funzione SimulationTableUpdate scrive di fatto i punti nella tabella.
+
+Sempre in OnInterpUpdate() viene verficata la condizione di fine simulazione
+
+
+	    else if(((motor_interp_status[nodeid] & 0b1000000100000000) == 0)
+		&& (motor_mode[nodeid] == 0x7) && (motor_started[nodeid] == 2))
+	    {
+	      motor_started[nodeid] = 0;
+
+	#ifdef CANOPENSHELL_VERBOSE
+	      if(verbose_flag)
+	      {
+		printf("INF[%d on node %x]: Interpolation finished (sin IP mode)\n",
+		    SmartMotorError, nodeid);
+	      }
+	#endif
+
+	      if(fake_flag == 0)
+	      {
+		SimulationTableEnd(d, nodeid, 0, 0);
+
+		/*struct state_machine_struct *interpolation_machine[] =
+		 {&smart_stop_machine};
+
+		 _machine_exe(CANOpenShellOD_Data, nodeid, &SimulationTableEnd,
+		 interpolation_machine, 1, 1, 0);*/
+	      }
+	      else
+	      {
+		//motor_mode[nodeid] = 0x3;
+
+	#ifdef CANOPENSHELL_VERBOSE
+		if(verbose_flag)
+		{
+		  printf("SUCC[node %x]: smart motor stopped\n", nodeid);
+		}
+	#endif
+		SimulationTableEnd(d, nodeid, 0, 0);
+	      }
+
+	      motor_interp_status[nodeid] = Interpolation_Mode_Status;
+
+	      return 0;
+	    }
+
+
+SCRITTURA NELLA TABELLA DELL'INTERPOLATORE
+-------------------------------------------
+La scrittura dei punti nella tabella avviene dentro la funzione SimulationTableUpdate(), che prende tra i parametri
+il numero di celle libere, così come dichiarato dai motori.
+La funzione QueueGet() scarica un punto del buffer circolare nella variabile locale data_read. I punti letti saranno
+poi scritti nelle variabili globali (generate tramite lo stack CANOPen) InterpolationTimeValue e InterpolationData
+e verrà comandato il loro invio sul bus tramite sendPDOevent() (funzione sempre dello stack)
+
+    InterpolationTimeValue[nodeid - MOTOR_INDEX_FIRST] = data_read.time_ms;
+    InterpolationData[nodeid - MOTOR_INDEX_FIRST] = data_read.position + 1;
+
+    if(fake_flag == 0)
+      sendPDOevent(d);
+    else
+      motor_position[nodeid] = InterpolationData[nodeid - MOTOR_INDEX_FIRST];
+
+La funzione QueueGet non si occupa di aggiornare i puntatori del buffer circolare: a questo scopo viene richiamato
+QueueUpdate(). L'aggiornamento dei puntatori viene posticipato per consentire il riinvio dei dati in caso di errori.
+
+Quando si entra per la prima volta in SimulationTableUpdate, vengono caricati i primi punti della tabella, ma la simulazione
+non è ancora partita. Di questo si occupa la seguente parte:
+
+
+		  if(valid_point != 0)
+		  {
+		    // se la simulazione non è stata avviata ancora
+		    if(((motor_interp_status[nodeid] & 0b1000000000000000) == 0))
+		    {
+		      if(fake_flag == 0)
+		      {
+			struct state_machine_struct *interpolation_machine[] =
+			    {&start_interpolation_machine};
+
+			_machine_exe(CANOpenShellOD_Data, nodeid, NULL,
+			    interpolation_machine, 1, 1, 0);
+		      }
+		      else
+		      {
+			motor_interp_status[nodeid] |= 0b1000000000000000;
+		#ifdef CANOPENSHELL_VERBOSE
+			if(verbose_flag)
+			{
+			  printf("SUCC[node %x]: smartmotor interpolation mode start\n",
+			      nodeid);
+			}
+		#endif
+		      }
+		    }
+		  }
+
+che assicura l'invio del comando di inizio movimento una volta sola durante tutta la simulazione.
+
+FINE DELLA SIMULAZIONE
+----------------------
+Quando il buffer circolare si è svuotato (quindi è stato letto tutto il file .mot), nella tabella viene scritta la riga di chiusura
+
+

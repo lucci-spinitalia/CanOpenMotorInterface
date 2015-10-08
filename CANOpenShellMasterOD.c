@@ -43,6 +43,7 @@ INTEGER32 InterpolationData[] =		/* Mapped at index 0x2502, subindex 0x01 - 0x06
     0x0,	/* 0 */
     0x0	/* 0 */
   };
+UNS16 InterpolationStart = 0x0;		/* Mapped at index 0x2503, subindex 0x00 */
 INTEGER8 InterpolationTimePeriod[] =		/* Mapped at index 0x2600, subindex 0x01 - 0x06 */
   {
     0x0,	/* 0 */
@@ -189,7 +190,7 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                      };
 
 /* index 0x1006 :   Communication / Cycle Period. */
-                    UNS32 CANOpenShellMasterOD_obj1006 = 0x186A0;	/* 100000 */
+                    UNS32 CANOpenShellMasterOD_obj1006 = 0x2710;	/* 10000 */
                     ODCallback_t CANOpenShellMasterOD_Index1006_callbacks[] = 
                      {
                        NULL,
@@ -2555,6 +2556,35 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                        { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1811_SYNC_start_value }
                      };
 
+/* index 0x1812 :   Transmit PDO 19 Parameter. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1812 = 6; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1812_COB_ID_used_by_PDO = 0x400;	/* 1024 */
+                    UNS8 CANOpenShellMasterOD_obj1812_Transmission_Type = 0x0;	/* 0 */
+                    UNS16 CANOpenShellMasterOD_obj1812_Inhibit_Time = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj1812_Compatibility_Entry = 0x0;	/* 0 */
+                    UNS16 CANOpenShellMasterOD_obj1812_Event_Timer = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj1812_SYNC_start_value = 0x0;	/* 0 */
+                    ODCallback_t CANOpenShellMasterOD_Index1812_callbacks[] = 
+                     {
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                       NULL,
+                     };
+                    subindex CANOpenShellMasterOD_Index1812[] = 
+                     {
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1812 },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1812_COB_ID_used_by_PDO },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1812_Transmission_Type },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1812_Inhibit_Time },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1812_Compatibility_Entry },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1812_Event_Timer },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1812_SYNC_start_value }
+                     };
+
 /* index 0x1A00 :   Transmit PDO 1 Mapping. */
                     UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A00 = 1; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj1A00[] = 
@@ -2771,6 +2801,18 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                        { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A11[0] }
                      };
 
+/* index 0x1A12 :   Transmit PDO 19 Mapping. */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A12 = 1; /* number of subindex - 1*/
+                    UNS32 CANOpenShellMasterOD_obj1A12[] = 
+                    {
+                      0x25030010	/* 620953616 */
+                    };
+                    subindex CANOpenShellMasterOD_Index1A12[] = 
+                     {
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A12 },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A12[0] }
+                     };
+
 /* index 0x2000 :   Mapped variable NodeId */
                     ODCallback_t NodeId_callbacks[] = 
                      {
@@ -2921,6 +2963,16 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                        { RW, int32, sizeof (INTEGER32), (void*)&InterpolationData[3] },
                        { RW, int32, sizeof (INTEGER32), (void*)&InterpolationData[4] },
                        { RW, int32, sizeof (INTEGER32), (void*)&InterpolationData[5] }
+                     };
+
+/* index 0x2503 :   Mapped variable InterpolationStart */
+                    ODCallback_t InterpolationStart_callbacks[] = 
+                     {
+                       NULL,
+                     };
+                    subindex CANOpenShellMasterOD_Index2503[] = 
+                     {
+                       { RW, uint16, sizeof (UNS16), (void*)&InterpolationStart }
                      };
 
 /* index 0x2600 :   Mapped variable InterpolationTimePeriod */
@@ -3402,6 +3454,7 @@ const indextable CANOpenShellMasterOD_objdict[] =
   { (subindex*)CANOpenShellMasterOD_Index180F,sizeof(CANOpenShellMasterOD_Index180F)/sizeof(CANOpenShellMasterOD_Index180F[0]), 0x180F},
   { (subindex*)CANOpenShellMasterOD_Index1810,sizeof(CANOpenShellMasterOD_Index1810)/sizeof(CANOpenShellMasterOD_Index1810[0]), 0x1810},
   { (subindex*)CANOpenShellMasterOD_Index1811,sizeof(CANOpenShellMasterOD_Index1811)/sizeof(CANOpenShellMasterOD_Index1811[0]), 0x1811},
+  { (subindex*)CANOpenShellMasterOD_Index1812,sizeof(CANOpenShellMasterOD_Index1812)/sizeof(CANOpenShellMasterOD_Index1812[0]), 0x1812},
   { (subindex*)CANOpenShellMasterOD_Index1A00,sizeof(CANOpenShellMasterOD_Index1A00)/sizeof(CANOpenShellMasterOD_Index1A00[0]), 0x1A00},
   { (subindex*)CANOpenShellMasterOD_Index1A01,sizeof(CANOpenShellMasterOD_Index1A01)/sizeof(CANOpenShellMasterOD_Index1A01[0]), 0x1A01},
   { (subindex*)CANOpenShellMasterOD_Index1A02,sizeof(CANOpenShellMasterOD_Index1A02)/sizeof(CANOpenShellMasterOD_Index1A02[0]), 0x1A02},
@@ -3420,6 +3473,7 @@ const indextable CANOpenShellMasterOD_objdict[] =
   { (subindex*)CANOpenShellMasterOD_Index1A0F,sizeof(CANOpenShellMasterOD_Index1A0F)/sizeof(CANOpenShellMasterOD_Index1A0F[0]), 0x1A0F},
   { (subindex*)CANOpenShellMasterOD_Index1A10,sizeof(CANOpenShellMasterOD_Index1A10)/sizeof(CANOpenShellMasterOD_Index1A10[0]), 0x1A10},
   { (subindex*)CANOpenShellMasterOD_Index1A11,sizeof(CANOpenShellMasterOD_Index1A11)/sizeof(CANOpenShellMasterOD_Index1A11[0]), 0x1A11},
+  { (subindex*)CANOpenShellMasterOD_Index1A12,sizeof(CANOpenShellMasterOD_Index1A12)/sizeof(CANOpenShellMasterOD_Index1A12[0]), 0x1A12},
   { (subindex*)CANOpenShellMasterOD_Index2000,sizeof(CANOpenShellMasterOD_Index2000)/sizeof(CANOpenShellMasterOD_Index2000[0]), 0x2000},
   { (subindex*)CANOpenShellMasterOD_Index2001,sizeof(CANOpenShellMasterOD_Index2001)/sizeof(CANOpenShellMasterOD_Index2001[0]), 0x2001},
   { (subindex*)CANOpenShellMasterOD_Index2100,sizeof(CANOpenShellMasterOD_Index2100)/sizeof(CANOpenShellMasterOD_Index2100[0]), 0x2100},
@@ -3437,6 +3491,7 @@ const indextable CANOpenShellMasterOD_objdict[] =
   { (subindex*)CANOpenShellMasterOD_Index2400,sizeof(CANOpenShellMasterOD_Index2400)/sizeof(CANOpenShellMasterOD_Index2400[0]), 0x2400},
   { (subindex*)CANOpenShellMasterOD_Index2501,sizeof(CANOpenShellMasterOD_Index2501)/sizeof(CANOpenShellMasterOD_Index2501[0]), 0x2501},
   { (subindex*)CANOpenShellMasterOD_Index2502,sizeof(CANOpenShellMasterOD_Index2502)/sizeof(CANOpenShellMasterOD_Index2502[0]), 0x2502},
+  { (subindex*)CANOpenShellMasterOD_Index2503,sizeof(CANOpenShellMasterOD_Index2503)/sizeof(CANOpenShellMasterOD_Index2503[0]), 0x2503},
   { (subindex*)CANOpenShellMasterOD_Index2600,sizeof(CANOpenShellMasterOD_Index2600)/sizeof(CANOpenShellMasterOD_Index2600[0]), 0x2600},
   { (subindex*)CANOpenShellMasterOD_Index6040,sizeof(CANOpenShellMasterOD_Index6040)/sizeof(CANOpenShellMasterOD_Index6040[0]), 0x6040},
   { (subindex*)CANOpenShellMasterOD_Index6041,sizeof(CANOpenShellMasterOD_Index6041)/sizeof(CANOpenShellMasterOD_Index6041[0]), 0x6041},
@@ -3648,82 +3703,85 @@ const indextable * CANOpenShellMasterOD_scanIndexOD (UNS16 wIndex, UNS32 * error
 		case 0x180F: i = 160;*callbacks = CANOpenShellMasterOD_Index180F_callbacks; break;
 		case 0x1810: i = 161;*callbacks = CANOpenShellMasterOD_Index1810_callbacks; break;
 		case 0x1811: i = 162;*callbacks = CANOpenShellMasterOD_Index1811_callbacks; break;
-		case 0x1A00: i = 163;break;
-		case 0x1A01: i = 164;break;
-		case 0x1A02: i = 165;break;
-		case 0x1A03: i = 166;break;
-		case 0x1A04: i = 167;break;
-		case 0x1A05: i = 168;break;
-		case 0x1A06: i = 169;break;
-		case 0x1A07: i = 170;break;
-		case 0x1A08: i = 171;break;
-		case 0x1A09: i = 172;break;
-		case 0x1A0A: i = 173;break;
-		case 0x1A0B: i = 174;break;
-		case 0x1A0C: i = 175;break;
-		case 0x1A0D: i = 176;break;
-		case 0x1A0E: i = 177;break;
-		case 0x1A0F: i = 178;break;
-		case 0x1A10: i = 179;break;
-		case 0x1A11: i = 180;break;
-		case 0x2000: i = 181;*callbacks = NodeId_callbacks; break;
-		case 0x2001: i = 182;break;
-		case 0x2100: i = 183;break;
-		case 0x2200: i = 184;break;
-		case 0x2201: i = 185;break;
-		case 0x2202: i = 186;break;
-		case 0x2300: i = 187;break;
-		case 0x2301: i = 188;break;
-		case 0x2302: i = 189;break;
-		case 0x2303: i = 190;break;
-		case 0x2304: i = 191;break;
-		case 0x2305: i = 192;break;
-		case 0x2306: i = 193;break;
-		case 0x2307: i = 194;break;
-		case 0x2400: i = 195;*callbacks = Interpolation_Mode_Status_callbacks; break;
-		case 0x2501: i = 196;*callbacks = InterpolationTimeValue_callbacks; break;
-		case 0x2502: i = 197;*callbacks = InterpolationData_callbacks; break;
-		case 0x2600: i = 198;*callbacks = InterpolationTimePeriod_callbacks; break;
-		case 0x6040: i = 199;*callbacks = Controlword_callbacks; break;
-		case 0x6041: i = 200;*callbacks = Statusword_callbacks; break;
-		case 0x605A: i = 201;break;
-		case 0x605D: i = 202;break;
-		case 0x6060: i = 203;break;
-		case 0x6061: i = 204;*callbacks = Modes_of_operation_display_callbacks; break;
-		case 0x6063: i = 205;*callbacks = Position_Actual_Value_callbacks; break;
-		case 0x6065: i = 206;break;
-		case 0x606C: i = 207;break;
-		case 0x6071: i = 208;break;
-		case 0x6072: i = 209;break;
-		case 0x6073: i = 210;break;
-		case 0x607A: i = 211;break;
-		case 0x607C: i = 212;break;
-		case 0x607D: i = 213;break;
-		case 0x607E: i = 214;break;
-		case 0x607F: i = 215;break;
-		case 0x6081: i = 216;break;
-		case 0x6083: i = 217;break;
-		case 0x6085: i = 218;break;
-		case 0x608F: i = 219;break;
-		case 0x6098: i = 220;break;
-		case 0x6099: i = 221;break;
-		case 0x609A: i = 222;break;
-		case 0x60F4: i = 223;break;
-		case 0x60FB: i = 224;break;
-		case 0x60FD: i = 225;break;
-		case 0x60FE: i = 226;break;
-		case 0x60FF: i = 227;break;
-		case 0x6401: i = 228;break;
-		case 0x6402: i = 229;break;
-		case 0x6403: i = 230;break;
-		case 0x6404: i = 231;break;
-		case 0x6405: i = 232;break;
-		case 0x6502: i = 233;break;
-		case 0x6503: i = 234;break;
-		case 0x6504: i = 235;break;
-		case 0x6505: i = 236;break;
-		case 0x6510: i = 237;break;
-		case 0x67FF: i = 238;break;
+		case 0x1812: i = 163;*callbacks = CANOpenShellMasterOD_Index1812_callbacks; break;
+		case 0x1A00: i = 164;break;
+		case 0x1A01: i = 165;break;
+		case 0x1A02: i = 166;break;
+		case 0x1A03: i = 167;break;
+		case 0x1A04: i = 168;break;
+		case 0x1A05: i = 169;break;
+		case 0x1A06: i = 170;break;
+		case 0x1A07: i = 171;break;
+		case 0x1A08: i = 172;break;
+		case 0x1A09: i = 173;break;
+		case 0x1A0A: i = 174;break;
+		case 0x1A0B: i = 175;break;
+		case 0x1A0C: i = 176;break;
+		case 0x1A0D: i = 177;break;
+		case 0x1A0E: i = 178;break;
+		case 0x1A0F: i = 179;break;
+		case 0x1A10: i = 180;break;
+		case 0x1A11: i = 181;break;
+		case 0x1A12: i = 182;break;
+		case 0x2000: i = 183;*callbacks = NodeId_callbacks; break;
+		case 0x2001: i = 184;break;
+		case 0x2100: i = 185;break;
+		case 0x2200: i = 186;break;
+		case 0x2201: i = 187;break;
+		case 0x2202: i = 188;break;
+		case 0x2300: i = 189;break;
+		case 0x2301: i = 190;break;
+		case 0x2302: i = 191;break;
+		case 0x2303: i = 192;break;
+		case 0x2304: i = 193;break;
+		case 0x2305: i = 194;break;
+		case 0x2306: i = 195;break;
+		case 0x2307: i = 196;break;
+		case 0x2400: i = 197;*callbacks = Interpolation_Mode_Status_callbacks; break;
+		case 0x2501: i = 198;*callbacks = InterpolationTimeValue_callbacks; break;
+		case 0x2502: i = 199;*callbacks = InterpolationData_callbacks; break;
+		case 0x2503: i = 200;*callbacks = InterpolationStart_callbacks; break;
+		case 0x2600: i = 201;*callbacks = InterpolationTimePeriod_callbacks; break;
+		case 0x6040: i = 202;*callbacks = Controlword_callbacks; break;
+		case 0x6041: i = 203;*callbacks = Statusword_callbacks; break;
+		case 0x605A: i = 204;break;
+		case 0x605D: i = 205;break;
+		case 0x6060: i = 206;break;
+		case 0x6061: i = 207;*callbacks = Modes_of_operation_display_callbacks; break;
+		case 0x6063: i = 208;*callbacks = Position_Actual_Value_callbacks; break;
+		case 0x6065: i = 209;break;
+		case 0x606C: i = 210;break;
+		case 0x6071: i = 211;break;
+		case 0x6072: i = 212;break;
+		case 0x6073: i = 213;break;
+		case 0x607A: i = 214;break;
+		case 0x607C: i = 215;break;
+		case 0x607D: i = 216;break;
+		case 0x607E: i = 217;break;
+		case 0x607F: i = 218;break;
+		case 0x6081: i = 219;break;
+		case 0x6083: i = 220;break;
+		case 0x6085: i = 221;break;
+		case 0x608F: i = 222;break;
+		case 0x6098: i = 223;break;
+		case 0x6099: i = 224;break;
+		case 0x609A: i = 225;break;
+		case 0x60F4: i = 226;break;
+		case 0x60FB: i = 227;break;
+		case 0x60FD: i = 228;break;
+		case 0x60FE: i = 229;break;
+		case 0x60FF: i = 230;break;
+		case 0x6401: i = 231;break;
+		case 0x6402: i = 232;break;
+		case 0x6403: i = 233;break;
+		case 0x6404: i = 234;break;
+		case 0x6405: i = 235;break;
+		case 0x6502: i = 236;break;
+		case 0x6503: i = 237;break;
+		case 0x6504: i = 238;break;
+		case 0x6505: i = 239;break;
+		case 0x6510: i = 240;break;
+		case 0x67FF: i = 241;break;
 		default:
 			*errorCode = OD_NO_SUCH_OBJECT;
 			return NULL;
@@ -3737,7 +3795,7 @@ const indextable * CANOpenShellMasterOD_scanIndexOD (UNS16 wIndex, UNS32 * error
  * Even if no pdoTransmit are defined, at least one entry is computed
  * for compilations issues.
  */
-s_PDO_status CANOpenShellMasterOD_PDO_status[18] = {s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer};
+s_PDO_status CANOpenShellMasterOD_PDO_status[19] = {s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer,s_PDO_status_Initializer};
 
 const quick_index CANOpenShellMasterOD_firstIndex = {
   0, /* SDO_SVR */
@@ -3745,7 +3803,7 @@ const quick_index CANOpenShellMasterOD_firstIndex = {
   141, /* PDO_RCV */
   143, /* PDO_RCV_MAP */
   145, /* PDO_TRS */
-  163 /* PDO_TRS_MAP */
+  164 /* PDO_TRS_MAP */
 };
 
 const quick_index CANOpenShellMasterOD_lastIndex = {
@@ -3753,8 +3811,8 @@ const quick_index CANOpenShellMasterOD_lastIndex = {
   140, /* SDO_CLT */
   142, /* PDO_RCV */
   144, /* PDO_RCV_MAP */
-  162, /* PDO_TRS */
-  180 /* PDO_TRS_MAP */
+  163, /* PDO_TRS */
+  182 /* PDO_TRS_MAP */
 };
 
 const UNS16 CANOpenShellMasterOD_ObjdictSize = sizeof(CANOpenShellMasterOD_objdict)/sizeof(CANOpenShellMasterOD_objdict[0]); 
