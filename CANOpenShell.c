@@ -1071,15 +1071,7 @@ UNS32 OnInterpUpdate(CO_Data* d, UNS8 nodeid)
 #endif
 
       if(fake_flag == 0)
-      {
         SimulationTableEnd(d, nodeid, 0, 0);
-
-        /*struct state_machine_struct *interpolation_machine[] =
-         {&smart_stop_machine};
-
-         _machine_exe(CANOpenShellOD_Data, nodeid, &SimulationTableEnd,
-         interpolation_machine, 1, 1, 0);*/
-      }
       else
       {
         //motor_mode[nodeid] = 0x3;
