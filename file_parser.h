@@ -27,7 +27,7 @@ struct table_data
   int read_pointer; /**< dove sono arrivato a leggere */
   int count; /**< numero di elementi presenti nel buffer */
 
-  int cursor_position; /**< dove sono arrivato nel file delle posizioni */
+  long cursor_position; /**< dove sono arrivato nel file delle posizioni */
   int end_reached; /**< indica se non ci sono più punti da inserire nella tabella */
 
   pthread_mutex_t table_mutex; /**< sincro tra diversi thread */

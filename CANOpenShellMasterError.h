@@ -13,11 +13,11 @@
 #define CERR(cmd, num)            \
           printf("CERR %s %d: %s\n", cmd, num, cerr_descr[num])
 
-#define AERR(num, nodeid)            \
-          printf("AERR %d @M%d: %s\n", num, nodeid, cerr_descr[num])
+#define AERR(num, nodeid, msg)            \
+          printf("AERR %d @M%d: %s %s\n", num, nodeid, cerr_descr[num], msg)
 
-#define EVENT(num, nodeid)            \
-          printf("EVENT %d @M%d: %s\n", num, nodeid, cerr_descr[num])
+#define EVENT(num, nodeid, msg)            \
+          printf("EVENT %d @M%d: %s %s\n", num, nodeid, cerr_descr[num], msg)
 
 #define OK(cmd)            \
           printf("OK %s\n", cmd)
@@ -57,12 +57,28 @@ enum enum_cerr
   CERR_InterpFIFOOverError = 0x12,  /**< FIFO overflow */
   CERR_PermissionDenied = 0x13, /**< Inviato comando dallo stato sbalgiato */
   CERR_SimulationError = 0x14, /**< Errore nella simulazione */
-  CERR_MotorFault = 0x15 /**< Canopen entrato nello stato "Fault" */
+  CERR_MotorFault = 0x15, /**< Canopen entrato nello stato "Fault" */
+  CERR_FileError = 0x16 /**< Errore nella linea del file .mot */
 };
+
+struct
+{
+  int count;
+  int event[100];
+  int type[100]; /* 0: error async 1: event */
+  int nodeid[100];
+  char message[100][100];
+
+  pthread_mutex_t error_mux;
+} event_buffer;
+
 
 extern char *cerr_descr[];
 extern volatile int verbose_flag;
 
 extern UNS32 canopen_abort_code;  /**< Codice dell'ultimo errore del tipo CANOpenError */
+
+void add_event(int error, int nodeid, int type, char *message);
+void return_event();
 
 #endif /* CANOPENSHELLMASTERERROR_H_ */

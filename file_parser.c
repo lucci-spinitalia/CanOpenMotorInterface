@@ -16,6 +16,8 @@
 #include <pthread.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
+#include <ctype.h>
 #include "CANOpenShellMasterError.h"
 #include "file_parser.h"
 #include "CANOpenShell.h"
@@ -93,12 +95,11 @@ void *QueueRefiller(void *args)
   {
     pthread_testcancel();
 
-    pthread_mutex_lock(&data->table_mutex);
-
     if(data->count < POSITION_DATA_NUM_MAX)
     {
       data_refilled = QueuePut(data, POSITION_DATA_NUM_MAX - data->count);
 
+      //printf("[%d] Refilled %d points\n", data->nodeId, data_refilled);
       if(data_refilled == -1)
       {
 #ifdef CANOPENSHELL_VERBOSE
@@ -112,18 +113,18 @@ void *QueueRefiller(void *args)
         break;
       }
       /*else if(data_refilled > 0)
-      {
-        printf("Refilled node %d: %d\n", data->nodeId, data_refilled);
-        fflush(stdout);
-      }*/
-
-      pthread_mutex_unlock(&data->table_mutex);
+       {
+       printf("Refilled node %d: %d\n", data->nodeId, data_refilled);
+       fflush(stdout);
+       }*/
+      else if((data_refilled == 0) && (data->end_reached))
+        break;
     }
-    else
-      pthread_mutex_unlock(&data->table_mutex);
 
     usleep(10000);
   }
+
+  data->table_refiller = 0;
 
   return NULL;
 }
@@ -157,12 +158,18 @@ void QueueInit(int nodeid, struct table_data *data)
 void QueueFill(struct table_data *data)
 {
   row_read[data->nodeId] = 0;
+
+  pthread_mutex_lock(&data->table_mutex);
+
   data->write_pointer = 0;
   data->read_pointer = 0;
   data->count = 0;
   data->cursor_position = 0;
   data->end_reached = 0;
 
+  pthread_mutex_unlock(&data->table_mutex);
+
+  //printf("[%d] Queue fill\n", data->nodeId);
   if(data->table_refiller == 0)
   {
     int err;
@@ -170,6 +177,8 @@ void QueueFill(struct table_data *data)
 
     if(err != 0)
       printf("can't create thread:[%s]", strerror(err));
+
+    //printf("[%d] Created process fill", data->nodeId);
   }
 }
 
@@ -185,10 +194,11 @@ int QueueGet(struct table_data *data_in, struct table_data_read *data_out,
 {
   int read_pointer;
 
+  //printf("[%d] Trying to get data. . .", data_in->nodeId);
   // Controllo che l'offset non sia più grande dei dati che ho scritto nel buffer
   if(offset > data_in->count)
   {
-    #ifdef CANOPENSHELL_VERBOSE
+#ifdef CANOPENSHELL_VERBOSE
 
     if(verbose_flag)
     {
@@ -208,7 +218,8 @@ int QueueGet(struct table_data *data_in, struct table_data_read *data_out,
 #ifdef CANOPENSHELL_VERBOSE
     if(verbose_flag)
     {
-      printf("Errore nella riga di movimento: %d %c\n", data_in->nodeId, data_in->type);
+      printf("Errore nella riga di movimento: %d %c\n", data_in->nodeId,
+          data_in->type);
     }
 #endif
 
@@ -218,6 +229,7 @@ int QueueGet(struct table_data *data_in, struct table_data_read *data_out,
   data_out->position = data_in->position[read_pointer];
   data_out->time_ms = data_in->time_ms[read_pointer];
 
+  //printf("pointer: %d, position: %ld, time: %ld\n", read_pointer, data_out->position, data_out->time_ms);
   return 0;
 }
 
@@ -252,6 +264,7 @@ int QueueLast(struct table_data *data_in, struct table_data_read *data_out)
  */
 void QueueUpdate(struct table_data *data, int point_number)
 {
+  //printf("[%d] Queue update\n", data->nodeId);
   if(point_number <= data->count)
   {
     data->read_pointer += point_number;
@@ -309,6 +322,7 @@ int QueuePut(struct table_data *data, int line_number)
   char vel_backw[12];
   char nodeid[3];
   int line_count = 0;
+  long value;
 
   if(data->end_reached == 1)
     return 0;
@@ -320,8 +334,6 @@ int QueuePut(struct table_data *data, int line_number)
     sprintf(file_path, "%s%d.mot", FILE_DIR, data->nodeId);
   else
     sprintf(file_path, "%s%d.mot.fake", FILE_DIR, data->nodeId);
-
-
 
   file = fopen(file_path, "r");
 
@@ -443,7 +455,10 @@ int QueuePut(struct table_data *data, int line_number)
           token = strtok_r(NULL, " \n\r\a", &token_save);
           if(token != NULL)
           {
-            if(*token == 'T')
+            value = strtol((token + 1), NULL, 10);
+
+            if((*token == 'T') && (*(token + 1) != '\0')
+                && (value != ERANGE) && (value != 0))
               strcpy(time, token + 1);
             else
               goto fault;
@@ -500,19 +515,11 @@ int QueuePut(struct table_data *data, int line_number)
         default:
           fault:
 
-#ifdef CANOPENSHELL_VERBOSE
-          if(verbose_flag)
-          {
-            printf("WARN[%d on node %x]: Riga %ld non valida\n",
-                InternalError, data->nodeId,
-                row_read[data->nodeId] + line_count);
-
-            printf("line: %s", line);
-          }
-#endif
-
           data->type = 'E';
           data->cursor_position += read;
+
+          sprintf(line_copy, "linea %ld", row_read[data->nodeId] + line_count + 1);
+          add_event(CERR_FileError, data->nodeId, 0, line_copy);
           continue;
           break;
       }
@@ -524,10 +531,18 @@ int QueuePut(struct table_data *data, int line_number)
       if(data->write_pointer >= POSITION_DATA_NUM_MAX)
         data->write_pointer = 0;
 
+      pthread_mutex_lock(&data->table_mutex);
+
       data->count++;
 
       if(data->count == POSITION_DATA_NUM_MAX)
+      {
+        pthread_mutex_unlock(&data->table_mutex);
+
         break;
+      }
+      else
+        pthread_mutex_unlock(&data->table_mutex);
     }
     else
     {

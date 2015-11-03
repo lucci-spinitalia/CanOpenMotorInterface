@@ -124,8 +124,8 @@ void *map2_pdo[8] =
     {
         &writeNetworkDictCallBack, // Set bit 31 of the COB-ID
         &writeNetworkDictCallBack, // Set the number of entry to 0
-        &writeNetworkDictCallBack, // Set the mapping object: status word
-        &writeNetworkDictCallBack, // Set the mapping object: actual velocity
+        &writeNetworkDictCallBack, // Set the mapping object
+        &writeNetworkDictCallBack, // Set the mapping object
         &writeNetworkDictCallBack, // Set the number of entry
         &writeNetworkDictCallBack, // Clear bit 31 of the COB-ID
         &writeNetworkDictCallBack, // Set transmission type on event timer
@@ -151,8 +151,8 @@ void *map2_pdo[8] =
     {
         0xFFFFFFFF, 0x1, 4, 0, 0xFFFFFFFF, // Set bit 31 of the COB-ID
         0xFFFFFFFF, 0x0, 1, 0, 0x00, // Set the number of entry to 0
-        0xFFFFFFFF, 0x1, 4, 0, 0xFFFFFFFF, // Set the mapping object: status word
-        0xFFFFFFFF, 0x2, 4, 0, 0xFFFFFFFF, // Set the mapping object: actual velocity
+        0xFFFFFFFF, 0x1, 4, 0, 0xFFFFFFFF, // Set the mapping object
+        0xFFFFFFFF, 0x2, 4, 0, 0xFFFFFFFF, // Set the mapping object
         0xFFFFFFFF, 0x0, 1, 0, 0x02, // Set the number of entry
         0xFFFFFFFF, 0x1, 4, 0, 0xFFFFFFFF, // Clear bit 31 of the COB-ID
         0xFFFFFFFF, 0x2, 1, 0, 0xFFFFFFFF, // Set transmission type on event timer
@@ -330,7 +330,7 @@ char *smart_stop_error[2] =
 struct state_machine_struct smart_stop_machine =
     {smart_stop, 10, smart_stop_param, 50, smart_stop_error};
 
-void *smart_position_set_function[10] =
+void *smart_position_set_function[9] =
     {
         &writeNetworkDictCallBack, // Reset the status word
         &writeNetworkDictCallBack, // Set mode position
@@ -341,35 +341,54 @@ void *smart_position_set_function[10] =
         &writeNetworkDictCallBack, // Change state: ready to switch on
         &writeNetworkDictCallBack, // Change state: switched on
         &writeNetworkDictCallBack, // Enable command, single setpoint (motion not actually started yet)
-        &writeNetworkDictCallBack, // Begin motion to target position
     };
 /*
  * param
  * profile speed
  * target point
- */UNS32 smart_position_set_param[50] =
+ * procile acceleration
+ */UNS32 smart_position_set_param[45] =
     {
         0x6040, 0x0, 2, 0, 0x80, // Reset status word
         0x6060, 0x0, 1, 0, 0x1, // Set mode position
         0x6081, 0x0, 4, 0, 0xFFFFFFFF, // Set profile speed
+        0x6083, 0x0, 4, 0, 0xFFFFFFFF, // Set acceleration
+        0x6084, 0x0, 4, 0, 0xFFFFFFFF, // Set deceleration
         0x607A, 0x0, 4, 0, 0xFFFFFFFF, // Set target position to destination
-        0x6083, 0x0, 4, 0, 0xa, // Set acceleration
-        0x6084, 0x0, 4, 0, 0xa, // Set deceleration
         0x6040, 0x0, 2, 0, 0x6, // Change state: ready to switch on
         0x6040, 0x0, 2, 0, 0x7, // Change state: switched on
         0x6040, 0x0, 2, 0, 0x2F, // Enable command, single setpoint (motion not actually started yet)
-        0x6040, 0x0, 2, 0, 0x3F, // Begin motion to target position
     };
 
 char *smart_position_set_error[2] =
     {
-        "smart motor go to target point. . .",
-        "cannot reach target point"
+        "set target point",
+        "cannot set target point"
     };
 
 struct state_machine_struct smart_position_set_machine =
-    {smart_position_set_function, 10, smart_position_set_param, 50,
+    {smart_position_set_function, 9, smart_position_set_param, 45,
         smart_position_set_error};
+
+void *smart_position_start_function[1] =
+    {
+        &writeNetworkDictCallBack // Begin motion to target position
+    };
+
+UNS32 smart_position_start_param[5] =
+    {
+        0x6040, 0x0, 2, 0, 0x3F // Begin motion to target position
+    };
+
+char *smart_position_start_error[2] =
+    {
+        "smart motor go to target point. . .",
+        "cannot begin motion"
+    };
+
+struct state_machine_struct smart_position_start_machine =
+    {smart_position_start_function, 1, smart_position_start_param, 5,
+        smart_position_start_error};
 
 void *smart_interpolation_test1[19] =
     {
@@ -1058,6 +1077,8 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
       {
         if(motor_active[i] > 0)
         {
+
+
           lock_value = pthread_mutex_lock(&machine_mux[i]);
 
           if(machine_run[i] == 1)
@@ -1126,7 +1147,9 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
       for(i = 1; i < CANOPEN_NODE_NUMBER; i++)
       {
         if(motor_active[i] > 0)
+        {
           callback_user[i] = machine_callback;
+        }
       }
 
 #ifdef SDO_SYNC
@@ -1953,7 +1976,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 #ifndef SDO_SYNC
           lock_value = pthread_mutex_lock(&machine_mux[i]);
 
-          if((motor_active[i] > 0) && machine_run[i] == 0)
+          if((motor_active[i] > 0) && (machine_run[i] == 0))
           {
             machine_run[i] = 1;
             lock_value = pthread_mutex_unlock(&machine_mux[i]);
@@ -1970,6 +1993,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
               printf("writenetworkdick machine %d\n", nodeId);
 
               lock_value = pthread_mutex_unlock(&machine_mux);
+            }
 #endif
             machine_state_param_index[i] =
                 machine_state_param_index[nodeId];
@@ -2246,7 +2270,6 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 // Nel caso in cui le funzioni siano finite
   if(machine_state_index[nodeId] == next_machine[nodeId][0]->function_size)
   {
-
 #ifdef CANOPENSHELL_VERBOSE
     if(verbose_flag)
     {
@@ -2273,7 +2296,6 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
     else
     {
       result_value = 0;
-
       goto finalize;
     }
   }
@@ -2305,6 +2327,8 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
   {
     for(i = 0; i < CANOPEN_NODE_NUMBER; i++)
     {
+
+      printf("Finalize %d\n", i);
       if(motor_active[i] > 0)
       {
         next_machine_size[i] = 0;

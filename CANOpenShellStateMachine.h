@@ -51,6 +51,7 @@ extern struct state_machine_struct map4_pdo_machine;
 extern struct state_machine_struct heart_start_machine;
 extern struct state_machine_struct smart_stop_machine;
 extern struct state_machine_struct smart_position_set_machine;
+extern struct state_machine_struct smart_position_start_machine;
 extern struct state_machine_struct smart_interpolation_test1_machine;
 extern struct state_machine_struct smart_interpolation_test2_machine;
 extern struct state_machine_struct stop_interpolation_machine;
