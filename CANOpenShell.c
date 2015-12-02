@@ -47,11 +47,14 @@
 #include "CANOpenShellMasterError.h"
 #include "file_parser.h"
 #include "utils.h"
+#include "smartmotor_table.h"
 
 //****************************************************************************
 // DEFINES
 #define MOTOR_INDEX_FIRST 0x77
 #define POSITION_FIFO_FILE "/tmp/alma_3d_spinitalia_pos_stream_pipe"
+#define SYNC_DIVIDER_STATUS 15
+#define SYNC_DIVIDER_TIMESTAMP 100
 
 #define TABLE_MAX_NUM 6
 
@@ -178,8 +181,8 @@
 #define FERMO              9 /**< il motore è fermo */
 #define CENTRAGGIO         10 /**< in movimento verso lo zero */
 #define RILASCIATO         11 /**< il controllo dei motori è spento ed è presente il freno motore */
-#define LIBERO             12 /**< i motori sono a coppia zero */
-#define IN_POSIZIONE       13 /**< movimento in modalità posizione */
+#define LIBERO             13 /**< i motori sono a coppia zero */
+#define IN_POSIZIONE       14 /**< movimento in modalità posizione */
 
 #define cst_str2(c1, c2) ((unsigned int)0 | \
     (char)c2) << 8 | (char)c1
@@ -653,11 +656,13 @@ UNS32 OnStatusUpdate(CO_Data* d, const indextable * indextable_curr,
 
   /** Fault management **/
 
-  motor_status[nodeid] = Statusword;
-  motor_mode[nodeid] = Modes_of_operation_display;
+  if(fake_flag == 0)
+  {
+    motor_status[nodeid] = Statusword;
+    motor_mode[nodeid] = Modes_of_operation_display;
+  }
 
-  //CTif(motor_mode[nodeid] == 0x7)
-    OnInterpUpdate(d, nodeid);
+  OnInterpUpdate(d, nodeid);
 
   // Bus voltage fault
   if((motor_status[nodeid] & 0b0000000000010000) == 0)
@@ -714,6 +719,8 @@ UNS32 OnStatusUpdate(CO_Data* d, const indextable * indextable_curr,
         else
         {
           motor_mode[nodeid] = 0x3;
+          smartmotor_path_reset(nodeid, &motor_status[nodeid]);
+          //motor_status[nodeid] &= ~0b0001010000000000;
 
 #ifdef CANOPENSHELL_VERBOSE
           if(verbose_flag)
@@ -884,7 +891,8 @@ UNS32 OnStatusUpdate(CO_Data* d, const indextable * indextable_curr,
 
 UNS32 OnInterpUpdate(CO_Data* d, UNS8 nodeid)
 {
-  motor_interp_status[nodeid] = Interpolation_Mode_Status;
+  if(fake_flag == 0)
+    motor_interp_status[nodeid] = Interpolation_Mode_Status;
 
   // confronto lo stato precedente dell'interpolazione con quello attuale
   // per capire se ci sono stati cambiamenti
@@ -917,9 +925,8 @@ UNS32 OnInterpUpdate(CO_Data* d, UNS8 nodeid)
     }
 #endif
 
-    if(fake_flag == 0)
-      SimulationTableEnd(d, nodeid, 0, 0);
-    else
+    SimulationTableEnd(d, nodeid, 0, 0);
+    if(fake_flag)
     {
       //motor_mode[nodeid] = 0x3;
 
@@ -929,11 +936,11 @@ UNS32 OnInterpUpdate(CO_Data* d, UNS8 nodeid)
         printf("SUCC[node %x]: smart motor stopped\n", nodeid);
       }
 #endif
-      SimulationTableEnd(d, nodeid, 0, 0);
     }
 
     return 0;
   }
+
   //}
 
   if((motor_interp_status[nodeid] & 0b0000000001000000) > 0)
@@ -1059,6 +1066,9 @@ void SimulationTableEnd(CO_Data* d, UNS8 nodeId, int machine_state,
 
   SmartClear(nodeId);
 
+  if(fake_flag)
+    smartmotor_table_reset(nodeId, &motor_interp_status[nodeId]);
+
   for(motor_index = 0; motor_index < motor_active_number; motor_index++)
     stop_in_progress |= motor_started[motor_table[motor_index].nodeId];
 
@@ -1069,6 +1079,7 @@ void SimulationTableEnd(CO_Data* d, UNS8 nodeId, int machine_state,
       for(motor_index = 0; motor_index < motor_active_number; motor_index++)
       {
         NodeId = motor_table[motor_index].nodeId;
+
         motor_status[NodeId] = 0b0000010000110111;
         motor_interp_status[NodeId] = 0x122d;
         motor_mode[NodeId] = 0x1;
@@ -1107,9 +1118,6 @@ void SimulationTableStart(CO_Data* d)
 
       //d->PDO_status[0].last_message.cob_id = 0;
       //sendPDOevent(d);
-
-      for(motor_index = 0; motor_index < motor_active_number; motor_index++)
-        simulation_ready[motor_index] = 0;
     }
     else
     {
@@ -1117,6 +1125,9 @@ void SimulationTableStart(CO_Data* d)
         motor_interp_status[motor_table[motor_index].nodeId] |=
             0b1000000000000000;
     }
+
+    for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+      simulation_ready[motor_index] = 0;
   }
 }
 
@@ -1197,7 +1208,7 @@ void SimulationTableUpdate(CO_Data* d, UNS8 nodeid, UNS16 interpolation_status,
     }
 
     InterpolationTimeValue[nodeid - MOTOR_INDEX_FIRST] = data_read.time_ms;
-    InterpolationData[nodeid - MOTOR_INDEX_FIRST] = data_read.position + 1;
+    InterpolationData[nodeid - MOTOR_INDEX_FIRST] = data_read.position;
 
     if(fake_flag == 0)
     {
@@ -1208,18 +1219,24 @@ void SimulationTableUpdate(CO_Data* d, UNS8 nodeid, UNS16 interpolation_status,
         printf("Errore PDO!\n");
     }
     else
-      motor_position[nodeid] = InterpolationData[nodeid - MOTOR_INDEX_FIRST];
+    {
+      //motor_position[nodeid] = InterpolationData[nodeid - MOTOR_INDEX_FIRST];
+
+      smartmotor_table_write(nodeid, &motor_interp_status[nodeid],
+          InterpolationData[nodeid - MOTOR_INDEX_FIRST],
+          InterpolationTimeValue[nodeid - MOTOR_INDEX_FIRST],
+          InterpolationTimePeriod[nodeid - MOTOR_INDEX_FIRST]);
+    }
   }
 
   /*if(valid_point > 20)
-    printf("[%d] Points %d interp %x\n", nodeid, valid_point,
-        interpolation_status);*/
+   printf("[%d] Points %d interp %x\n", nodeid, valid_point,
+   interpolation_status);*/
 
   // per uscire dalla modalità ip mode devo impostare l'unità temporale a zero
   // e scrivere l'ultimo valore nella tabella.
   // Devo utilizzare l'sdo perchè altrimenti il dato non partirebbe in quanto è uguale
   // a quello precendente
-
   // Se il motore sta elaborando la tabella e il riempitore di tabella ha finito i punti,
   // significa che posso bloccare il movimento
   if((motor_table[motor_table_index].count == 0) // tutti i punti letti scritti
@@ -1231,15 +1248,16 @@ void SimulationTableUpdate(CO_Data* d, UNS8 nodeid, UNS16 interpolation_status,
     // devo forzare l'aggiornamento dello stato dell'interpolatore. Il problema
     // sorge quando ci sono pochi punti e chiudo subito la tabella. In questo caso
     // all'aggiornamento dello stato tramite callback non passo per lo start.
+
     motor_started[nodeid] = 2;
     QueueLast(&motor_table[motor_table_index], &data_read);
 
+    InterpolationTimePeriod[nodeid - MOTOR_INDEX_FIRST] = 0;
+    InterpolationTimeValue[nodeid - MOTOR_INDEX_FIRST] = 0;
+    InterpolationData[nodeid - MOTOR_INDEX_FIRST] = data_read.position;
+
     if(fake_flag == 0)
     {
-      InterpolationTimePeriod[nodeid - MOTOR_INDEX_FIRST] = 0;
-      InterpolationTimeValue[nodeid - MOTOR_INDEX_FIRST] = 0;
-      InterpolationData[nodeid - MOTOR_INDEX_FIRST] = data_read.position;
-
       //d->PDO_status[0].last_message.cob_id = 0;
       sendPDOevent(d);
 
@@ -1251,10 +1269,15 @@ void SimulationTableUpdate(CO_Data* d, UNS8 nodeid, UNS16 interpolation_status,
     }
     else
     {
-      motor_interp_status[nodeid] = 0x122d;
+      smartmotor_table_write(nodeid, &motor_interp_status[nodeid],
+          InterpolationData[nodeid - MOTOR_INDEX_FIRST],
+          InterpolationTimeValue[nodeid - MOTOR_INDEX_FIRST],
+          InterpolationTimePeriod[nodeid - MOTOR_INDEX_FIRST]);
 
-      motor_position[nodeid] =
-          InterpolationData[nodeid - MOTOR_INDEX_FIRST];
+      /*motor_interp_status[nodeid] = 0x122d;
+
+       motor_position[nodeid] =
+       InterpolationData[nodeid - MOTOR_INDEX_FIRST];*/
     }
   }
 
@@ -1452,35 +1475,14 @@ void SmartIntTest1(UNS8 nodeid)
   _machine_exe(CANOpenShellOD_Data, nodeid, NULL, &machine, 1, 0, 0);
 }
 
-void FakeStatusUpdate(sigval_t val)
+void FakePositionUpdate(sigval_t val)
 {
-  static int timeout_count = 0;
   int motor_index;
-
-  timeout_count++;
-
-  if(timeout_count == 10)
-  {
-    // MAP TPDO 1 (COB-ID 180) to transmit "node id" (8-bit), "status word" (16-bit), "interpolation mode status" (16-bit), "modes of operation" (8-bit)
-
-    for(motor_index = 0; motor_index < motor_active_number; motor_index++)
-    {
-      simulation_first_start[motor_table[motor_index].nodeId] = 1;
-
-      NodeId = motor_table[motor_index].nodeId;
-      Statusword = motor_status[NodeId];
-      Interpolation_Mode_Status = motor_interp_status[NodeId]; //9201
-      Modes_of_operation_display = motor_mode[NodeId];
-
-      OnStatusUpdate(CANOpenShellOD_Data, NULL, 0);
-    }
-
-    timeout_count = 0;
-  }
 
   for(motor_index = 0; motor_index < motor_active_number; motor_index++)
   {
     NodeId = motor_table[motor_index].nodeId;
+
     OnPositionUpdate(CANOpenShellOD_Data, NULL, 0);
   }
 
@@ -1591,6 +1593,9 @@ void SmartPositionCallback(CO_Data* d, UNS8 nodeId, int machine_state,
   }
 }
 
+/**
+ *
+ */
 void SmartPosition(UNS8 nodeid, long position, long velocity, long acceleration,
     int start)
 {
@@ -1613,14 +1618,25 @@ void SmartPosition(UNS8 nodeid, long position, long velocity, long acceleration,
       simulation_first_start[motor_table[motor_index].nodeId] = 1;
       motor_started[motor_table[motor_index].nodeId] = 0;
 
-      if(fake_flag != 0)
+      if(fake_flag)
       {
+        smartmotor_path_reset(motor_table[motor_index].nodeId,
+            &motor_status[motor_table[motor_index].nodeId]);
+
+        smartmotor_path_generate(motor_table[motor_index].nodeId, 8000,
+            motor_position[motor_table[motor_index].nodeId], position, velocity,
+            acceleration);
+
+        motor_started[motor_table[motor_index].nodeId] = 1;
         motor_mode[motor_table[motor_index].nodeId] = 0x1;
-        motor_position[motor_table[motor_index].nodeId] = position;
+        //motor_position[motor_table[motor_index].nodeId] = position;
+        //motor_status[motor_table[motor_index].nodeId] |= 0b0001010000000000;
 
 #ifdef CANOPENSHELL_VERBOSE
         if(verbose_flag)
         {
+          printf("SUCC[node %x]: set target point\n",
+              motor_table[motor_index].nodeId);
           printf("SUCC[node %x]: smart motor go to target point. . .\n",
               motor_table[motor_index].nodeId);
         }
@@ -1664,8 +1680,15 @@ void SmartPosition(UNS8 nodeid, long position, long velocity, long acceleration,
             nodeid);
       }
 #endif
+      smartmotor_path_reset(nodeid, &motor_status[nodeid]);
+
+      smartmotor_path_generate(nodeid, 8000, motor_position[nodeid], position,
+          velocity, acceleration);
+
       motor_mode[nodeid] = 0x1;
-      motor_position[nodeid] = position;
+      //motor_position[nodeid] = position;
+      //motor_status[nodeid] |= 0b0001010000000000;
+
     }
   }
 }
@@ -1828,6 +1851,8 @@ void SmartStop(UNS8 nodeid, int from_callback)
       for(motor_index = 0; motor_index < motor_active_number; motor_index++)
       {
         motor_mode[motor_table[motor_index].nodeId] = 0x3;
+        smartmotor_table_reset(motor_table[motor_index].nodeId,
+            &motor_interp_status[motor_table[motor_index].nodeId]);
 
 #ifdef CANOPENSHELL_VERBOSE
         if(verbose_flag)
@@ -1836,14 +1861,14 @@ void SmartStop(UNS8 nodeid, int from_callback)
               motor_table[motor_index].nodeId);
         }
 #endif
-        SmartStopCallback(CANOpenShellOD_Data,
-            motor_table[motor_index].nodeId,
+        SmartStopCallback(CANOpenShellOD_Data, motor_table[motor_index].nodeId,
             0, 0);
       }
     }
     else
     {
       motor_mode[nodeid] = 0x3;
+      smartmotor_table_reset(nodeid, &motor_interp_status[nodeid]);
 
 #ifdef CANOPENSHELL_VERBOSE
       if(verbose_flag)
@@ -2704,7 +2729,7 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
         sigev.sigev_value.sival_int = 0;
         sigev.sigev_notify = SIGEV_THREAD;
         sigev.sigev_notify_attributes = NULL;
-        sigev.sigev_notify_function = FakeStatusUpdate;
+        sigev.sigev_notify_function = FakePositionUpdate;
 
         if(timer_create(CLOCK_REALTIME, &sigev, &fake_update_timer))
         {
@@ -2754,13 +2779,13 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
 
           0x1800, 0xC0000180, 0x1A00, 0x1A00, 0x20000008, 0x1A00, 0x60410010,
           0x1A00, 0x24000010, 0x1A00, 0x60610008, 0x1A00, 0x1800, 0x40000180,
-          0x1800, 15, 0x1800, 0, /*19*/
+          0x1800, SYNC_DIVIDER_STATUS, 0x1800, 0, /*19*/
 
           0x1801, 0xC0000280, 0x1A01, 0x1A01, 0x20000008, 0x1A01, 0x60630020,
           0x1A01, 0x1801, 0x40000280, 0x1801, 0xfe, 0x1801, 10, /*33*/
 
           0x1802, 0xC0000380, 0x1A02, 0x1A02, 0x10130020, 0x1A02, 0x1802,
-          0x40000380, 0x1802, 100, 0x1802, 0, /*45*/
+          0x40000380, 0x1802, SYNC_DIVIDER_TIMESTAMP, 0x1802, 0, /*45*/
 
           /*0x1400, 0xC0000200 + nodeid, 0x1600, 0x1600, 0x60c20208, 0x1600,
            0x60c20108, 0x1600, 0x1400, 0x40000200 + nodeid, 0x1400, 0xFE, 0x1400,
@@ -3192,7 +3217,32 @@ void CANOpenShellOD_stopped(CO_Data* d)
 
 void CANOpenShellOD_post_sync(CO_Data* d)
 {
-  printf("Master_post_sync\n");
+  //printf("Master_post_sync\n");
+
+  static int timeout_count = 0;
+  int motor_index;
+
+  timeout_count++;
+
+  if(timeout_count == (SYNC_DIVIDER_STATUS - 1))
+  {
+    //printf("Master_post_sync status\n");
+    // MAP TPDO 1 (COB-ID 180) to transmit "node id" (8-bit), "status word" (16-bit), "interpolation mode status" (16-bit), "modes of operation" (8-bit)
+
+    for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+    {
+      simulation_first_start[motor_table[motor_index].nodeId] = 1;
+
+      NodeId = motor_table[motor_index].nodeId;
+      Statusword = motor_status[NodeId];
+      Interpolation_Mode_Status = motor_interp_status[NodeId]; //9201
+      Modes_of_operation_display = motor_mode[NodeId];
+
+      OnStatusUpdate(CANOpenShellOD_Data, NULL, 0);
+    }
+
+    timeout_count = 0;
+  }
 }
 
 void CANOpenShellOD_post_TPDO(CO_Data* d)
@@ -3394,7 +3444,7 @@ void DiscoverTimeout(sigval_t val)
       else
       {
         printf("ERR[node %x]: smartmotor off\n",
-                        motor_table[motor_index].nodeId);
+            motor_table[motor_index].nodeId);
       }
 
     }
@@ -3524,6 +3574,8 @@ int ProcessCommandTripode(char* command)
             motor_status[motor_table[parse_num].nodeId] = 0x1637;
             motor_interp_status[motor_table[parse_num].nodeId] = 0X102d;
           }
+
+          CANOpenShellOD_Data->post_sync = CANOpenShellOD_post_sync;
         }
       }
       else
@@ -4166,8 +4218,31 @@ void *PipeWriteHandler()
     if((position_start_time.tv_sec == 0) && (position_start_time.tv_usec == 0))
       gettimeofday(&position_start_time, NULL);
 
-    // Carico la stringa delle posizioni da inviare
     int motor_index;
+
+    if(fake_flag)
+    {
+      for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+      {
+        if(motor_mode[motor_table[motor_index].nodeId] == 0x1)
+        {
+          smartmotor_path_read(motor_table[motor_index].nodeId,
+              &motor_status[motor_table[motor_index].nodeId],
+              &motor_position[motor_table[motor_index].nodeId]);
+        }
+        else if(motor_mode[motor_table[motor_index].nodeId] == 0x7)
+        {
+          if((motor_interp_status[motor_table[motor_index].nodeId] & 0x3f) < 45)
+          {
+            smartmotor_table_read(motor_table[motor_index].nodeId,
+                &motor_interp_status[motor_table[motor_index].nodeId],
+                &motor_position[motor_table[motor_index].nodeId]);
+          }
+        }
+      }
+    }
+
+    // Carico la stringa delle posizioni da inviare
     for(motor_index = 0; motor_index < motor_active_number; motor_index++)
     {
       if(position_message[0] == '\0')
@@ -4179,14 +4254,15 @@ void *PipeWriteHandler()
             motor_position[motor_table[motor_index].nodeId]);
     }
 
+
     for(motor_index = 0; motor_index < motor_active_number; motor_index++)
     {
       if(fake_flag == 0)
         file_complete[motor_table[motor_index].nodeId] =
             FileCompleteGet(motor_table[motor_index].nodeId,
                 SMART_TABLE_SIZE
-                    - (motor_interp_status[motor_table[motor_index].nodeId]
-                        & 0x3F));
+                - (motor_interp_status[motor_table[motor_index].nodeId]
+                    & 0x3F));
       else
         file_complete[motor_table[motor_index].nodeId] = FileCompleteGet(
             motor_table[motor_index].nodeId, 1);
@@ -4230,7 +4306,9 @@ void *PipeWriteHandler()
       pthread_mutex_unlock(&robot_state_mux);
 
       fputs(position_message, position_fp);
+
       fflush(position_fp);
+
 
       file_complete_min = 0;
 
