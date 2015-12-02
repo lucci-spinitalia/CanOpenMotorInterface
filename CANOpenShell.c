@@ -126,6 +126,8 @@
  * IN_POSIZIONE -------------> FERMO
  *
  *
+ *            CT1 Mx Px VMx AMx
+ * FERMO ---------------------> IN_POSIZIONE
  *         CT2 P2
  * FERMO -----------> CENTRAGGIO
  *          CT2 P3
@@ -139,18 +141,10 @@
  * CENTRAGGIO -----------> CENTRATO
  *
  *
- *             CT2 P4
- * RILASCIATO ---------> LIBERO
  *             CT5 && centrato
  * RILASCIATO ------------------> FERMO
  *             CT0 && !centrato
  * RILASCIATO ------------------> INIZIALIZZATO
- *
- *
- *          CT5 && centrato
- * LIBERO ------------------> FERMO
- *           CT0 && !centrato
- * LIBERO ---------------------> INIZIALIZZATO
  *
  *
  *              CT0
@@ -181,8 +175,7 @@
 #define FERMO              9 /**< il motore è fermo */
 #define CENTRAGGIO         10 /**< in movimento verso lo zero */
 #define RILASCIATO         11 /**< il controllo dei motori è spento ed è presente il freno motore */
-#define LIBERO             13 /**< i motori sono a coppia zero */
-#define IN_POSIZIONE       14 /**< movimento in modalità posizione */
+#define IN_POSIZIONE       13 /**< movimento in modalità posizione */
 
 #define cst_str2(c1, c2) ((unsigned int)0 | \
     (char)c2) << 8 | (char)c1
@@ -628,7 +621,7 @@ void SmartPositionTargetCallback(CO_Data* d, UNS8 nodeid, int machine_state,
 
     }
     else if((robot_state == ACCESO) || (robot_state == EMERGENZA)
-        || (robot_state == RILASCIATO) || (robot_state == LIBERO))
+        || (robot_state == RILASCIATO))
     {
       robot_state = INIZIALIZZATO;
       pthread_mutex_unlock(&robot_state_mux);
@@ -704,8 +697,7 @@ UNS32 OnStatusUpdate(CO_Data* d, const indextable * indextable_curr,
       pthread_mutex_lock(&robot_state_mux);
       if((robot_state == RICERCA_CENTRO) || (robot_state == CENTRAGGIO)
           || (robot_state == ACCESO) || (robot_state == EMERGENZA)
-          || (robot_state == RILASCIATO) || (robot_state == LIBERO)
-          || (robot_state == IN_POSIZIONE))
+          || (robot_state == RILASCIATO) || (robot_state == IN_POSIZIONE))
       {
         pthread_mutex_unlock(&robot_state_mux);
 
@@ -1817,8 +1809,7 @@ void SmartStopCallback(CO_Data* d, UNS8 nodeId, int machine_state,
     }
 
     pthread_mutex_lock(&robot_state_mux);
-    if((robot_state == SIMULAZIONE) || (robot_state == RILASCIATO)
-        || (robot_state == LIBERO))
+    if((robot_state == SIMULAZIONE) || (robot_state == RILASCIATO))
     {
       if(robot_state == SIMULAZIONE)
         CERR("CT4", CERR_SimulationError);
@@ -1914,7 +1905,7 @@ void SmartReleaseCallback(CO_Data* d, UNS8 Node_ID, int machine_state,
 {
   if(return_value)
   {
-    CERR("CT2 P4", InternalError);
+    CERR("Err", InternalError);
 
     return;
   }
@@ -1926,11 +1917,6 @@ void SmartReleaseCallback(CO_Data* d, UNS8 Node_ID, int machine_state,
   {
     release_complete = 0;
     pthread_mutex_unlock(&release_mux);
-
-    OK("CT2 P4");
-    pthread_mutex_lock(&robot_state_mux);
-    robot_state = LIBERO;
-    pthread_mutex_unlock(&robot_state_mux);
   }
   else
     pthread_mutex_unlock(&release_mux);
@@ -3338,8 +3324,6 @@ void help_menu(void)
       "     CT2 P2 : all motors returns to the center point \n");
   printf(
       "     CT2 P3 : release motors with brake \n");
-  printf(
-      "     CT2 P4 : release motors without brake \n");
   printf("     CT4 : starts simulation \n");
   printf("     CT5 : stops simulation (valid only in simulation state) \n");
   printf("     CT6 : quit application \n");
@@ -3526,9 +3510,7 @@ int ProcessCommandTripode(char* command)
         pthread_mutex_lock(&robot_state_mux);
         if((robot_state != ACCESO) && (robot_state != EMERGENZA)
             && ((robot_state != RILASCIATO)
-                || ((robot_state == RILASCIATO) && (homing_executed == 1)))
-            && ((robot_state != LIBERO)
-                || ((robot_state == LIBERO) && (homing_executed == 1))))
+                || ((robot_state == RILASCIATO) && (homing_executed == 1))))
         {
           pthread_mutex_unlock(&robot_state_mux);
           goto permission_denied;
@@ -3586,7 +3568,8 @@ int ProcessCommandTripode(char* command)
       // alle condizioni ho aggiunto IN_POSIZIONE per evitare che
       // ci si trovi bloccati quando si passa il comando senza lo start.
       pthread_mutex_lock(&robot_state_mux);
-      if((robot_state != CENTRATO) && (robot_state != IN_POSIZIONE))
+      if((robot_state != CENTRATO) && (robot_state != FERMO)
+          && (robot_state != IN_POSIZIONE))
       {
         pthread_mutex_unlock(&robot_state_mux);
         goto permission_denied;
@@ -3734,19 +3717,6 @@ int ProcessCommandTripode(char* command)
           SmartRelease(0, 0, 1);
           break;
 
-        case cst_str2('P', '4'):
-          pthread_mutex_lock(&robot_state_mux);
-          if(robot_state != RILASCIATO)
-          {
-            pthread_mutex_unlock(&robot_state_mux);
-            goto permission_denied;
-          }
-
-          pthread_mutex_unlock(&robot_state_mux);
-
-          SmartRelease(0, 0, 0);
-          break;
-
         default:
           goto fail;
           break;
@@ -3771,9 +3741,7 @@ int ProcessCommandTripode(char* command)
       pthread_mutex_lock(&robot_state_mux);
       if((robot_state != SIMULAZIONE)
           && ((robot_state != RILASCIATO)
-              || ((robot_state == RILASCIATO) && (homing_executed == 0)))
-          && ((robot_state != LIBERO)
-              || ((robot_state == LIBERO) && (homing_executed == 0))))
+              || ((robot_state == RILASCIATO) && (homing_executed == 0))))
       {
         pthread_mutex_unlock(&robot_state_mux);
         goto permission_denied;
@@ -3868,10 +3836,6 @@ int ProcessParameterTripode(char* command)
 
         case RILASCIATO:
           sprintf(parse_str, "PR1: %d, Rilasciato\n", robot_state);
-          break;
-
-        case LIBERO:
-          sprintf(parse_str, "PR1: %d, Libero\n", robot_state);
           break;
       }
       pthread_mutex_unlock(&robot_state_mux);
@@ -4254,7 +4218,6 @@ void *PipeWriteHandler()
             motor_position[motor_table[motor_index].nodeId]);
     }
 
-
     for(motor_index = 0; motor_index < motor_active_number; motor_index++)
     {
       if(fake_flag == 0)
@@ -4308,7 +4271,6 @@ void *PipeWriteHandler()
       fputs(position_message, position_fp);
 
       fflush(position_fp);
-
 
       file_complete_min = 0;
 
