@@ -87,7 +87,8 @@ void *QueueRefiller(void *args)
   if(err != 0)
     printf("can't set thread as cancellable deferred\n");
 
-  row_total[data->nodeId] = FileLineCount(data->nodeId);
+  if(data->is_pipe == 0)
+    row_total[data->nodeId] = FileLineCount(data->nodeId);
 
   data->end_reached = 0;
 
@@ -95,38 +96,64 @@ void *QueueRefiller(void *args)
   {
     pthread_testcancel();
 
-    if(data->count < POSITION_DATA_NUM_MAX)
+    if(data->is_pipe == 0)
     {
-      data_refilled = QueuePut(data, POSITION_DATA_NUM_MAX - data->count);
+      if(data->count < POSITION_DATA_NUM_MAX)
+        data_refilled = QueuePut(data, POSITION_DATA_NUM_MAX - data->count);
+      else
+        goto go_sleep;
+    }
+    else
+      data_refilled = QueuePutPipe(data, 10);
 
-      //printf("[%d] Refilled %d points\n", data->nodeId, data_refilled);
-      if(data_refilled == -1)
-      {
+    //printf("[%d] Refilled %d points\n", data->nodeId, data_refilled);
+    if(data_refilled == -1)
+    {
 #ifdef CANOPENSHELL_VERBOSE
-        if(verbose_flag)
-        {
-          printf("ERR[%d on node %x]: Errore nel file.\n", InternalError,
-              data->nodeId);
-        }
+      if(verbose_flag)
+      {
+        printf("ERR[%d on node %x]: Errore nel file.\n", InternalError, data->nodeId);
+      }
 #endif
 
-        break;
-      }
-      /*else if(data_refilled > 0)
-       {
-       printf("Refilled node %d: %d\n", data->nodeId, data_refilled);
-       fflush(stdout);
-       }*/
-      else if((data_refilled == 0) && (data->end_reached))
-        break;
+      break;
     }
+    else if((data_refilled == 0) && (data->end_reached))
+      break;
 
-    usleep(10000);
+    go_sleep:
+    if(data->is_pipe == 0)
+      usleep(10000);
   }
 
   data->table_refiller = 0;
 
   return NULL;
+}
+
+int QueueOpenFile(struct table_data *data)
+{
+  char file_path[256];
+  if(data->position_file == NULL)
+  {
+    if(fake_flag == 0)
+      sprintf(file_path, "%s%d.mot", FILE_DIR, data->nodeId);
+    else
+      sprintf(file_path, "%s%d.mot.fake", FILE_DIR, data->nodeId);
+
+    data->position_file = fopen(file_path, "r");
+
+    if(data->position_file == NULL)
+    {
+#ifdef CANOPENSHELL_VERBOSE
+      if(verbose_flag)
+        perror("file");
+#endif
+      return -1;
+    }
+  }
+
+  return 0;
 }
 
 void QueueInit(int nodeid, struct table_data *data)
@@ -145,17 +172,25 @@ void QueueInit(int nodeid, struct table_data *data)
     }
   }
 
+  if(data->position_file != NULL)
+  {
+    fclose(data->position_file);
+    data->position_file = NULL;
+  }
+
   data->nodeId = nodeid;
   data->write_pointer = 0;
   data->read_pointer = 0;
   data->count = 0;
   data->cursor_position = 0;
   data->end_reached = 0;
+  data->is_pipe = 0;
 
   row_read[nodeid] = 0;
+
 }
 
-void QueueFill(struct table_data *data)
+int QueueFill(struct table_data *data)
 {
   row_read[data->nodeId] = 0;
 
@@ -170,6 +205,12 @@ void QueueFill(struct table_data *data)
   pthread_mutex_unlock(&data->table_mutex);
 
   //printf("[%d] Queue fill\n", data->nodeId);
+  if(QueueOpenFile(data) < 0)
+  {
+    data->end_reached = 1;
+    return -1;
+  }
+
   if(data->table_refiller == 0)
   {
     int err;
@@ -180,17 +221,26 @@ void QueueFill(struct table_data *data)
 
     //printf("[%d] Created process fill", data->nodeId);
   }
+
+  return 0;
 }
 
 /**
  * Legge dalla coda e restituisce i valori nella struttura passata.
  *
- * Questa funzione si occupa anche di seguire il buffer circolare a seconda dell'offset
+ * @input data_in: struttura dati table_data
+ * @input data_out: struttura dati table_data_read
+ * @input offset: numero di posizioni da prelevare
+ *
+ * @return:  0 -> successo
+ *          -1 -> sintassi della riga errata
+ *          -2 -> non ci sono abbastanza dati per coprire l'offset
+ *
+ * @remark: Questa funzione si occupa anche di seguire il buffer circolare a seconda dell'offset
  * impostato. L'aggiornamento dei puntatori viene lasciato alla funzione QueueUpdate: in
  * questo modo è possibile leggere nuovamente i dati in caso di errore.
  */
-int QueueGet(struct table_data *data_in, struct table_data_read *data_out,
-    int offset)
+int QueueGet(struct table_data *data_in, struct table_data_read *data_out, int offset)
 {
   int read_pointer;
 
@@ -218,13 +268,57 @@ int QueueGet(struct table_data *data_in, struct table_data_read *data_out,
 #ifdef CANOPENSHELL_VERBOSE
     if(verbose_flag)
     {
-      printf("Errore nella riga di movimento: %d %c\n", data_in->nodeId,
-          data_in->type);
+      printf("Errore nella riga di movimento: %d %c\n", data_in->nodeId, data_in->type);
     }
 #endif
 
     return -1;
   }
+
+  data_out->position = data_in->position[read_pointer];
+  data_out->time_ms = data_in->time_ms[read_pointer];
+
+  //printf("pointer: %d, position: %ld, time: %ld\n", read_pointer, data_out->position, data_out->time_ms);
+  return 0;
+}
+
+/**
+ * Legge dalla coda e restituisce i valori nella struttura passata.
+ *
+ * @input data_in: struttura dati table_data
+ * @input data_out: struttura dati table_data_read
+ * @input offset: numero di posizioni da prelevare
+ *
+ * @return:  0 -> successo
+ *          -1 -> sintassi della riga errata
+ *          -2 -> non ci sono abbastanza dati per coprire l'offset
+ *
+ * @remark: Questa funzione si occupa anche di seguire il buffer circolare a seconda dell'offset
+ * impostato. A differenza di un buffer circolare classico, i dati letti sono sempre gli ultimi in
+ * coda. Quindi, se si richiede la lettura di 10 posizioni, di partirà dalla posizione del puntatore
+ * di scrittura meno 10 e si concluderà con l'ultimo dato.
+ */
+int QueueGetPipe(struct table_data *data_in, struct table_data_read *data_out, int offset)
+{
+  int read_pointer;
+
+  // Controllo che l'offset non sia più grande dei dati che ho scritto nel buffer
+  if(offset > data_in->count)
+  {
+#ifdef CANOPENSHELL_VERBOSE
+
+    if(verbose_flag)
+    {
+      printf("Superato il limite del file\n");
+    }
+#endif
+    return -2;
+  }
+
+  if((data_in->write_pointer - offset) < 0)
+    read_pointer = POSITION_DATA_NUM_MAX - (offset - data_in->write_pointer);
+  else
+    read_pointer = (data_in->write_pointer - offset);
 
   data_out->position = data_in->position[read_pointer];
   data_out->time_ms = data_in->time_ms[read_pointer];
@@ -277,11 +371,25 @@ void QueueUpdate(struct table_data *data, int point_number)
   else
   {
     if(data->end_reached == 0)
-      printf(
-          "ERR[%d on node %x]: punti incongruenti con il buffer (QueueUpdate).\n",
-          InternalError, data->nodeId);
+      printf("ERR[%d on node %x]: punti incongruenti con il buffer (QueueUpdate).\n", InternalError,
+          data->nodeId);
   }
+}
 
+/**
+ * Sposta il puntatore di lettura a point_number punti prima del puntatore di scrittura.
+ */
+int QueueSeek(struct table_data *data, int point_number)
+{
+  if(point_number > data->count)
+    return -1;
+
+  if((data->write_pointer - point_number) < 0)
+    data->read_pointer = POSITION_DATA_NUM_MAX - (point_number - data->write_pointer);
+  else
+    data->read_pointer = data->write_pointer - point_number;
+
+  return 0;
 }
 
 /**
@@ -307,7 +415,7 @@ void QueueUpdate(struct table_data *data, int point_number)
  */
 int QueuePut(struct table_data *data, int line_number)
 {
-  FILE *file = NULL;
+  //FILE *file = NULL;
   char *line = NULL;
   size_t len = 0;
   ssize_t read;
@@ -315,7 +423,7 @@ int QueuePut(struct table_data *data, int line_number)
   char *token;
   char *token_save;
   char line_copy[256];
-  char file_path[256];
+  //char file_path[256];
   char position[12];
   char time[12];
   char vel_forw[12];
@@ -330,32 +438,36 @@ int QueuePut(struct table_data *data, int line_number)
   if(data->count == POSITION_DATA_NUM_MAX)
     return -2;
 
-  if(fake_flag == 0)
-    sprintf(file_path, "%s%d.mot", FILE_DIR, data->nodeId);
-  else
-    sprintf(file_path, "%s%d.mot.fake", FILE_DIR, data->nodeId);
+  /*if(fake_flag == 0)
+   sprintf(file_path, "%s%d.mot", FILE_DIR, data->nodeId);
+   else
+   sprintf(file_path, "%s%d.mot.fake", FILE_DIR, data->nodeId);
 
-  file = fopen(file_path, "r");
+   file = fopen(file_path, "r");*/
 
-  if(file == NULL)
+  if(data->position_file == NULL)
   {
 #ifdef CANOPENSHELL_VERBOSE
     if(verbose_flag)
       perror("file");
 #endif
+
+    data->end_reached = 1;
     return -1;
   }
 
-  if(fseek(file, data->cursor_position, SEEK_SET) != 0)
+  //if(fseek(file, data->cursor_position, SEEK_SET) != 0)
+  if(fseek(data->position_file, data->cursor_position, SEEK_SET) != 0)
   {
-    fclose(file);
+    //fclose(file);
     return -1;
   }
 
   for(line_count = 0; line_count < line_number; line_count++)
   {
     // Ogni informazione è delimitata da uno spazio
-    if((read = getline(&line, &len, file)) != -1)
+    //if((read = getline(&line, &len, file)) != -1)
+    if((read = getline(&line, &len, data->position_file)) != -1)
     {
       if(strcmp(line, "\n") == 0)
         continue;
@@ -372,13 +484,15 @@ int QueuePut(struct table_data *data, int line_number)
 #ifdef CANOPENSHELL_VERBOSE
         if(verbose_flag)
         {
-          printf("WARN[%d on node %x]: Riga %ld non valida (sintassi CT1 M)\n",
-              InternalError, data->nodeId, row_read[data->nodeId] + line_count);
+          printf("WARN[%d on node %x]: Riga %ld non valida (sintassi CT1 M)\n", InternalError,
+              data->nodeId, row_read[data->nodeId] + line_count);
 
-          printf("line: %s", line);
+          printf("line: %s, row read: %d, line count: %ld\n", line, row_read[data->nodeId], line_count);
+          printf("cursor position on error: %ld\n", data->cursor_position);
         }
 #endif
         data->type = 'E';
+
         data->cursor_position += read;
 
         continue;
@@ -389,21 +503,23 @@ int QueuePut(struct table_data *data, int line_number)
       if(token != NULL)
       {
         strcpy(nodeid, token);
+
         if(atoi(nodeid) != data->nodeId)
         {
 #ifdef CANOPENSHELL_VERBOSE
           if(verbose_flag)
           {
-            printf("WARN[%d on node %x]: Riga %ld non valida (nodeid)\n",
-                InternalError, data->nodeId,
-                row_read[data->nodeId] + line_count);
+            printf("WARN[%d on node %x]: Riga %ld non valida (nodeid)\n", InternalError,
+                data->nodeId, row_read[data->nodeId] + line_count);
 
             printf("line: %s", line);
           }
 #endif
 
           data->type = 'E';
+
           data->cursor_position += read;
+
           continue;
         }
       }
@@ -412,14 +528,14 @@ int QueuePut(struct table_data *data, int line_number)
 #ifdef CANOPENSHELL_VERBOSE
         if(verbose_flag)
         {
-          printf("WARN[%d on node %x]: Riga %ld non valida (sintassi nodeid)\n",
-              InternalError, data->nodeId, row_read[data->nodeId] + line_count);
+          printf("WARN[%d on node %x]: Riga %ld non valida (sintassi nodeid)\n", InternalError,
+              data->nodeId, row_read[data->nodeId] + line_count);
 
           printf("line: %s", line);
         }
 #endif
-
         data->cursor_position += read;
+
         continue;
       }
 
@@ -435,14 +551,15 @@ int QueuePut(struct table_data *data, int line_number)
 #ifdef CANOPENSHELL_VERBOSE
         if(verbose_flag)
         {
-          printf("WARN[%d on node %x]: Riga %ld non valida (sintassi tipo)\n",
-              InternalError, data->nodeId, row_read[data->nodeId] + line_count);
+          printf("WARN[%d on node %x]: Riga %ld non valida (sintassi tipo)\n", InternalError,
+              data->nodeId, row_read[data->nodeId] + line_count);
 
           printf("line: %s", line);
         }
 #endif
 
         data->type = 'E';
+
         data->cursor_position += read;
         continue;
       }
@@ -457,8 +574,7 @@ int QueuePut(struct table_data *data, int line_number)
           {
             value = strtol((token + 1), NULL, 10);
 
-            if((*token == 'T') && (*(token + 1) != '\0')
-                && (value != ERANGE) && (value != 0))
+            if((*token == 'T') && (*(token + 1) != '\0') && (value != ERANGE) && (value != 0))
               strcpy(time, token + 1);
             else
               goto fault;
@@ -470,10 +586,10 @@ int QueuePut(struct table_data *data, int line_number)
           long ltime = atol(time);
 
           memcpy(&data->position[data->write_pointer], &lposition,
-              sizeof(&data->position[data->write_pointer]));
+              sizeof(data->position[data->write_pointer]));
 
           memcpy(&data->time_ms[data->write_pointer], &ltime,
-              sizeof(&data->time_ms[data->write_pointer]));
+              sizeof(data->time_ms[data->write_pointer]));
 
           break;
 
@@ -516,16 +632,18 @@ int QueuePut(struct table_data *data, int line_number)
           fault:
 
           data->type = 'E';
+
           data->cursor_position += read;
 
           sprintf(line_copy, "linea %ld", row_read[data->nodeId] + line_count + 1);
           add_event(CERR_FileError, data->nodeId, 0, line_copy);
+
           continue;
           break;
       }
 
-      // aggiorno il buffer circolare
       data->cursor_position += read;
+
       data->write_pointer++;
 
       if(data->write_pointer >= POSITION_DATA_NUM_MAX)
@@ -555,7 +673,245 @@ int QueuePut(struct table_data *data, int line_number)
   row_read[data->nodeId] += line_count + 1;
 
   free(line);
-  fclose(file);
+  //fclose(file);
+
+  return line_count;
+}
+
+/**
+ * Aggiunge alla coda i valori letti dal file di simulazione.
+ *
+ * @return >= 0: letta una nuova riga; -1: errore file -2: buffer pieno
+ *
+ * @remark: questa funzione, come QueuePut, legge dal file le posizioni. Visto
+ * però che, in questo caso, si lavora con una pipe, la lettura viene fatta in
+ * modo continuo.
+ */
+int QueuePutPipe(struct table_data *data, int line_number)
+{
+  //FILE *file = NULL;
+  char *line = NULL;
+  size_t len = 0;
+  ssize_t read;
+
+  char *token;
+  char *token_save;
+  char line_copy[256];
+  //char file_path[256];
+  char position[12];
+  char time[12];
+  char vel_forw[12];
+  char vel_backw[12];
+  char nodeid[3];
+  int line_count = 0;
+  long value;
+
+  if(data->end_reached == 1)
+    return 0;
+
+  if(data->position_file == NULL)
+  {
+#ifdef CANOPENSHELL_VERBOSE
+    if(verbose_flag)
+      perror("file");
+#endif
+    return -1;
+  }
+
+  for(line_count = 0; line_count < line_number; line_count++)
+  {
+    // Ogni informazione è delimitata da uno spazio
+    //if((read = getline(&line, &len, file)) != -1)
+    if((read = getline(&line, &len, data->position_file)) != -1)
+    {
+      if(strcmp(line, "\n") == 0)
+        continue;
+
+      // controllo se la riga entra nel buffer
+      if(len < sizeof(line_copy))
+        strcpy(line_copy, line);
+      else
+        strncpy(line_copy, line, sizeof(line_copy));
+
+      // Verifico la sintassi
+      if(strncmp(line_copy, "CT1 M", strlen("CT1 M")))
+      {
+#ifdef CANOPENSHELL_VERBOSE
+        if(verbose_flag)
+        {
+          printf("WARN[%d on node %x]: Riga %ld non valida (sintassi CT1 M)\n", InternalError,
+              data->nodeId, row_read[data->nodeId] + line_count);
+
+          printf("line: %s", line);
+        }
+#endif
+        data->type = 'E';
+
+        continue;
+      }
+
+      // controllo che l'indirizzo del motore combaci
+      token = strtok_r(line_copy + 5, " ", &token_save);
+      if(token != NULL)
+      {
+        strcpy(nodeid, token);
+
+        if(atoi(nodeid) != data->nodeId)
+        {
+#ifdef CANOPENSHELL_VERBOSE
+          if(verbose_flag)
+          {
+            printf("WARN[%d on node %x]: Riga %ld non valida (nodeid)\n", InternalError,
+                data->nodeId, row_read[data->nodeId] + line_count);
+
+            printf("line: %s", line);
+          }
+#endif
+
+          data->type = 'E';
+
+          continue;
+        }
+      }
+      else
+      {
+#ifdef CANOPENSHELL_VERBOSE
+        if(verbose_flag)
+        {
+          printf("WARN[%d on node %x]: Riga %ld non valida (sintassi nodeid)\n", InternalError,
+              data->nodeId, row_read[data->nodeId] + line_count);
+
+          printf("line: %s", line);
+        }
+#endif
+
+        continue;
+      }
+
+      // determino il tipo di riga letta
+      token = strtok_r(NULL, " ", &token_save);
+      if(token != NULL)
+      {
+        data->type = *token;
+        strcpy(position, token + 1);
+      }
+      else
+      {
+#ifdef CANOPENSHELL_VERBOSE
+        if(verbose_flag)
+        {
+          printf("WARN[%d on node %x]: Riga %ld non valida (sintassi tipo)\n", InternalError,
+              data->nodeId, row_read[data->nodeId] + line_count);
+
+          printf("line: %s", line);
+        }
+#endif
+
+        data->type = 'E';
+        continue;
+      }
+
+      // a seconda del tipo di dato, leggo i parametri successivi
+      switch(data->type)
+      {
+        case 'S':
+          // copio il tempo
+          token = strtok_r(NULL, " \n\r\a", &token_save);
+          if(token != NULL)
+          {
+            value = strtol((token + 1), NULL, 10);
+
+            if((*token == 'T') && (*(token + 1) != '\0') && (value != ERANGE) && (value != 0))
+              strcpy(time, token + 1);
+            else
+              goto fault;
+          }
+          else
+            goto fault;
+
+          long lposition = atol(position);
+          long ltime = atol(time);
+
+          memcpy(&data->position[data->write_pointer], &lposition,
+              sizeof(data->position[data->write_pointer]));
+
+          memcpy(&data->time_ms[data->write_pointer], &ltime,
+              sizeof(data->time_ms[data->write_pointer]));
+
+          break;
+
+        case 'H':
+          // se non è la prima riga letta, allora la devo ignoare
+          if((row_read[data->nodeId] != 0) || line_count != 0)
+            goto fault;
+
+          // copio le velocità di andata e ritorno
+          token = strtok_r(NULL, " ", &token_save);
+          if(token != NULL)
+          {
+            if(strncmp(token, "VF", 2) == 0)
+              strcpy(vel_forw, token + 2);
+            else
+              goto fault;
+          }
+          else
+            goto fault;
+
+          token = strtok_r(NULL, " \n\r\a", &token_save);
+          if(token != NULL)
+          {
+            if(strncmp(token, "VB", 2) == 0)
+              strcpy(vel_backw, token + 2);
+            else
+              goto fault;
+          }
+          else
+            goto fault;
+
+          data->offset = atol(position);
+          data->forward_velocity = atol(vel_forw);
+          data->backward_velocity = atol(vel_backw);
+
+          //return 1;
+          break;
+
+        default:
+          fault:
+
+          data->type = 'E';
+
+          sprintf(line_copy, "linea %ld", row_read[data->nodeId] + line_count + 1);
+          add_event(CERR_FileError, data->nodeId, 0, line_copy);
+
+          continue;
+          break;
+      }
+
+      // aggiorno il buffer circolare
+      data->write_pointer++;
+
+      if(data->write_pointer >= POSITION_DATA_NUM_MAX)
+        data->write_pointer = 0;
+
+      pthread_mutex_lock(&data->table_mutex);
+
+      if(data->count < POSITION_DATA_NUM_MAX)
+        data->count++;
+
+      pthread_mutex_unlock(&data->table_mutex);
+    }
+    else
+    {
+      data->end_reached = 1;
+
+      break;
+    }
+  }
+
+  row_read[data->nodeId] += line_count + 1;
+
+  free(line);
+  //fclose(file);
 
   return line_count;
 }

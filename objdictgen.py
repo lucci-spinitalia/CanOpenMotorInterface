@@ -1,1 +1,0 @@
-../../../CanFestival-3-7740ac6fdedc/objdictgen/objdictgen.py

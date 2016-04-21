@@ -49,6 +49,7 @@ void smartmotor_table_write(int nodeid, UNS32 *interp_status, long point,
     // la tabella dell'interpolatore
     if(point == table_point[nodeid][smartmotor_table_ptr_wr[nodeid] - 1])
     {
+      //printf("close table\n");
       pthread_mutex_lock(&buffer_mux[nodeid]);
       *interp_status &= 0b0111111111111111;
       pthread_mutex_unlock(&buffer_mux[nodeid]);
@@ -56,14 +57,16 @@ void smartmotor_table_write(int nodeid, UNS32 *interp_status, long point,
     else
     {
       // altrimenti si tratta di un errore nella scala tempi
+      //printf("[%d] errore nella scala dei tempi\n", nodeid);
       pthread_mutex_lock(&buffer_mux[nodeid]);
       *interp_status |= 0b0000010000000000;
       pthread_mutex_unlock(&buffer_mux[nodeid]);
     }
     return;
   }
+
   // in caso di overflow, aggiorno lo stato del registro
-  if(smartmotor_table_count[nodeid] == 45)
+  if(smartmotor_table_count[nodeid] > SMARTMOTOR_TABLE_SIZE)
   {
     pthread_mutex_lock(&buffer_mux[nodeid]);
     *interp_status |= 0b0010000000000000;
@@ -89,6 +92,7 @@ void smartmotor_table_read(int nodeid, UNS32 *interp_status, long *point)
 {
   if(smartmotor_table_count[nodeid] == 0)
   {
+    // controllo underflow
     pthread_mutex_lock(&buffer_mux[nodeid]);
     *interp_status |= 0b0100000000000000;
     pthread_mutex_unlock(&buffer_mux[nodeid]);
@@ -105,6 +109,13 @@ void smartmotor_table_read(int nodeid, UNS32 *interp_status, long *point)
 
   smartmotor_table_count[nodeid]--;
   *interp_status += 1;
+
+  // controllo overflow
+  if((*interp_status & 0x3f) > SMARTMOTOR_TABLE_SIZE)
+  {
+    *interp_status |= 0b0010000000000000;
+  }
+
   pthread_mutex_unlock(&buffer_mux[nodeid]);
 }
 
@@ -115,25 +126,26 @@ void smartmotor_path_reset(int nodeid, UNS16 *motor_status)
 
   *motor_status &= 0b1111101111111111;
 
-  //printf("reset motor status %d\n", *motor_status);
+  //printf("[%d]reset motor status %d\n", nodeid, *motor_status);
 }
 
 void smartmotor_path_read(int nodeid, UNS16 *motor_status, long *position)
 {
   if(smartmotor_path_count[nodeid] == 0)
   {
-    //printf("exit due trajectory finished\n");
+    //printf("[%d] exit due trajectory finished\n", nodeid);
     *motor_status |= 0b0001010000000000;
     return;
   }
 
   *position = path_point[nodeid][smartmotor_path_ptr_rd[nodeid]];
+  //printf("[%d] position: %ld\n", nodeid, *position);
   smartmotor_path_ptr_rd[nodeid]++;
   smartmotor_path_count[nodeid]--;
 
   if(smartmotor_path_count[nodeid] == 0)
   {
-    //printf("Trajectory finish\n");
+    //printf("[%d] Trajectory finish\n", nodeid);
     *motor_status |= 0b0001010000000000;
   }
 

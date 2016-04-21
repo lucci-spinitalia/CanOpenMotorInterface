@@ -1,0 +1,37 @@
+digraph canopenshell_machine {
+	rankdir=LR;
+	node [shape = doublecircle]; ACCESO
+	node [shape = circle, style = filled]; SIMULAZIONE RICERCA_CENTRO CENTRAGGIO IN_POSIZIONE MOVIMENTO_LIBERO
+	node [shape = circle, style = dashed]; TUTTI
+	node [shape = circle, style = solid, regular= 1];
+	ACCESO -> INIZIALIZZATO [ label = "CT0" ];
+	ACCESO -> SPENTO [ label = "CT6" ];
+	INIZIALIZZATO -> RICERCA_CENTRO [ label = "CT2 P1" ];
+	INIZIALIZZATO -> RILASCIATO [ label = "CT2 P3" ];
+	INIZIALIZZATO -> SPENTO [ label = "CT6" ];
+	INIZIALIZZATO -> MOVIMENTO_LIBERO [ label = "CB7" ];
+	INIZIALIZZATO -> SIMULAZIONE [ label = "CB4" ];
+	RICERCA_CENTRO -> CENTRATO [ label = "fine" ];
+	CENTRATO -> SIMULAZIONE [ label = "CT4" ];
+	CENTRATO -> IN_POSIZIONE [ label = "CT1 Mx Px VMx AMx" ];
+	CENTRATO -> RILASCIATO [ label = "CT2 P3" ];
+	CENTRATO -> SPENTO [ label = "CT6" ];
+	CENTRATO -> MOVIMENTO_LIBERO [ label = "CB7" ];
+	SIMULAZIONE -> FERMO [ label = "fine" ];
+	SIMULAZIONE -> FERMO [ label = "CT5" ];
+	IN_POSIZIONE -> FERMO [ label = "fine" ];
+	FERMO -> CENTRAGGIO [ label = "CT2 P2" ];
+	FERMO -> RILASCIATO [ label = "CT2 P3" ];
+	FERMO -> SPENTO [ label = "CT6" ];
+        FERMO -> IN_POSIZIONE [ label = "CT1 Mx Px VMx AMx" ];
+	FERMO -> SIMULAZIONE [ label = "CB4" ];
+	FERMO -> RICERCA_CENTRO [ label = "CB2 P1" ];
+	FERMO -> MOVIMENTO_LIBERO [ label = "CB7" ];
+	CENTRAGGIO -> CENTRATO [ label = "fine" ];
+	RILASCIATO -> FERMO [ label = "CT5 && centrato" ];
+	RILASCIATO -> INIZIALIZZATO [ label = "CT0 && !centrato" ];
+	RILASCIATO -> SPENTO [ label = "CT6" ];
+	TUTTI -> EMERGENZA [ label = "EM2" ];
+	EMERGENZA -> INIZIALIZZATO [ label = "CT0" ];
+	MOVIMENTO_LIBERO -> FERMO [ label = "CB5" ];
+}
