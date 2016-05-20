@@ -6,11 +6,12 @@
  */
 
 #include "smartmotor_table.h"
+#include "CANOpenShellMasterError.h"
 #include <math.h>
 
 #define CANOPEN_NODE_NUMBER 128
 #define SMARTMOTOR_TABLE_SIZE 45
-#define PATH_MAX_SIZE 3000
+#define PATH_MAX_SIZE 525000
 
 unsigned char smartmotor_table_ptr_wr[CANOPEN_NODE_NUMBER];
 unsigned char smartmotor_table_ptr_rd[CANOPEN_NODE_NUMBER];
@@ -158,6 +159,7 @@ int smartmotor_path_generate(int nodeid, int encoder_count, long start_step,
   double vel_step_per_sec = velocity * 8000.0 / 65536;
   double acc_step_per_sec_sec = acceleration * 8000.0 / 8.192;
 
+  //printf("[%d] vel %f acc %f\n", nodeid, vel_step_per_sec, acc_step_per_sec_sec);
   double acc_time;
   double vel_time;
 
@@ -171,7 +173,6 @@ int smartmotor_path_generate(int nodeid, int encoder_count, long start_step,
   double time_approx;
   double acc_final;
 
-  //printf("[%d] wants to go from %ld to %ld\n", nodeid, start_step, stop_step);
   if(acc_step_per_sec_sec <= 0)
     return -1;
 

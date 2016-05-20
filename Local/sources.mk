@@ -14,7 +14,7 @@ EXECUTABLES :=
 # Every subdirectory with source files must be described here
 SUBDIRS := \
 . \
-CanFestival-3-7740ac6fdedc/drivers/timers_unix \
-CanFestival-3-7740ac6fdedc/drivers/unix \
-CanFestival-3-7740ac6fdedc/src \
+Mongo-canfestival-3-asc-e07f8b94110e/drivers/timers_unix \
+Mongo-canfestival-3-asc-e07f8b94110e/drivers/unix \
+Mongo-canfestival-3-asc-e07f8b94110e/src \
 

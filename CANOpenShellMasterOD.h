@@ -8,7 +8,7 @@
 
 /* Prototypes of function provided by object dictionnary */
 UNS32 CANOpenShellMasterOD_valueRangeTest (UNS8 typeValue, void * value);
-const indextable * CANOpenShellMasterOD_scanIndexOD (UNS16 wIndex, UNS32 * errorCode, ODCallback_t **callbacks);
+const indextable * CANOpenShellMasterOD_scanIndexOD (CO_Data *d, UNS16 wIndex, UNS32 * errorCode);
 
 /* Master node data struct */
 extern CO_Data CANOpenShellMasterOD_Data;
@@ -34,6 +34,8 @@ extern UNS16 Interpolation_Mode_Status;		/* Mapped at index 0x2400, subindex 0x0
 extern UNS8 InterpolationTimeValue[6];		/* Mapped at index 0x2501, subindex 0x01 - 0x06 */
 extern INTEGER32 InterpolationData[6];		/* Mapped at index 0x2502, subindex 0x01 - 0x06 */
 extern UNS16 InterpolationStart;		/* Mapped at index 0x2503, subindex 0x00*/
+extern UNS32 VelocityProfile[6];		/* Mapped at index 0x2504, subindex 0x01 - 0x06 */
+extern INTEGER32 PositionTarget[6];		/* Mapped at index 0x2505, subindex 0x01 - 0x06 */
 extern INTEGER8 InterpolationTimePeriod[6];		/* Mapped at index 0x2600, subindex 0x01 - 0x06 */
 extern UNS16 Controlword;		/* Mapped at index 0x6040, subindex 0x00*/
 extern UNS16 Statusword;		/* Mapped at index 0x6041, subindex 0x00*/

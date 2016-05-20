@@ -25,6 +25,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #define eprintf(...) printf (__VA_ARGS__)
 #endif
 
+#define TABLE_MAX_NUM 6
+
 #include <canfestival.h>
 
 extern int fake_flag;

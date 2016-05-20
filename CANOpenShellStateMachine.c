@@ -1,6 +1,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <pthread.h>
 #include <time.h>
 #include <unistd.h>
 #include "CANOpenShellStateMachine.h"
@@ -37,54 +38,102 @@ pthread_cond_t machine_run_cond = PTHREAD_COND_INITIALIZER;
 #endif
 
 void *smart_start[12] =
-    {
-        &masterSendNMTstateChange, // Start canopen node
-        &writeNetworkDictCallBack, // Change state: switched off
-        &writeNetworkDictCallBack, // Reset status word
-        &writeNetworkDictCallBack, // Change state: switched off
-        &writeNetworkDictCallBack, // Set mode velocity
-        &writeNetworkDictCallBack, // Set velocity in PV mode
-        &writeNetworkDictCallBack, // Set acceleration
-        &writeNetworkDictCallBack, // Set deceleration
-        &writeNetworkDictCallBack, // Set following error window
-        &writeNetworkDictCallBack, // Change state: ready to switch on
-        &writeNetworkDictCallBack, // Change state: switched on
-        &writeNetworkDictCallBack, // Start command
+{
+&masterSendNMTstateChange, // Start canopen node
+    &writeNetworkDictCallBack, // Change state: switched off
+    &writeNetworkDictCallBack, // Reset status word
+    &writeNetworkDictCallBack, // Change state: switched off
+    &writeNetworkDictCallBack, // Set mode velocity
+    &writeNetworkDictCallBack, // Set velocity in PV mode
+    &writeNetworkDictCallBack, // Set acceleration
+    &writeNetworkDictCallBack, // Set deceleration
+    &writeNetworkDictCallBack, // Set following error window
+    &writeNetworkDictCallBack, // Change state: ready to switch on
+    &writeNetworkDictCallBack, // Change state: switched on
+    &writeNetworkDictCallBack,
+// Start command
     };
 UNS32 smart_start_param[56] =
-    {
-        NMT_Start_Node,  // Start canopen node
-        0x6040, 0x0, 2, 0, 0x0,  // Change state: switched off
-        0x6040, 0x0, 2, 0, 0x80,  // Reset status word
-        0x6040, 0x0, 2, 0, 0x0,  // Change state: switched off
-        0x6060, 0x0, 1, 0, 0x3,  // Set mode velocity
-        0x60FF, 0x0, 4, 0, 0x0,  // Set velocity in PV mode
-        0x6083, 0x0, 4, 0, 0x1000,  // Set acceleration
-        0x6084, 0x0, 4, 0, 0xa,  // Set deceleration
-        0x6065, 0x0, 4, 0, 2000,  // Set following error window
-        0x6040, 0x0, 2, 0, 0x6,  // Change state: ready to switch on
-        0x6040, 0x0, 2, 0, 0x7,  // Change state: switched on
-        0x6040, 0x0, 2, 0, 0xF,  // Start command
+{
+NMT_Start_Node,  // Start canopen node
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x0,  // Change state: switched off
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x80,  // Reset status word
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x0,  // Change state: switched off
+    0x6060,
+    0x0,
+    1,
+    0,
+    0x3,  // Set mode velocity
+    0x60FF,
+    0x0,
+    4,
+    0,
+    0x0,  // Set velocity in PV mode
+    0x6083,
+    0x0,
+    4,
+    0,
+    0x1000,  // Set acceleration
+    0x6084,
+    0x0,
+    4,
+    0,
+    0xa,  // Set deceleration
+    0x6065,
+    0x0,
+    4,
+    0,
+    2000,  // Set following error window
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x6,  // Change state: ready to switch on
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x7,  // Change state: switched on
+    0x6040,
+    0x0,
+    2,
+    0,
+    0xF,
+// Start command
     };
 
 char *smart_start_error[2] =
-    {
-        "smartmotor started",
-        "Cannot start smartmotor"
-    };
+{
+"smartmotor started", "Cannot start smartmotor"
+};
 
 struct state_machine_struct smart_start_machine =
-    {smart_start, 12, smart_start_param, 56, smart_start_error};
+{
+smart_start, 12, smart_start_param, 56, smart_start_error
+};
 
 void *map1_pdo[7] =
-    {
-        &writeNetworkDictCallBack, // Set bit 31 of the COB-ID
-        &writeNetworkDictCallBack, // Set the number of entry to 0
-        &writeNetworkDictCallBack, // Set the mapping object
-        &writeNetworkDictCallBack, // Set the number of entry
-        &writeNetworkDictCallBack, // Clear bit 31 of the COB-ID
-        &writeNetworkDictCallBack, // Set transmission type on event timer
-        &writeNetworkDictCallBack  // Set transmission time
+{
+&writeNetworkDictCallBack, // Set bit 31 of the COB-ID
+    &writeNetworkDictCallBack, // Set the number of entry to 0
+    &writeNetworkDictCallBack, // Set the mapping object
+    &writeNetworkDictCallBack, // Set the number of entry
+    &writeNetworkDictCallBack, // Clear bit 31 of the COB-ID
+    &writeNetworkDictCallBack, // Set transmission type on event timer
+    &writeNetworkDictCallBack
+// Set transmission time
     };
 /**
  * Optional parameter:
@@ -101,35 +150,62 @@ void *map1_pdo[7] =
  *      0x1800 | pdo_number
  *      transmission time
  */UNS32 map1_pdo_param[35] =
-    {
-        0xFFFFFFFF, 0x1, 4, 0, 0xFFFFFFFF, // Set bit 31 of the COB-ID
-        0xFFFFFFFF, 0x0, 1, 0, 0x00, // Set the number of entry to 0
-        0xFFFFFFFF, 0x1, 4, 0, 0xFFFFFFFF, // Set the mapping object: status word
-        0xFFFFFFFF, 0x0, 1, 0, 0x01, // Set the number of entry
-        0xFFFFFFFF, 0x1, 4, 0, 0xFFFFFFFF, // Clear bit 31 of the COB-ID
-        0xFFFFFFFF, 0x2, 1, 0, 0xFFFFFFFF, // Set transmission type on event timer
-        0xFFFFFFFF, 0x5, 2, 0, 0xFFFFFFFF // Set transmission time on event timer
+{
+0xFFFFFFFF, 0x1, 4, 0, 0xFFFFFFFF, // Set bit 31 of the COB-ID
+    0xFFFFFFFF,
+    0x0,
+    1,
+    0,
+    0x00, // Set the number of entry to 0
+    0xFFFFFFFF,
+    0x1,
+    4,
+    0,
+    0xFFFFFFFF, // Set the mapping object: status word
+    0xFFFFFFFF,
+    0x0,
+    1,
+    0,
+    0x01, // Set the number of entry
+    0xFFFFFFFF,
+    0x1,
+    4,
+    0,
+    0xFFFFFFFF, // Clear bit 31 of the COB-ID
+    0xFFFFFFFF,
+    0x2,
+    1,
+    0,
+    0xFFFFFFFF, // Set transmission type on event timer
+    0xFFFFFFFF,
+    0x5,
+    2,
+    0,
+    0xFFFFFFFF
+// Set transmission time on event timer
     };
 
 char *map1_pdo_error[2] =
-    {
-        "PDO mapped",
-        "Cannot map PDO"
-    };
+{
+"PDO mapped", "Cannot map PDO"
+};
 
 struct state_machine_struct map1_pdo_machine =
-    {map1_pdo, 7, map1_pdo_param, 35, map1_pdo_error};
+{
+map1_pdo, 7, map1_pdo_param, 35, map1_pdo_error
+};
 
 void *map2_pdo[8] =
-    {
-        &writeNetworkDictCallBack, // Set bit 31 of the COB-ID
-        &writeNetworkDictCallBack, // Set the number of entry to 0
-        &writeNetworkDictCallBack, // Set the mapping object
-        &writeNetworkDictCallBack, // Set the mapping object
-        &writeNetworkDictCallBack, // Set the number of entry
-        &writeNetworkDictCallBack, // Clear bit 31 of the COB-ID
-        &writeNetworkDictCallBack, // Set transmission type on event timer
-        &writeNetworkDictCallBack  // Set transmission time
+{
+&writeNetworkDictCallBack, // Set bit 31 of the COB-ID
+    &writeNetworkDictCallBack, // Set the number of entry to 0
+    &writeNetworkDictCallBack, // Set the mapping object
+    &writeNetworkDictCallBack, // Set the mapping object
+    &writeNetworkDictCallBack, // Set the number of entry
+    &writeNetworkDictCallBack, // Clear bit 31 of the COB-ID
+    &writeNetworkDictCallBack, // Set transmission type on event timer
+    &writeNetworkDictCallBack
+// Set transmission time
     };
 /**
  * Optional parameter:
@@ -148,37 +224,68 @@ void *map2_pdo[8] =
  *      0x1800 | pdo_number
  *      transmission time
  */UNS32 map2_pdo_param[40] =
-    {
-        0xFFFFFFFF, 0x1, 4, 0, 0xFFFFFFFF, // Set bit 31 of the COB-ID
-        0xFFFFFFFF, 0x0, 1, 0, 0x00, // Set the number of entry to 0
-        0xFFFFFFFF, 0x1, 4, 0, 0xFFFFFFFF, // Set the mapping object
-        0xFFFFFFFF, 0x2, 4, 0, 0xFFFFFFFF, // Set the mapping object
-        0xFFFFFFFF, 0x0, 1, 0, 0x02, // Set the number of entry
-        0xFFFFFFFF, 0x1, 4, 0, 0xFFFFFFFF, // Clear bit 31 of the COB-ID
-        0xFFFFFFFF, 0x2, 1, 0, 0xFFFFFFFF, // Set transmission type on event timer
-        0xFFFFFFFF, 0x5, 2, 0, 0xFFFFFFFF // Set transmission time on event timer
+{
+0xFFFFFFFF, 0x1, 4, 0, 0xFFFFFFFF, // Set bit 31 of the COB-ID
+    0xFFFFFFFF,
+    0x0,
+    1,
+    0,
+    0x00, // Set the number of entry to 0
+    0xFFFFFFFF,
+    0x1,
+    4,
+    0,
+    0xFFFFFFFF, // Set the mapping object
+    0xFFFFFFFF,
+    0x2,
+    4,
+    0,
+    0xFFFFFFFF, // Set the mapping object
+    0xFFFFFFFF,
+    0x0,
+    1,
+    0,
+    0x02, // Set the number of entry
+    0xFFFFFFFF,
+    0x1,
+    4,
+    0,
+    0xFFFFFFFF, // Clear bit 31 of the COB-ID
+    0xFFFFFFFF,
+    0x2,
+    1,
+    0,
+    0xFFFFFFFF, // Set transmission type on event timer
+    0xFFFFFFFF,
+    0x5,
+    2,
+    0,
+    0xFFFFFFFF
+// Set transmission time on event timer
     };
 
 char *map2_pdo_error[2] =
-    {
-        "PDO mapped",
-        "Cannot map PDO"
-    };
+{
+"PDO mapped", "Cannot map PDO"
+};
 
 struct state_machine_struct map2_pdo_machine =
-    {map2_pdo, 8, map2_pdo_param, 40, map2_pdo_error};
+{
+map2_pdo, 8, map2_pdo_param, 40, map2_pdo_error
+};
 
 void *map3_pdo[9] =
-    {
-        &writeNetworkDictCallBack, // Set bit 31 of the COB-ID
-        &writeNetworkDictCallBack, // Set the number of entry to 0
-        &writeNetworkDictCallBack, // Set the mapping object 1
-        &writeNetworkDictCallBack, // Set the mapping object 2
-        &writeNetworkDictCallBack, // Set the mapping object 3
-        &writeNetworkDictCallBack, // Set the number of entry
-        &writeNetworkDictCallBack, // Clear bit 31 of the COB-ID
-        &writeNetworkDictCallBack, // Set transmission type on event timer
-        &writeNetworkDictCallBack  // Set transmission time
+{
+&writeNetworkDictCallBack, // Set bit 31 of the COB-ID
+    &writeNetworkDictCallBack, // Set the number of entry to 0
+    &writeNetworkDictCallBack, // Set the mapping object 1
+    &writeNetworkDictCallBack, // Set the mapping object 2
+    &writeNetworkDictCallBack, // Set the mapping object 3
+    &writeNetworkDictCallBack, // Set the number of entry
+    &writeNetworkDictCallBack, // Clear bit 31 of the COB-ID
+    &writeNetworkDictCallBack, // Set transmission type on event timer
+    &writeNetworkDictCallBack
+// Set transmission time
     };
 /**
  * Optional parameter:
@@ -199,39 +306,74 @@ void *map3_pdo[9] =
  *      0x1800 | pdo_number
  *      transmission time
  */UNS32 map3_pdo_param[45] =
-    {
-        0xFFFFFFFF, 0x1, 4, 0, 0xFFFFFFFF, // Set bit 31 of the COB-ID
-        0xFFFFFFFF, 0x0, 1, 0, 0x00, // Set the number of entry to 0
-        0xFFFFFFFF, 0x1, 4, 0, 0xFFFFFFFF, // Set the mapping object 1
-        0xFFFFFFFF, 0x2, 4, 0, 0xFFFFFFFF, // Set the mapping object 2
-        0xFFFFFFFF, 0x3, 4, 0, 0xFFFFFFFF, // Set the mapping object 3
-        0xFFFFFFFF, 0x0, 1, 0, 0x03, // Set the number of entry
-        0xFFFFFFFF, 0x1, 4, 0, 0xFFFFFFFF, // Clear bit 31 of the COB-ID
-        0xFFFFFFFF, 0x2, 1, 0, 0xFFFFFFFF, // Set transmission type on event timer
-        0xFFFFFFFF, 0x5, 2, 0, 0xFFFFFFFF // Set transmission time on event timer
+{
+0xFFFFFFFF, 0x1, 4, 0, 0xFFFFFFFF, // Set bit 31 of the COB-ID
+    0xFFFFFFFF,
+    0x0,
+    1,
+    0,
+    0x00, // Set the number of entry to 0
+    0xFFFFFFFF,
+    0x1,
+    4,
+    0,
+    0xFFFFFFFF, // Set the mapping object 1
+    0xFFFFFFFF,
+    0x2,
+    4,
+    0,
+    0xFFFFFFFF, // Set the mapping object 2
+    0xFFFFFFFF,
+    0x3,
+    4,
+    0,
+    0xFFFFFFFF, // Set the mapping object 3
+    0xFFFFFFFF,
+    0x0,
+    1,
+    0,
+    0x03, // Set the number of entry
+    0xFFFFFFFF,
+    0x1,
+    4,
+    0,
+    0xFFFFFFFF, // Clear bit 31 of the COB-ID
+    0xFFFFFFFF,
+    0x2,
+    1,
+    0,
+    0xFFFFFFFF, // Set transmission type on event timer
+    0xFFFFFFFF,
+    0x5,
+    2,
+    0,
+    0xFFFFFFFF
+// Set transmission time on event timer
     };
 
 char *map3_pdo_error[2] =
-    {
-        "PDO mapped",
-        "Cannot map PDO"
-    };
+{
+"PDO mapped", "Cannot map PDO"
+};
 
 struct state_machine_struct map3_pdo_machine =
-    {map3_pdo, 9, map3_pdo_param, 45, map3_pdo_error};
+{
+map3_pdo, 9, map3_pdo_param, 45, map3_pdo_error
+};
 
 void *map4_pdo[10] =
-    {
-        &writeNetworkDictCallBack, // Set bit 31 of the COB-ID
-        &writeNetworkDictCallBack, // Set the number of entry to 0
-        &writeNetworkDictCallBack, // Set the mapping object 1
-        &writeNetworkDictCallBack, // Set the mapping object 2
-        &writeNetworkDictCallBack, // Set the mapping object 3
-        &writeNetworkDictCallBack, // Set the mapping object 4
-        &writeNetworkDictCallBack, // Set the number of entry
-        &writeNetworkDictCallBack, // Clear bit 31 of the COB-ID
-        &writeNetworkDictCallBack, // Set transmission type on event timer
-        &writeNetworkDictCallBack  // Set transmission time
+{
+&writeNetworkDictCallBack, // Set bit 31 of the COB-ID
+    &writeNetworkDictCallBack, // Set the number of entry to 0
+    &writeNetworkDictCallBack, // Set the mapping object 1
+    &writeNetworkDictCallBack, // Set the mapping object 2
+    &writeNetworkDictCallBack, // Set the mapping object 3
+    &writeNetworkDictCallBack, // Set the mapping object 4
+    &writeNetworkDictCallBack, // Set the number of entry
+    &writeNetworkDictCallBack, // Clear bit 31 of the COB-ID
+    &writeNetworkDictCallBack, // Set transmission type on event timer
+    &writeNetworkDictCallBack
+// Set transmission time
     };
 /**
  * Optional parameter:
@@ -254,93 +396,172 @@ void *map4_pdo[10] =
  *      0x1800 | pdo_number
  *      transmission time
  */UNS32 map4_pdo_param[50] =
-    {
-        0xFFFFFFFF, 0x1, 4, 0, 0xFFFFFFFF, // Set bit 31 of the COB-ID
-        0xFFFFFFFF, 0x0, 1, 0, 0x00, // Set the number of entry to 0
-        0xFFFFFFFF, 0x1, 4, 0, 0xFFFFFFFF, // Set the mapping object 1
-        0xFFFFFFFF, 0x2, 4, 0, 0xFFFFFFFF, // Set the mapping object 2
-        0xFFFFFFFF, 0x3, 4, 0, 0xFFFFFFFF, // Set the mapping object 3
-        0xFFFFFFFF, 0x4, 4, 0, 0xFFFFFFFF, // Set the mapping object 4
-        0xFFFFFFFF, 0x0, 1, 0, 0x04, // Set the number of entry
-        0xFFFFFFFF, 0x1, 4, 0, 0xFFFFFFFF, // Clear bit 31 of the COB-ID
-        0xFFFFFFFF, 0x2, 1, 0, 0xFFFFFFFF, // Set transmission type on event timer
-        0xFFFFFFFF, 0x5, 2, 0, 0xFFFFFFFF // Set transmission time on event timer
+{
+0xFFFFFFFF, 0x1, 4, 0, 0xFFFFFFFF, // Set bit 31 of the COB-ID
+    0xFFFFFFFF,
+    0x0,
+    1,
+    0,
+    0x00, // Set the number of entry to 0
+    0xFFFFFFFF,
+    0x1,
+    4,
+    0,
+    0xFFFFFFFF, // Set the mapping object 1
+    0xFFFFFFFF,
+    0x2,
+    4,
+    0,
+    0xFFFFFFFF, // Set the mapping object 2
+    0xFFFFFFFF,
+    0x3,
+    4,
+    0,
+    0xFFFFFFFF, // Set the mapping object 3
+    0xFFFFFFFF,
+    0x4,
+    4,
+    0,
+    0xFFFFFFFF, // Set the mapping object 4
+    0xFFFFFFFF,
+    0x0,
+    1,
+    0,
+    0x04, // Set the number of entry
+    0xFFFFFFFF,
+    0x1,
+    4,
+    0,
+    0xFFFFFFFF, // Clear bit 31 of the COB-ID
+    0xFFFFFFFF,
+    0x2,
+    1,
+    0,
+    0xFFFFFFFF, // Set transmission type on event timer
+    0xFFFFFFFF,
+    0x5,
+    2,
+    0,
+    0xFFFFFFFF
+// Set transmission time on event timer
     };
 
 char *map4_pdo_error[2] =
-    {
-        "PDO mapped",
-        "Cannot map PDO"
-    };
+{
+"PDO mapped", "Cannot map PDO"
+};
 
 struct state_machine_struct map4_pdo_machine =
-    {map4_pdo, 10, map4_pdo_param, 50, map4_pdo_error};
+{
+map4_pdo, 10, map4_pdo_param, 50, map4_pdo_error
+};
 
 void *heart_start[1] =
-    {
-        &writeNetworkDictCallBack
-    };
+{
+&writeNetworkDictCallBack
+};
 UNS32 heart_start_param[5] =
-    {
-        0x1017, 0x0, 2, 0, 0xFFFFFFFF
-    };
+{
+0x1017, 0x0, 2, 0, 0xFFFFFFFF
+};
 
 char *heart_start_error[2] =
-    {
-        "Heartbeat configured",
-        "Cannot configure heartbeat"
-    };
+{
+"Heartbeat configured", "Cannot configure heartbeat"
+};
 
 struct state_machine_struct heart_start_machine =
-    {heart_start, 1, heart_start_param, 5, heart_start_error};
+{
+heart_start, 1, heart_start_param, 5, heart_start_error
+};
 
 void *smart_stop[10] =
-    {
-        &writeNetworkDictCallBack,  // Change state: switched off
-        &writeNetworkDictCallBack,  // Change state: switched off
-        &writeNetworkDictCallBack,  // Change state: switched off
-        &writeNetworkDictCallBack,  // Disable positive limit switch input
-        &writeNetworkDictCallBack,  // Disable negative limit switch input
-        &writeNetworkDictCallBack,  // Set mode velocity
-        &writeNetworkDictCallBack,  // Set velocity in PV mode
-        &writeNetworkDictCallBack,  // Change state: ready to switch on
-        &writeNetworkDictCallBack,  // Change state: switched on
-        &writeNetworkDictCallBack,  // Start command
+{
+&writeNetworkDictCallBack,  // Change state: switched off
+    &writeNetworkDictCallBack,  // Change state: switched off
+    &writeNetworkDictCallBack,  // Change state: switched off
+    &writeNetworkDictCallBack,  // Disable positive limit switch input
+    &writeNetworkDictCallBack,  // Disable negative limit switch input
+    &writeNetworkDictCallBack,  // Set mode velocity
+    &writeNetworkDictCallBack,  // Set velocity in PV mode
+    &writeNetworkDictCallBack,  // Change state: ready to switch on
+    &writeNetworkDictCallBack,  // Change state: switched on
+    &writeNetworkDictCallBack,
+// Start command
     };
 UNS32 smart_stop_param[50] =
-    {
-        0x6040, 0x0, 2, 0, 0x0,  // Change state: switched off
-        0x6040, 0x0, 2, 0, 0x80,  // Change state: switched off
-        0x6040, 0x0, 2, 0, 0x0,  // Change state: switched off
-        0x2101, 0x3, 2, 0, 0x2,  // Disable positive limit switch input
-        0x2101, 0x3, 2, 0, 0x3,  // Disable negative limit switch input
-        0x6060, 0x0, 1, 0, 0x3,  // Set mode velocity
-        0x60FF, 0x0, 4, 0, 0x0,  // Set velocity in PV mode
-        0x6040, 0x0, 2, 0, 0x6,  // Change state: ready to switch on
-        0x6040, 0x0, 2, 0, 0x7,  // Change state: switched on
-        0x6040, 0x0, 2, 0, 0xF,  // Start command
+{
+0x6040, 0x0, 2, 0, 0x0,  // Change state: switched off
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x80,  // Change state: switched off
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x0,  // Change state: switched off
+    0x2101,
+    0x3,
+    2,
+    0,
+    0x2,  // Disable positive limit switch input
+    0x2101,
+    0x3,
+    2,
+    0,
+    0x3,  // Disable negative limit switch input
+    0x6060,
+    0x0,
+    1,
+    0,
+    0x3,  // Set mode velocity
+    0x60FF,
+    0x0,
+    4,
+    0,
+    0x0,  // Set velocity in PV mode
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x6,  // Change state: ready to switch on
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x7,  // Change state: switched on
+    0x6040,
+    0x0,
+    2,
+    0,
+    0xF,
+// Start command
     };
 
 char *smart_stop_error[2] =
-    {
-        "smart motor stopped",
-        "cannost stop smartmotor"
-    };
+{
+"smart motor stopped", "cannost stop smartmotor"
+};
 
 struct state_machine_struct smart_stop_machine =
-    {smart_stop, 10, smart_stop_param, 50, smart_stop_error};
+{
+smart_stop, 10, smart_stop_param, 50, smart_stop_error
+};
 
 void *smart_position_set_function[9] =
-    {
-        &writeNetworkDictCallBack, // Reset the status word
-        &writeNetworkDictCallBack, // Set mode position
-        &writeNetworkDictCallBack, // Set profile speed
-        &writeNetworkDictCallBack, // Set target position to zero
-        &writeNetworkDictCallBack, // Set acceleration
-        &writeNetworkDictCallBack, // Set deceleration
-        &writeNetworkDictCallBack, // Change state: ready to switch on
-        &writeNetworkDictCallBack, // Change state: switched on
-        &writeNetworkDictCallBack, // Enable command, single setpoint (motion not actually started yet)
+{
+&writeNetworkDictCallBack, // Reset the status word
+    &writeNetworkDictCallBack, // Set mode position
+    &writeNetworkDictCallBack, // Set profile speed
+    &writeNetworkDictCallBack, // Set target position to zero
+    &writeNetworkDictCallBack, // Set acceleration
+    &writeNetworkDictCallBack, // Set deceleration
+    &writeNetworkDictCallBack, // Change state: ready to switch on
+    &writeNetworkDictCallBack, // Change state: switched on
+    &writeNetworkDictCallBack,
+// Enable command, single setpoint (motion not actually started yet)
     };
 /*
  * param
@@ -348,355 +569,708 @@ void *smart_position_set_function[9] =
  * target point
  * procile acceleration
  */UNS32 smart_position_set_param[45] =
-    {
-        0x6040, 0x0, 2, 0, 0x80, // Reset status word
-        0x6060, 0x0, 1, 0, 0x1, // Set mode position
-        0x6081, 0x0, 4, 0, 0xFFFFFFFF, // Set profile speed
-        0x6083, 0x0, 4, 0, 0xFFFFFFFF, // Set acceleration
-        0x6084, 0x0, 4, 0, 0xFFFFFFFF, // Set deceleration
-        0x607A, 0x0, 4, 0, 0xFFFFFFFF, // Set target position to destination
-        0x6040, 0x0, 2, 0, 0x6, // Change state: ready to switch on
-        0x6040, 0x0, 2, 0, 0x7, // Change state: switched on
-        0x6040, 0x0, 2, 0, 0x2F, // Enable command, single setpoint (motion not actually started yet)
+{
+0x6040, 0x0, 2, 0, 0x80, // Reset status word
+    0x6060,
+    0x0,
+    1,
+    0,
+    0x1, // Set mode position
+    0x6083,
+    0x0,
+    4,
+    0,
+    0xFFFFFFFF, // Set acceleration
+    0x6084,
+    0x0,
+    4,
+    0,
+    0xFFFFFFFF, // Set deceleration
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x6, // Change state: ready to switch on
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x7, // Change state: switched on
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x2F, // Enable command, single setpoint (motion not actually started yet)
+    0x6081,
+    0x0,
+    4,
+    0,
+    0xFFFFFFFF, // Set profile speed
+    0x607A,
+    0x0,
+    4,
+    0,
+    0xFFFFFFFF, // Set target position to destination
+
     };
 
 char *smart_position_set_error[2] =
-    {
-        "set target point",
-        "cannot set target point"
-    };
+{
+"set target point", "cannot set target point"
+};
 
 struct state_machine_struct smart_position_set_machine =
-    {smart_position_set_function, 9, smart_position_set_param, 45,
-        smart_position_set_error};
+{
+smart_position_set_function, 9, smart_position_set_param, 45, smart_position_set_error
+};
 
 void *smart_position_start_function[1] =
-    {
-        &writeNetworkDictCallBack // Begin motion to target position
+{
+&writeNetworkDictCallBack
+// Begin motion to target position
     };
 
 UNS32 smart_position_start_param[5] =
-    {
-        0x6040, 0x0, 2, 0, 0x3F // Begin motion to target position
+{
+0x6040, 0x0, 2, 0, 0x3F
+// Begin motion to target position
     };
 
 char *smart_position_start_error[2] =
-    {
-        "smart motor go to target point. . .",
-        "cannot begin motion"
-    };
+{
+"smart motor go to target point. . .", "cannot begin motion"
+};
 
 struct state_machine_struct smart_position_start_machine =
-    {smart_position_start_function, 1, smart_position_start_param, 5,
-        smart_position_start_error};
+{
+smart_position_start_function, 1, smart_position_start_param, 5, smart_position_start_error
+};
+
+void *smart_set_mode_function[4] =
+{
+&writeNetworkDictCallBack,
+&writeNetworkDictCallBack,
+&writeNetworkDictCallBack,
+&writeNetworkDictCallBack
+    };
+
+UNS32 smart_set_mode_param[25] =
+{
+    0x6040, 0x0, 2, 0, 0x80, // Reset status word
+        0x6060,
+        0x0,
+        1,
+        0,
+        0x1, // Set mode position
+        0x6040,
+        0x0,
+        2,
+        0,
+        0x6, // Change state: ready to switch on
+        0x6040,
+        0x0,
+        2,
+        0,
+        0x7, // Change state: switched on
+        0x6040,
+        0x0,
+        2,
+        0,
+        0x2F // Enable command, single setpoint (motion not actually started yet)
+    };
+
+char *smart_set_mode_error[2] =
+{
+"smart motor go to target point. . .", "cannot begin motion"
+};
+
+struct state_machine_struct smart_set_mode_machine =
+{
+smart_set_mode_function, 4, smart_set_mode_param, 25, smart_set_mode_error
+};
+
+void *smart_message_function[1] =
+{
+&writeNetworkDictCallBack
+};
+
+UNS32 smart_message_param[5] =
+{
+0x2500, 0x1, 0xFFFFFFFF, visible_string, 0xFFFFFFFF
+};
+
+char *smart_message_error[2] =
+{
+"smartmotor message sent. . .", "cannot sent smart message"
+};
+
+struct state_machine_struct smart_message_machine =
+{
+smart_message_function, 1, smart_message_param, 5, smart_message_error
+};
 
 void *smart_interpolation_test1[19] =
-    {
-        &writeNetworkDictCallBack, // Reset the status word
-        &writeNetworkDictCallBack, // Set interpolation mode
-        &writeNetworkDictCallBack, // Change state: ready to switch on
-        &writeNetworkDictCallBack, // Change state: switched on
-        &writeNetworkDictCallBack, // Clear buffer
-        &writeNetworkDictCallBack, // Enable buffer
-        &writeNetworkDictCallBack, // Set time period to 1 (second)
-        &writeNetworkDictCallBack, // Set time period to seconds
-        &writeNetworkDictCallBack, // Write data point 1
-        &writeNetworkDictCallBack, // Write data point 2
-        &writeNetworkDictCallBack, // Write data point 3
-        &writeNetworkDictCallBack, // Write data point 4
-        &writeNetworkDictCallBack, // Write data point 5
-        &writeNetworkDictCallBack, // Write data point 6
-        &writeNetworkDictCallBack, // Write zero-length segment
-        &writeNetworkDictCallBack, // Write data point
-        &writeNetworkDictCallBack, // This is required to satisfy CiA 402 drive state machine
-        &writeNetworkDictCallBack, // Enable command (motion not actually started yet
-        &writeNetworkDictCallBack // Begin motion
+{
+&writeNetworkDictCallBack, // Reset the status word
+    &writeNetworkDictCallBack, // Set interpolation mode
+    &writeNetworkDictCallBack, // Change state: ready to switch on
+    &writeNetworkDictCallBack, // Change state: switched on
+    &writeNetworkDictCallBack, // Clear buffer
+    &writeNetworkDictCallBack, // Enable buffer
+    &writeNetworkDictCallBack, // Set time period to 1 (second)
+    &writeNetworkDictCallBack, // Set time period to seconds
+    &writeNetworkDictCallBack, // Write data point 1
+    &writeNetworkDictCallBack, // Write data point 2
+    &writeNetworkDictCallBack, // Write data point 3
+    &writeNetworkDictCallBack, // Write data point 4
+    &writeNetworkDictCallBack, // Write data point 5
+    &writeNetworkDictCallBack, // Write data point 6
+    &writeNetworkDictCallBack, // Write zero-length segment
+    &writeNetworkDictCallBack, // Write data point
+    &writeNetworkDictCallBack, // This is required to satisfy CiA 402 drive state machine
+    &writeNetworkDictCallBack, // Enable command (motion not actually started yet
+    &writeNetworkDictCallBack
+// Begin motion
     };
 UNS32 smart_interpolation_test1_param[95] =
-    {
-        0x6040, 0x0, 2, 0, 0x80, // Reset the status word
-        0x6060, 0x0, 1, 0, 0x7, // Set interpolation mode
-        0x6040, 0x0, 2, 0, 0x6, // Change state: ready to switch on
-        0x6040, 0x0, 2, 0, 0x7, // Change state: switched on
-        0x60C4, 0x6, 1, 0, 0x0, // Clear buffer
-        0x60C4, 0x6, 1, 0, 0x1, // Enable buffer
-        0x60C2, 0x1, 1, 0, 0x1, // Set time period to 1 (second)
-        0x60C2, 0x2, 1, 0, 0x0, // Set time period to seconds
-        0x60C1, 0x1, 4, 0, 0x0, // Write data point 1
-        0x60C1, 0x1, 4, 0, 0x3E8, // Write data point 2
-        0x60C1, 0x1, 4, 0, 0xBB8, // Write data point 3
-        0x60C1, 0x1, 4, 0, 0x7D0, // Write data point 4
-        0x60C1, 0x1, 4, 0, 0x3E8, // Write data point 5
-        0x60C1, 0x1, 4, 0, 0x0, // Write data point 6
-        0x60C2, 0x1, 1, 0, 0x0, // Write zero-length segment
-        0x60C1, 0x1, 4, 0, 0x0, // Write data point
-        0x6040, 0x0, 2, 0, 0x6, // This is required to satisfy CiA 402 drive state machine
-        0x6040, 0x0, 2, 0, 0xF, // Enable command (motion not actually started yet
-        0x6040, 0x0, 2, 0, 0x1F // Begin motion
+{
+0x6040, 0x0, 2, 0, 0x80, // Reset the status word
+    0x6060,
+    0x0,
+    1,
+    0,
+    0x7, // Set interpolation mode
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x6, // Change state: ready to switch on
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x7, // Change state: switched on
+    0x60C4,
+    0x6,
+    1,
+    0,
+    0x0, // Clear buffer
+    0x60C4,
+    0x6,
+    1,
+    0,
+    0x1, // Enable buffer
+    0x60C2,
+    0x1,
+    1,
+    0,
+    0x1, // Set time period to 1 (second)
+    0x60C2,
+    0x2,
+    1,
+    0,
+    0x0, // Set time period to seconds
+    0x60C1,
+    0x1,
+    4,
+    0,
+    0x0, // Write data point 1
+    0x60C1,
+    0x1,
+    4,
+    0,
+    0x3E8, // Write data point 2
+    0x60C1,
+    0x1,
+    4,
+    0,
+    0xBB8, // Write data point 3
+    0x60C1,
+    0x1,
+    4,
+    0,
+    0x7D0, // Write data point 4
+    0x60C1,
+    0x1,
+    4,
+    0,
+    0x3E8, // Write data point 5
+    0x60C1,
+    0x1,
+    4,
+    0,
+    0x0, // Write data point 6
+    0x60C2,
+    0x1,
+    1,
+    0,
+    0x0, // Write zero-length segment
+    0x60C1,
+    0x1,
+    4,
+    0,
+    0x0, // Write data point
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x6, // This is required to satisfy CiA 402 drive state machine
+    0x6040,
+    0x0,
+    2,
+    0,
+    0xF, // Enable command (motion not actually started yet
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x1F
+// Begin motion
     };
 
 char *smart_interpolation_test1_error[2] =
-    {
-        "smartmotor interpolation mode started",
-        "Cannot start smartmotor in interpolation mode"
-    };
+{
+"smartmotor interpolation mode started", "Cannot start smartmotor in interpolation mode"
+};
 
 struct state_machine_struct smart_interpolation_test1_machine =
-    {smart_interpolation_test1, 19, smart_interpolation_test1_param, 95,
-        smart_interpolation_test1_error};
+{
+smart_interpolation_test1, 19, smart_interpolation_test1_param, 95, smart_interpolation_test1_error
+};
 
 void *smart_interpolation_test2[19] =
-    {
-        &writeNetworkDictCallBack, // Reset the status word
-        &writeNetworkDictCallBack, // Change state: ready to switch on
-        &writeNetworkDictCallBack, // Change state: switched on
-        &writeNetworkDictCallBack, // Clear buffer
-        &writeNetworkDictCallBack, // Enable buffer
-        &writeNetworkDictCallBack, // Set time period to seconds
-        &writeNetworkDictCallBack, // Set time period to 1 (second)
-        &writeNetworkDictCallBack, // Set interpolation mode
-        &writeNetworkDictCallBack, // Write data point 1
-        &writeNetworkDictCallBack, // Write data point 2
-        &writeNetworkDictCallBack, // Write data point 3
-        &writeNetworkDictCallBack, // Write data point 4
-        &writeNetworkDictCallBack, // Write data point 5
-        &writeNetworkDictCallBack, // Write data point 6
-        &writeNetworkDictCallBack, // Write zero-length segment
-        &writeNetworkDictCallBack, // Write data point
-        &writeNetworkDictCallBack, // This is required to satisfy CiA 402 drive state machine
-        &writeNetworkDictCallBack, // Enable command (motion not actually started yet
-        &writeNetworkDictCallBack // Begin motion
+{
+&writeNetworkDictCallBack, // Reset the status word
+    &writeNetworkDictCallBack, // Change state: ready to switch on
+    &writeNetworkDictCallBack, // Change state: switched on
+    &writeNetworkDictCallBack, // Clear buffer
+    &writeNetworkDictCallBack, // Enable buffer
+    &writeNetworkDictCallBack, // Set time period to seconds
+    &writeNetworkDictCallBack, // Set time period to 1 (second)
+    &writeNetworkDictCallBack, // Set interpolation mode
+    &writeNetworkDictCallBack, // Write data point 1
+    &writeNetworkDictCallBack, // Write data point 2
+    &writeNetworkDictCallBack, // Write data point 3
+    &writeNetworkDictCallBack, // Write data point 4
+    &writeNetworkDictCallBack, // Write data point 5
+    &writeNetworkDictCallBack, // Write data point 6
+    &writeNetworkDictCallBack, // Write zero-length segment
+    &writeNetworkDictCallBack, // Write data point
+    &writeNetworkDictCallBack, // This is required to satisfy CiA 402 drive state machine
+    &writeNetworkDictCallBack, // Enable command (motion not actually started yet
+    &writeNetworkDictCallBack
+// Begin motion
     };
 UNS32 smart_interpolation_test2_param[95] =
-    {
-        0x6040, 0x0, 2, 0, 0x80, // Reset the status word
-        0x6040, 0x0, 2, 0, 0x6, // Change state: ready to switch on
-        0x6040, 0x0, 2, 0, 0x7, // Change state: switched on
-        0x60C4, 0x6, 1, 0, 0x0, // Clear buffer
-        0x60C4, 0x6, 1, 0, 0x1, // Enable buffer
-        0x60C2, 0x2, 1, 0, 0xFD, // Set time period to seconds
-        0x60C2, 0x1, 1, 0, 0x14, // Set time period to 1 (second)
-        0x6060, 0x0, 1, 0, 0x7, // Set interpolation mode
-        0x60C1, 0x1, 4, 0, 0x0, // Write data point 1
-        0x60C1, 0x1, 4, 0, 0x3E8, // Write data point 2
-        0x60C1, 0x1, 4, 0, 0xBB8, // Write data point 3
-        0x60C1, 0x1, 4, 0, 0x7D0, // Write data point 4
-        0x60C1, 0x1, 4, 0, 0x3E8, // Write data point 5
-        0x60C1, 0x1, 4, 0, 0x0, // Write data point 6
-        0x60C2, 0x1, 1, 0, 0x0, // Write zero-length segment
-        0x60C1, 0x1, 4, 0, 0x0, // Write data point
-        0x6040, 0x0, 2, 0, 0x6, // This is required to satisfy CiA 402 drive state machine
-        0x6040, 0x0, 2, 0, 0xF, // Enable command (motion not actually started yet
-        0x6040, 0x0, 2, 0, 0x1F // Begin motion
+{
+0x6040, 0x0, 2, 0, 0x80, // Reset the status word
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x6, // Change state: ready to switch on
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x7, // Change state: switched on
+    0x60C4,
+    0x6,
+    1,
+    0,
+    0x0, // Clear buffer
+    0x60C4,
+    0x6,
+    1,
+    0,
+    0x1, // Enable buffer
+    0x60C2,
+    0x2,
+    1,
+    0,
+    0xFD, // Set time period to seconds
+    0x60C2,
+    0x1,
+    1,
+    0,
+    0x14, // Set time period to 1 (second)
+    0x6060,
+    0x0,
+    1,
+    0,
+    0x7, // Set interpolation mode
+    0x60C1,
+    0x1,
+    4,
+    0,
+    0x0, // Write data point 1
+    0x60C1,
+    0x1,
+    4,
+    0,
+    0x3E8, // Write data point 2
+    0x60C1,
+    0x1,
+    4,
+    0,
+    0xBB8, // Write data point 3
+    0x60C1,
+    0x1,
+    4,
+    0,
+    0x7D0, // Write data point 4
+    0x60C1,
+    0x1,
+    4,
+    0,
+    0x3E8, // Write data point 5
+    0x60C1,
+    0x1,
+    4,
+    0,
+    0x0, // Write data point 6
+    0x60C2,
+    0x1,
+    1,
+    0,
+    0x0, // Write zero-length segment
+    0x60C1,
+    0x1,
+    4,
+    0,
+    0x0, // Write data point
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x6, // This is required to satisfy CiA 402 drive state machine
+    0x6040,
+    0x0,
+    2,
+    0,
+    0xF, // Enable command (motion not actually started yet
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x1F
+// Begin motion
     };
 
 char *smart_interpolation_test2_error[2] =
-    {
-        "smartmotor interpolation mode started",
-        "Cannot start smartmotor in interpolation mode"
-    };
+{
+"smartmotor interpolation mode started", "Cannot start smartmotor in interpolation mode"
+};
 
 struct state_machine_struct smart_interpolation_test2_machine =
-    {smart_interpolation_test2, 19, smart_interpolation_test2_param, 95,
-        smart_interpolation_test2_error};
+{
+smart_interpolation_test2, 19, smart_interpolation_test2_param, 95, smart_interpolation_test2_error
+};
 
 void *init_interpolation_function[10] =
-    {
-        &writeNetworkDictCallBack, // Change state: ready to switch on
-        &writeNetworkDictCallBack, // Change state: switched on
-        //&writeNetworkDictCallBack, // Enable positive limit switch
-        //&writeNetworkDictCallBack, // Enable negative limit switch
-        &writeNetworkDictCallBack, // Enable command (motion not actually started yet)
-        &writeNetworkDictCallBack, // Clear buffer
-        &writeNetworkDictCallBack, // Enable buffer
-        &writeNetworkDictCallBack, // Set time period to seconds
-        &writeNetworkDictCallBack, // Set time period to 1 (second)
-        &writeNetworkDictCallBack, // Set interpolation mode
-        &writeNetworkDictCallBack, // Set interpolation sub-mode (spline)
-        &writeNetworkDictCallBack // Set first point to zero
+{
+&writeNetworkDictCallBack, // Change state: ready to switch on
+    &writeNetworkDictCallBack, // Change state: switched on
+    //&writeNetworkDictCallBack, // Enable positive limit switch
+    //&writeNetworkDictCallBack, // Enable negative limit switch
+    &writeNetworkDictCallBack, // Enable command (motion not actually started yet)
+    &writeNetworkDictCallBack, // Clear buffer
+    &writeNetworkDictCallBack, // Enable buffer
+    &writeNetworkDictCallBack, // Set time period to seconds
+    &writeNetworkDictCallBack, // Set time period to 1 (second)
+    &writeNetworkDictCallBack, // Set interpolation mode
+    &writeNetworkDictCallBack, // Set interpolation sub-mode (spline)
+    &writeNetworkDictCallBack
+// Set first point to zero
     };
 /*
  * Param
  *   current_position
  */UNS32 init_interpolation_param[50] =
-    {
-        0x6040, 0x0, 2, 0, 0x6, // Change state: ready to switch on
-        0x6040, 0x0, 2, 0, 0x7, // Change state: switched on
-        //0x2309, 0x0, 2, 0, -4, // Enable positive limit switch
-        //0x2309, 0x0, 2, 0, -5, // Enable negative limit switch
-        0x6040, 0x0, 2, 0, 0xF, // Enable command (motion not actually started yet)
-        0x60C4, 0x6, 1, 0, 0x0, // Clear buffer
-        0x60C4, 0x6, 1, 0, 0x1, // Enable buffer
-        0x60C2, 0x1, 1, 0, 0x1, // Set time period to 1 (second)
-        0x60C2, 0x2, 1, 0, 0x00, // Set time period to seconds
-        0x6060, 0x0, 1, 0, 0x7, // Set interpolation mode
-        0X60C0, 0X0, 2, 0, 0, // Set interpolation sub-mode
-        0x60C1, 0x1, 4, 0, 0xFFFFFFFF // Set first point to current position
+{
+0x6040, 0x0, 2, 0, 0x6, // Change state: ready to switch on
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x7, // Change state: switched on
+    //0x2309, 0x0, 2, 0, -4, // Enable positive limit switch
+    //0x2309, 0x0, 2, 0, -5, // Enable negative limit switch
+    0x6040,
+    0x0,
+    2,
+    0,
+    0xF, // Enable command (motion not actually started yet)
+    0x60C4,
+    0x6,
+    1,
+    0,
+    0x0, // Clear buffer
+    0x60C4,
+    0x6,
+    1,
+    0,
+    0x1, // Enable buffer
+    0x60C2,
+    0x1,
+    1,
+    0,
+    0x1, // Set time period to 1 (second)
+    0x60C2,
+    0x2,
+    1,
+    0,
+    0x00, // Set time period to seconds
+    0x6060,
+    0x0,
+    1,
+    0,
+    0x7, // Set interpolation mode
+    0X60C0,
+    0X0,
+    2,
+    0,
+    0, // Set interpolation sub-mode
+    0x60C1,
+    0x1,
+    4,
+    0,
+    0xFFFFFFFF
+// Set first point to current position
     };
 
 char *init_interpolation_error[2] =
-    {
-        "smartmotor interpolation mode init",
-        "Cannot init smartmotor in interpolation mode"
-    };
+{
+"smartmotor interpolation mode init", "Cannot init smartmotor in interpolation mode"
+};
 
 struct state_machine_struct init_interpolation_machine =
-    {
-        init_interpolation_function, 10, init_interpolation_param, 50,
-        init_interpolation_error
-    };
+{
+init_interpolation_function, 10, init_interpolation_param, 50, init_interpolation_error
+};
 
 void *start_interpolation_function[1] =
-    {
-        &writeNetworkDictCallBack // Begin motion
+{
+&writeNetworkDictCallBack
+// Begin motion
     };
 UNS32 start_interpolation_param[5] =
-    {
-        0x6040, 0x0, 2, 0, 0x1F // Begin motion
+{
+0x6040, 0x0, 2, 0, 0x1F
+// Begin motion
     };
 
 char *start_interpolation_error[2] =
-    {
-        "smartmotor interpolation mode start",
-        "Cannot start smartmotor in interpolation mode"
-    };
+{
+"smartmotor interpolation mode start", "Cannot start smartmotor in interpolation mode"
+};
 
 struct state_machine_struct start_interpolation_machine =
-    {start_interpolation_function, 1, start_interpolation_param, 5,
-        start_interpolation_error};
+{
+start_interpolation_function, 1, start_interpolation_param, 5, start_interpolation_error
+};
+
+void *gosub_function[1] =
+{
+&writeNetworkDictCallBack
+// Call subroutine
+    };
+
+UNS32 gosub_param[5] =
+{
+0x2309, 0x0, 2, 0, 0xFFFFFFFF
+// Call subroutine
+    };
+
+char *gosub_error[2] =
+{
+"smartmotor subroutine called", "Cannot call smartmotor subroutine"
+};
+
+struct state_machine_struct gosub_machine =
+{
+gosub_function, 1, gosub_param, 5, gosub_error
+};
 
 void *stop_interpolation_function[2] =
-    {
-        &writeNetworkDictCallBack, // Write zero-length segment
-        &writeNetworkDictCallBack, // Repeat final data
+{
+&writeNetworkDictCallBack, // Write zero-length segment
+    &writeNetworkDictCallBack,
+// Repeat final data
     //&writeNetworkDictCallBack // leave drive on but holding at the ending position
     };
 UNS32 stop_interpolation_param[10] =
-    {
-        0x60C2, 0x1, 1, 0, 0x0, // Write zero-length segment
-        0x60C1, 0x1, 4, 0, 0xFFFFFFFF, // Repeat final data
+{
+0x60C2, 0x1, 1, 0, 0x0, // Write zero-length segment
+    0x60C1,
+    0x1,
+    4,
+    0,
+    0xFFFFFFFF,
+// Repeat final data
     //0x6040, 0x0, 2, 0, 0x0F, // leave drive on but holding at the ending position
     };
 
 char *stop_interpolation_error[2] =
-    {
-        "smartmotor interpolation mode closing. . .",
-        "Cannot stop simulation"
-    };
+{
+"smartmotor interpolation mode closing. . .", "Cannot stop simulation"
+};
 
 struct state_machine_struct stop_interpolation_machine =
-    {stop_interpolation_function, 2, stop_interpolation_param, 10,
-        stop_interpolation_error};
+{
+stop_interpolation_function, 2, stop_interpolation_param, 10, stop_interpolation_error
+};
 
 void *resume_interpolation_function[3] =
-    {
-        &writeNetworkDictCallBack, // Enable command (motion not actually started yet)
-        &writeNetworkDictCallBack, // back to the desire value
-        &writeNetworkDictCallBack  // Repeat final data
+{
+&writeNetworkDictCallBack, // Enable command (motion not actually started yet)
+    &writeNetworkDictCallBack, // back to the desire value
+    &writeNetworkDictCallBack
+// Repeat final data
     };
 /*
  * param:
  *   - current position
  */UNS32 resume_interpolation_param[15] =
-    {
-        0x6040, 0x0, 2, 0, 0xF, // Enable command (motion not actually started yet)
-        0x60C2, 0x1, 1, 0, 0x64, // back to the desire value
-        0x60C1, 0x1, 4, 0, 0xFFFFFFFF, // Repeat final data
+{
+0x6040, 0x0, 2, 0, 0xF, // Enable command (motion not actually started yet)
+    0x60C2,
+    0x1,
+    1,
+    0,
+    0x64, // back to the desire value
+    0x60C1,
+    0x1,
+    4,
+    0,
+    0xFFFFFFFF,
+// Repeat final data
     };
 
 char *resume_interpolation_error[2] =
-    {
-        "Interpolation resumed",
-        "Cannot resume interpolation"
-    };
+{
+"Interpolation resumed", "Cannot resume interpolation"
+};
 
 struct state_machine_struct resume_interpolation_machine =
-    {
-        resume_interpolation_function, 3, resume_interpolation_param, 15,
-        resume_interpolation_error
-    };
+{
+resume_interpolation_function, 3, resume_interpolation_param, 15, resume_interpolation_error
+};
 
 void *smart_off_function[3] =
-    {
-        &writeNetworkDictCallBack, // Change state: switched off
-        &writeNetworkDictCallBack, // Change state: switched off
-        &writeNetworkDictCallBack, // Change state: switched off
+{
+&writeNetworkDictCallBack, // Change state: switched off
+    &writeNetworkDictCallBack, // Change state: switched off
+    &writeNetworkDictCallBack,
+// Change state: switched off
     };
 UNS32 smart_off_param[15] =
-    {
-        0x6040, 0x0, 2, 0, 0x0,  // Change state: switched off
-        0x6040, 0x0, 2, 0, 0x80,  // Change state: switched off
-        0x6040, 0x0, 2, 0, 0x0,  // Change state: switched off
+{
+0x6040, 0x0, 2, 0, 0x0,  // Change state: switched off
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x80,  // Change state: switched off
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x0,
+// Change state: switched off
     };
 
 char *smart_off_error[2] =
-    {
-        "smartmotor off",
-        "Cannot switch off smartmotor"
-    };
+{
+"smartmotor off", "Cannot switch off smartmotor"
+};
 
 struct state_machine_struct smart_off_machine =
-    {
-        smart_off_function, 3, smart_off_param, 15, smart_off_error
-    };
+{
+smart_off_function, 3, smart_off_param, 15, smart_off_error
+};
 
 void *torque_function[9] =
-    {
-        &writeNetworkDictCallBack, // Set mode torque
-        &writeNetworkDictCallBack, // Set torque slope to 200
-        &writeNetworkDictCallBack, // Set torque to zero
-        &writeNetworkDictCallBack, // Change state ready to switch on
-        &writeNetworkDictCallBack // Start command
+{
+&writeNetworkDictCallBack, // Set mode torque
+    &writeNetworkDictCallBack, // Set torque slope to 200
+    &writeNetworkDictCallBack, // Set torque to zero
+    &writeNetworkDictCallBack, // Change state ready to switch on
+    &writeNetworkDictCallBack
+// Start command
     };
 /*
  * Param
  *   torque
  */UNS32 torque_param[25] =
-    {
-        0x6060, 0x0, 1, 0, 0x4, // Set mode torque
-        0x6087, 0x0, 4, 0, 0xC8, // Set torque slope to 200
-        0x6071, 0x0, 2, 0, 0xFFFFFFFF, // Set torque
-        0x6040, 0x0, 2, 0, 0x6, // Change state ready to switch on
-        0x6040, 0x0, 2, 0, 0xf // Start command
+{
+0x6060, 0x0, 1, 0, 0x4, // Set mode torque
+    0x6087,
+    0x0,
+    4,
+    0,
+    0xC8, // Set torque slope to 200
+    0x6071,
+    0x0,
+    2,
+    0,
+    0xFFFFFFFF, // Set torque
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x6, // Change state ready to switch on
+    0x6040,
+    0x0,
+    2,
+    0,
+    0xf
+// Start command
     };
 
 char *torque_error[2] =
-    {
-        "smartmotor torque mode",
-        "Cannot pass smartmotor in torque mode"
-    };
+{
+"smartmotor torque mode", "Cannot pass smartmotor in torque mode"
+};
 
 struct state_machine_struct torque_machine =
-    {
-        torque_function, 5, torque_param, 25, torque_error
-    };
+{
+torque_function, 5, torque_param, 25, torque_error
+};
 
 void *smart_limit_disable_function[2] =
-    {
-        &writeNetworkDictCallBack, // Enable left limit switch
-        &writeNetworkDictCallBack // Enable right limit switch
+{
+&writeNetworkDictCallBack, // Enable left limit switch
+    &writeNetworkDictCallBack
+// Enable right limit switch
     };
 UNS32 smart_limit_disable_param[10] =
-    {
-        0x2101, 0x3, 2, 0, 0x2,  // Disable positive limit switch input
-        0x2101, 0x3, 2, 0, 0x3,  // Disable negative limit switch input
+{
+0x2101, 0x3, 2, 0, 0x2,  // Disable positive limit switch input
+    0x2101,
+    0x3,
+    2,
+    0,
+    0x3,
+// Disable negative limit switch input
 
     };
 
 char *smart_limit_disable_error[2] =
-    {
-        "smartmotor disable limits",
-        "Cannot disable limits"
-    };
+{
+"smartmotor disable limits", "Cannot disable limits"
+};
 
 struct state_machine_struct smart_limit_disable_machine =
-    {smart_limit_disable_function, 2, smart_limit_disable_param, 10,
-        smart_limit_disable_error};
+{
+smart_limit_disable_function, 2, smart_limit_disable_param, 10, smart_limit_disable_error
+};
 
 void *smart_limit_enable_function[2] =
-    {
-        &writeNetworkDictCallBack, // Enable left limit switch
-        &writeNetworkDictCallBack // Enable right limit switch
+{
+&writeNetworkDictCallBack, // Enable left limit switch
+    &writeNetworkDictCallBack
+// Enable right limit switch
     };
 /*
  * param:
@@ -704,39 +1278,45 @@ void *smart_limit_enable_function[2] =
  *   backward velocity
  *   homing offset
  */UNS32 smart_limit_enable_param[10] =
-    {
-        0x2309, 0x0, 2, 0, -4, // Enable positive limit switch
-        0x2309, 0x0, 2, 0, -5 // Enable negative limit switch
+{
+0x2309, 0x0, 2, 0, -4, // Enable positive limit switch
+    0x2309,
+    0x0,
+    2,
+    0,
+    -5
+// Enable negative limit switch
 
     };
 
 char *smart_limit_enable_error[2] =
-    {
-        "smartmotor enable limits",
-        "Cannot enable limits"
-    };
+{
+"smartmotor enable limits", "Cannot enable limits"
+};
 
 struct state_machine_struct smart_limit_enable_machine =
-    {smart_limit_enable_function, 2, smart_limit_enable_param, 10,
-        smart_limit_enable_error};
+{
+smart_limit_enable_function, 2, smart_limit_enable_param, 10, smart_limit_enable_error
+};
 
 void *smart_homing_function[15] =
-    {
-        &writeNetworkDictCallBack, // Reset status word
-        &writeNetworkDictCallBack, // Reset status word
-        &writeNetworkDictCallBack, // Reset status word
-        &writeNetworkDictCallBack, // Enable left limit switch
-        &writeNetworkDictCallBack, // Enable right limit switch
-        &writeNetworkDictCallBack, // Set mode of operation to homing
-        &writeNetworkDictCallBack, // Set homing method
-        &writeNetworkDictCallBack, // Set homing speed during search for switch
-        &writeNetworkDictCallBack, // Set homing speed during search for zero
-        &writeNetworkDictCallBack, // Set homing acceleration
-        &writeNetworkDictCallBack, // Set homing offset
-        &writeNetworkDictCallBack, // This is required to satisfy cia 402 drive state machine
-        &writeNetworkDictCallBack, // This is required to satisfy cia 402 drive state machine
-        &writeNetworkDictCallBack, // Enable command (motion not actually started yet)
-        &writeNetworkDictCallBack, // Begin motion
+{
+&writeNetworkDictCallBack, // Reset status word
+    &writeNetworkDictCallBack, // Reset status word
+    &writeNetworkDictCallBack, // Reset status word
+    &writeNetworkDictCallBack, // Enable left limit switch
+    &writeNetworkDictCallBack, // Enable right limit switch
+    &writeNetworkDictCallBack, // Set mode of operation to homing
+    &writeNetworkDictCallBack, // Set homing method
+    &writeNetworkDictCallBack, // Set homing speed during search for switch
+    &writeNetworkDictCallBack, // Set homing speed during search for zero
+    &writeNetworkDictCallBack, // Set homing acceleration
+    &writeNetworkDictCallBack, // Set homing offset
+    &writeNetworkDictCallBack, // This is required to satisfy cia 402 drive state machine
+    &writeNetworkDictCallBack, // This is required to satisfy cia 402 drive state machine
+    &writeNetworkDictCallBack, // Enable command (motion not actually started yet)
+    &writeNetworkDictCallBack,
+// Begin motion
     };
 /*
  * param:
@@ -744,169 +1324,249 @@ void *smart_homing_function[15] =
  *   backward velocity
  *   homing offset
  */UNS32 smart_homing_param[75] =
-    {
-        0x6040, 0x0, 2, 0, 0x0, // Reset status word
-        0x6040, 0x0, 2, 0, 0x80, // Reset status word
-        0x6040, 0x0, 2, 0, 0x0, // Reset status word
-        0x6060, 0x0, 1, 0, 0x6, // Set mode of operation to homing
-        0x6098, 0x0, 1, 0, 18, // Set homing method
-        0x2309, 0x0, 2, 0, -4, // Enable positive limit switch
-        0x2309, 0x0, 2, 0, -5, // Enable negative limit switch
-        0x6099, 0x1, 4, 0, 0xFFFFFFFF, // Set homing speed during search for switch
-        0x6099, 0x2, 4, 0, 0xFFFFFFFF, // Set homing speed during search for zero
-        0x609a, 0x0, 4, 0, 10, // Set homing acceleration
-        0x607c, 0x0, 4, 0, 0xFFFFFFFF, // Set homing offset
-        0x6040, 0x0, 2, 0, 0x6, // This is required to satisfy cia 402 drive state machine
-        0x6040, 0x0, 2, 0, 0x7, // This is required to satisfy cia 402 drive state machine
-        0x6040, 0x0, 2, 0, 0xF, // Enable command (motion not actually started yet)
-        0x6040, 0x0, 2, 0, 0x1F, // Begin motion
+{
+0x6040, 0x0, 2, 0, 0x0, // Reset status word
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x80, // Reset status word
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x0, // Reset status word
+    0x6060,
+    0x0,
+    1,
+    0,
+    0x6, // Set mode of operation to homing
+    0x6098,
+    0x0,
+    1,
+    0,
+    18, // Set homing method
+    0x2309,
+    0x0,
+    2,
+    0,
+    -4, // Enable positive limit switch
+    0x2309,
+    0x0,
+    2,
+    0,
+    -5, // Enable negative limit switch
+    0x6099,
+    0x1,
+    4,
+    0,
+    0xFFFFFFFF, // Set homing speed during search for switch
+    0x6099,
+    0x2,
+    4,
+    0,
+    0xFFFFFFFF, // Set homing speed during search for zero
+    0x609a,
+    0x0,
+    4,
+    0,
+    10, // Set homing acceleration
+    0x607c,
+    0x0,
+    4,
+    0,
+    0xFFFFFFFF, // Set homing offset
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x6, // This is required to satisfy cia 402 drive state machine
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x7, // This is required to satisfy cia 402 drive state machine
+    0x6040,
+    0x0,
+    2,
+    0,
+    0xF, // Enable command (motion not actually started yet)
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x1F,
+// Begin motion
 
     };
 
 char *smart_homing_error[2] =
-    {
-        "smartmotor homing. . .",
-        "Cannot run smart motor in homing mode"
-    };
+{
+"smartmotor homing. . .", "Cannot run smart motor in homing mode"
+};
 
 struct state_machine_struct smart_homing_machine =
-    {smart_homing_function, 15, smart_homing_param, 75,
-        smart_homing_error};
+{
+smart_homing_function, 15, smart_homing_param, 75, smart_homing_error
+};
 
 void *smart_acceleration_pp_get_function[1] =
-    {
-        &readNetworkDictCallback // Read smartmotor ADT
+{
+&readNetworkDictCallback
+// Read smartmotor ADT
     };
 UNS32 smart_acceleration_pp_get_param[3] =
-    {
-        0x6083, 0x0, 0 // Read smartmotor ADT
+{
+0x6083, 0x0, 0
+// Read smartmotor ADT
     };
 
 char *smart_acceleration_pp_get_error[2] =
-    {
-        NULL,
-        "Cannot read ADT"
-    };
+{
+NULL, "Cannot read ADT"
+};
 
 struct state_machine_struct smart_acceleration_pp_get_machine =
-    {smart_acceleration_pp_get_function, 1, smart_acceleration_pp_get_param, 3,
-        smart_acceleration_pp_get_error};
+{
+    smart_acceleration_pp_get_function,
+    1,
+    smart_acceleration_pp_get_param,
+    3,
+    smart_acceleration_pp_get_error
+};
 
 void *smart_following_error_get_function[1] =
-    {
-        &readNetworkDictCallback // Read smartmotor EL
+{
+&readNetworkDictCallback
+// Read smartmotor EL
     };
 UNS32 smart_following_error_get_param[3] =
-    {
-        0x6065, 0x0, 0 // Read smartmotor EL
+{
+0x6065, 0x0, 0
+// Read smartmotor EL
     };
 
 char *smart_following_error_get_error[2] =
-    {
-        NULL,
-        "Cannot read EL"
-    };
+{
+NULL, "Cannot read EL"
+};
 
 struct state_machine_struct smart_following_error_get_machine =
-    {smart_following_error_get_function, 1, smart_following_error_get_param, 3,
-        smart_following_error_get_error};
+{
+    smart_following_error_get_function,
+    1,
+    smart_following_error_get_param,
+    3,
+    smart_following_error_get_error
+};
 
 void *smart_velocity_pp_get_function[1] =
-    {
-        &readNetworkDictCallback // Read smartmotor VT
+{
+&readNetworkDictCallback
+// Read smartmotor VT
     };
 UNS32 smart_velocity_pp_get_param[3] =
-    {
-        0x6081, 0x0, 0 // Read smartmotor VT
+{
+0x6081, 0x0, 0
+// Read smartmotor VT
     };
 
 char *smart_velocity_pp_get_error[2] =
-    {
-        NULL,
-        "Cannot read VT"
-    };
+{
+NULL, "Cannot read VT"
+};
 
 struct state_machine_struct smart_velocity_pp_get_machine =
-    {smart_velocity_pp_get_function, 1, smart_velocity_pp_get_param, 3,
-        smart_velocity_pp_get_error};
+{
+smart_velocity_pp_get_function, 1, smart_velocity_pp_get_param, 3, smart_velocity_pp_get_error
+};
 
 void *smart_velocity_pp_set_function[1] =
-    {
-        &writeNetworkDictCallBack, // Reset status word
+{
+&writeNetworkDictCallBack,
+// Reset status word
     };
 /*
  * PARAM
  * VT
  */UNS32 smart_velocity_pp_set_param[5] =
-    {
-        0x6081, 0x0, 4, 0, 0xFFFFFFFF // Reset status word
+{
+0x6081, 0x0, 4, 0, 0xFFFFFFFF
+// Reset status word
     };
 
 char *smart_velocity_pp_set_error[2] =
-    {
-        "Velocity target set",
-        "Cannot set the velocity target"
-    };
+{
+"Velocity target set", "Cannot set the velocity target"
+};
 
 struct state_machine_struct smart_velocity_pp_set_machine =
-    {smart_velocity_pp_set_function, 1, smart_velocity_pp_set_param, 5,
-        smart_velocity_pp_set_error};
+{
+smart_velocity_pp_set_function, 1, smart_velocity_pp_set_param, 5, smart_velocity_pp_set_error
+};
 
 void *smart_statusword_function[1] =
-    {
-        &readNetworkDictCallback // Read smartmotor status word 0
+{
+&readNetworkDictCallback
+// Read smartmotor status word 0
     };
 UNS32 smart_statusword_param[3] =
-    {
-        0x2304, 0x1, 0 // Read smartmotor status word 0
+{
+0x2304, 0xFFFFFFFF, 0
+// Read smartmotor status word 0
     };
 
 char *smart_statusword_error[2] =
-    {
-        "Status word read",
-        "Cannot read status word0 register"
-    };
+{
+"Status word read", "Cannot read status word0 register"
+};
 
 struct state_machine_struct smart_statusword_machine =
-    {smart_statusword_function, 1, smart_statusword_param, 3,
-        smart_statusword_error};
+{
+smart_statusword_function, 1, smart_statusword_param, 3, smart_statusword_error
+};
 
 void *smart_reset_statusword_function[1] =
-    {
-        &writeNetworkDictCallBack, // Reset status word
+{
+&writeNetworkDictCallBack,
+// Reset status word
     };
 UNS32 smart_reset_statusword_param[5] =
-    {
-        0x6040, 0x0, 2, 0, 0x80 // Reset status word
+{
+0x6040, 0x0, 2, 0, 0x80
+// Reset status word
     };
 
 char *smart_reset_statusword_error[2] =
-    {
-        "Status word cleared",
-        "Cannot reset status word"
-    };
+{
+"Status word cleared", "Cannot reset status word"
+};
 
 struct state_machine_struct smart_reset_statusword_machine =
-    {smart_reset_statusword_function, 1, smart_reset_statusword_param, 5,
-        smart_reset_statusword_error};
+{
+smart_reset_statusword_function, 1, smart_reset_statusword_param, 5, smart_reset_statusword_error
+};
 
 void *smart_origin_function[1] =
-    {
-        &writeNetworkDictCallBack, // Set origin
+{
+&writeNetworkDictCallBack,
+// Set origin
     };
 UNS32 smart_origin_param[5] =
-    {
-        0x2202, 0x0, 4, 0, 0x00  // Set origin
+{
+0x2202, 0x0, 4, 0, 0x00
+// Set origin
     };
 
 char *smart_origin_error[2] =
-    {
-        "Origin set",
-        "Cannot set origin"
-    };
+{
+"Origin set", "Cannot set origin"
+};
 
 struct state_machine_struct smart_origin_machine =
-    {smart_origin_function, 1, smart_origin_param, 5, smart_origin_error};
+{
+smart_origin_function, 1, smart_origin_param, 5, smart_origin_error
+};
 
 void _machine_init()
 {
@@ -966,9 +1626,8 @@ void _machine_reset(CO_Data* d, UNS8 nodeId)
   {
     if((sdo_result != 0) && (sdo_result != 0xFF))
     {
-      printf("ERR[%d on node %x state %d]: %s (SDO close error %d)\n",
-          InternalError, nodeId, machine_state_index[nodeId],
-          next_machine[nodeId][0]->error[1], sdo_result);
+      printf("ERR[%d on node %x state %d]: %s (SDO close error %d)\n", InternalError, nodeId,
+          machine_state_index[nodeId], next_machine[nodeId][0]->error[1], sdo_result);
     }
   }
 #endif
@@ -1025,15 +1684,14 @@ void _machine_callback(CO_Data* d, UNS8 nodeId)
  * @param nodeId: ID del nodo con cui comunicare
  * @param callback: array di callback da cui viene presa la prossima funzione da eseguire alla fine della macchina a stati
  * @param callback_num: dimensione della matrice di callback
+ * @param from_callback: indica se la funzione viene chiamata tramite un callback
  * @param var_count: numero di variabili contenute nella lista args
  * @param args: lista dei parametri da passare alla funzione successiva
  *
  */
 
 int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
-    struct state_machine_struct *machine[], int callback_num, int from_callback,
-    int var_count,
-    ...)
+    struct state_machine_struct *machine[], int callback_num, int from_callback, int var_count, ...)
 {
   void *last_function = NULL;
   UNS32 readNetworkDictCallback_result = 0;
@@ -1058,10 +1716,8 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 #ifdef CANOPENSHELL_VERBOSE
         if(verbose_flag)
         {
-          printf(
-              "ERR[%d on node %x state %d]: %s (Operazione in corso)\n",
-              InternalError, nodeId, machine_state_index[nodeId],
-              machine[0]->error[1]);
+          printf("ERR[%d on node %x state %d]: %s (Operazione in corso)\n", InternalError, nodeId,
+              machine_state_index[nodeId], machine[0]->error[1]);
         }
 #endif
 
@@ -1078,7 +1734,6 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
         if(motor_active[i] > 0)
         {
 
-
           lock_value = pthread_mutex_lock(&machine_mux[i]);
 
           if(machine_run[i] == 1)
@@ -1086,10 +1741,8 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 #ifdef CANOPENSHELL_VERBOSE
             if(verbose_flag)
             {
-              printf(
-                  "ERR[%d on node %x state %d]: %s (Operazione in corso node 0)\n",
-                  InternalError, i, machine_state_index[i],
-                  machine[0]->error[1]);
+              printf("ERR[%d on node %x state %d]: %s (Operazione in corso node 0)\n",
+                  InternalError, i, machine_state_index[i], machine[0]->error[1]);
 
               printf("callback num: %d\n", callback_num);
             }
@@ -1123,9 +1776,8 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 #ifdef CANOPENSHELL_VERBOSE
       if(verbose_flag)
       {
-        printf(
-            "WARN[%d on node %x state %d]: Qualcuno è entrato senza bussare...\n",
-            InternalError, nodeId, machine_state_index[nodeId]);
+        printf("WARN[%d on node %x state %d]: Qualcuno è entrato senza bussare...\n", InternalError,
+            nodeId, machine_state_index[nodeId]);
       }
 #endif
       lock_value = pthread_mutex_unlock(&machine_mux[nodeId]);
@@ -1169,8 +1821,8 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 #ifdef CANOPENSHELL_VERBOSE
       if(verbose_flag)
       {
-        printf("ERR[%d on node %x state %d]: Nessuna funzione\n", InternalError,
-            nodeId, machine_state_index[nodeId]);
+        printf("ERR[%d on node %x state %d]: Nessuna funzione\n", InternalError, nodeId,
+            machine_state_index[nodeId]);
       }
 #endif
 
@@ -1196,8 +1848,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
       if(next_machine[nodeId] == NULL)
       {
         next_machine[nodeId] = malloc(
-            next_machine_size[nodeId]
-                * sizeof(struct state_machine_struct *));
+            next_machine_size[nodeId] * sizeof(struct state_machine_struct *));
 
         if(next_machine[nodeId] == NULL)
         {
@@ -1220,8 +1871,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
         free(next_machine[nodeId]);
         next_machine[nodeId] = NULL;
         next_machine[nodeId] = malloc(
-            next_machine_size[nodeId]
-                * sizeof(struct state_machine_struct *));
+            next_machine_size[nodeId] * sizeof(struct state_machine_struct *));
 
         if(next_machine[nodeId] == NULL)
         {
@@ -1251,9 +1901,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
         {
           if(next_machine[i] == NULL)
           {
-            next_machine[i] = malloc(
-                next_machine_size[i]
-                    * sizeof(struct state_machine_struct *));
+            next_machine[i] = malloc(next_machine_size[i] * sizeof(struct state_machine_struct *));
 
             if(next_machine[i] == NULL)
             {
@@ -1262,8 +1910,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
               {
                 printf(
                     "ERR[%d on node %x state %d]: %s (memoria finita per allocare next_machine[%d])\n",
-                    InternalError, i, machine_state_index[i],
-                    next_machine[i][0]->error[1], i);
+                    InternalError, i, machine_state_index[i], next_machine[i][0]->error[1], i);
               }
 #endif
 
@@ -1275,9 +1922,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
           {
             free(next_machine[i]);
             next_machine[i] = NULL;
-            next_machine[i] = malloc(
-                next_machine_size[i]
-                    * sizeof(struct state_machine_struct *));
+            next_machine[i] = malloc(next_machine_size[i] * sizeof(struct state_machine_struct *));
 
             if(next_machine[i] == NULL)
             {
@@ -1286,8 +1931,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
               {
                 printf(
                     "ERR[%d on node %x state %d]: %s (memoria finita per allocare next_machine[%d])\n",
-                    InternalError, i, machine_state_index[i],
-                    next_machine[i][0]->error[1], i);
+                    InternalError, i, machine_state_index[i], next_machine[i][0]->error[1], i);
               }
 #endif
 
@@ -1318,8 +1962,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 #ifdef CANOPENSHELL_VERBOSE
             if(verbose_flag)
             {
-              printf(
-                  "ERR[%d on node %x state %d]: %s (memoria finita per allocare args_ptr[%d])\n",
+              printf("ERR[%d on node %x state %d]: %s (memoria finita per allocare args_ptr[%d])\n",
                   InternalError, nodeId, machine_state_index[nodeId],
                   next_machine[nodeId][0]->error[1], nodeId);
             }
@@ -1349,8 +1992,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                 {
                   printf(
                       "ERR[%d on node %x state %d]: %s (memoria finita per allocare args_ptr[%d])\n",
-                      InternalError, i, machine_state_index[i],
-                      next_machine[i][0]->error[1], i);
+                      InternalError, i, machine_state_index[i], next_machine[i][0]->error[1], i);
                 }
 #endif
 
@@ -1407,8 +2049,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 #ifdef CANOPENSHELL_VERBOSE
       if(verbose_flag)
       {
-        printf("ERR[%d on node %x state %d]: Errore al ritorno dal callback\n",
-            InternalError,
+        printf("ERR[%d on node %x state %d]: Errore al ritorno dal callback\n", InternalError,
             nodeId, machine_state_index[nodeId]);
       }
 #endif
@@ -1418,8 +2059,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
     }
     else
     {
-      if(machine_state_index[nodeId]
-          > next_machine[nodeId][0]->function_size)
+      if(machine_state_index[nodeId] > next_machine[nodeId][0]->function_size)
       {
 #ifdef CANOPENSHELL_VERBOSE
         if(verbose_flag)
@@ -1428,8 +2068,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
               "WARN[%d on node %x state %d]: Qualcuno si è intrufolato dalla porta posteriore...\n",
               InternalError, nodeId, machine_state_index[nodeId]);
 
-          printf("Il numero di chiamate a questa funzione è: %d\n",
-              function_call_number[nodeId]);
+          printf("Il numero di chiamate a questa funzione è: %d\n", function_call_number[nodeId]);
         }
 #endif
       }
@@ -1438,8 +2077,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
       if(verbose_flag)
       {
         if(function_call_number[nodeId] < 1)
-          printf(
-              "WARN[%d on node %x state %d]: Sei andato un po' troppo veloce...\n",
+          printf("WARN[%d on node %x state %d]: Sei andato un po' troppo veloce...\n",
               InternalError, nodeId, machine_state_index[nodeId]);
       }
 #endif
@@ -1456,14 +2094,13 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
     if(machine_state_index[nodeId] != 0)
     {
       int sdo_result;
-      UNS8 line;
+      UNS8 line = 0;
 
       UNS8 i;
 
       for(i = 0; i < SDO_MAX_SIMULTANEOUS_TRANSFERS; i++)
       {
-        if((d->transfers[i].state != SDO_RESET) &&
-            (d->transfers[i].CliServNbr == nodeId))
+        if((d->transfers[i].state != SDO_RESET) && (d->transfers[i].CliServNbr == nodeId))
         {
           line = i;
           break;
@@ -1473,13 +2110,11 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
       switch(d->transfers[line].state)
       {
         case SDO_ABORTED_INTERNAL:
-          #ifdef CANOPENSHELL_VERBOSE
+#ifdef CANOPENSHELL_VERBOSE
           if(verbose_flag)
           {
-            printf(
-                "ERR[%d on node %x state %d]: %s (Aborted internal code: %x)\n",
-                InternalError, nodeId, machine_state_index[nodeId],
-                next_machine[nodeId][0]->error[1],
+            printf("ERR[%d on node %x state %d]: %s (Aborted internal code: %x)\n", InternalError,
+                nodeId, machine_state_index[nodeId], next_machine[nodeId][0]->error[1],
                 d->transfers[line].abortCode);
           }
 #endif
@@ -1491,9 +2126,9 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
           {
             if((sdo_result != 0) && (sdo_result != 0xFF))
             {
-              printf("ERR[%d on node %x state %d]: %s (SDO close error %d)\n",
-                  InternalError, nodeId, machine_state_index[nodeId],
-                  next_machine[nodeId][0]->error[1], sdo_result);
+              printf("ERR[%d on node %x state %d]: %s (SDO close error %d)\n", InternalError,
+                  nodeId, machine_state_index[nodeId], next_machine[nodeId][0]->error[1],
+                  sdo_result);
             }
           }
 #endif
@@ -1503,23 +2138,20 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
           break;
 
         default:
-          if(next_machine[nodeId][0]->function[machine_state_index[nodeId]
-              - 1]
+          if(next_machine[nodeId][0]->function[machine_state_index[nodeId] - 1]
               == &writeNetworkDictCallBack)
           {
             function_call_number[nodeId]--;
             last_function = &writeNetworkDictCallBack;
 
-            sdo_result = getWriteResultNetworkDict(d, nodeId,
-                &canopen_abort_code);
+            sdo_result = getWriteResultNetworkDict(d, nodeId, &canopen_abort_code);
             switch(sdo_result)
             {
               case SDO_DOWNLOAD_IN_PROGRESS:
-                case SDO_UPLOAD_IN_PROGRESS:
-                while((sdo_result = getWriteResultNetworkDict(d, nodeId,
-                    &canopen_abort_code)) != SDO_DOWNLOAD_IN_PROGRESS)
-                  printf(
-                      "ERR[%d on node %x state %d]: Download in progress (getWrite)\n",
+              case SDO_UPLOAD_IN_PROGRESS:
+                while((sdo_result = getWriteResultNetworkDict(d, nodeId, &canopen_abort_code))
+                    != SDO_DOWNLOAD_IN_PROGRESS)
+                  printf("ERR[%d on node %x state %d]: Download in progress (getWrite)\n",
                       InternalError, nodeId, machine_state_index[nodeId]);
                 ;
                 break;
@@ -1532,10 +2164,9 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                 {
                   if((sdo_result != 0) && (sdo_result != 0xFF))
                   {
-                    printf(
-                        "ERR[%d on node %x state %d]: %s (SDO close error %d)\n",
-                        InternalError, nodeId, machine_state_index[nodeId],
-                        next_machine[nodeId][0]->error[1], sdo_result);
+                    printf("ERR[%d on node %x state %d]: %s (SDO close error %d)\n", InternalError,
+                        nodeId, machine_state_index[nodeId], next_machine[nodeId][0]->error[1],
+                        sdo_result);
                   }
                 }
 #endif
@@ -1545,8 +2176,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 #ifdef CANOPENSHELL_VERBOSE
                   if(verbose_flag)
                   {
-                    printf(
-                        "ERR[%d on node %x state %d]: %s (Canopen abort code %x)\n",
+                    printf("ERR[%d on node %x state %d]: %s (Canopen abort code %x)\n",
                         CANOpenError, nodeId, machine_state_index[nodeId],
                         next_machine[nodeId][0]->error[1], canopen_abort_code);
                   }
@@ -1563,21 +2193,19 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                 {
                   if((sdo_result != 0) && (sdo_result != 0xFF))
                   {
-                    printf(
-                        "ERR[%d on node %x state %d]: %s (SDO close error %d)\n",
-                        InternalError, nodeId, machine_state_index[nodeId],
-                        next_machine[nodeId][0]->error[1], sdo_result);
+                    printf("ERR[%d on node %x state %d]: %s (SDO close error %d)\n", InternalError,
+                        nodeId, machine_state_index[nodeId], next_machine[nodeId][0]->error[1],
+                        sdo_result);
                   }
                 }
 #endif
                 break;
 
               case SDO_ABORTED_RCV:
-                #ifdef CANOPENSHELL_VERBOSE
+#ifdef CANOPENSHELL_VERBOSE
                 if(verbose_flag)
                 {
-                  printf(
-                      "ERR[%d on node %x state %d]: %s (SDO getWriteResult error %d)\n",
+                  printf("ERR[%d on node %x state %d]: %s (SDO getWriteResult error %d)\n",
                       InternalError, nodeId, machine_state_index[nodeId],
                       next_machine[nodeId][0]->error[1], sdo_result);
                 }
@@ -1590,10 +2218,9 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                 {
                   if((sdo_result != 0) && (sdo_result != 0xFF))
                   {
-                    printf(
-                        "ERR[%d on node %x state %d]: %s (SDO close error %d)\n",
-                        InternalError, nodeId, machine_state_index[nodeId],
-                        next_machine[nodeId][0]->error[1], sdo_result);
+                    printf("ERR[%d on node %x state %d]: %s (SDO close error %d)\n", InternalError,
+                        nodeId, machine_state_index[nodeId], next_machine[nodeId][0]->error[1],
+                        sdo_result);
                   }
                 }
 #endif
@@ -1605,11 +2232,10 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                 break;
 
               case SDO_RESET:
-                #ifdef CANOPENSHELL_VERBOSE
+#ifdef CANOPENSHELL_VERBOSE
                 if(verbose_flag)
                 {
-                  printf(
-                      "ERR[%d on node %x state %d]: %s (SDO getWriteResult error %d)\n",
+                  printf("ERR[%d on node %x state %d]: %s (SDO getWriteResult error %d)\n",
                       InternalError, nodeId, machine_state_index[nodeId],
                       next_machine[nodeId][0]->error[1], sdo_result);
 
@@ -1623,11 +2249,10 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                 break;
 
               default:
-                #ifdef CANOPENSHELL_VERBOSE
+#ifdef CANOPENSHELL_VERBOSE
                 if(verbose_flag)
                 {
-                  printf(
-                      "ERR[%d on node %x state %d]: %s (SDO getWriteResult error %d)\n",
+                  printf("ERR[%d on node %x state %d]: %s (SDO getWriteResult error %d)\n",
                       InternalError, nodeId, machine_state_index[nodeId],
                       next_machine[nodeId][0]->error[1], sdo_result);
 
@@ -1643,10 +2268,9 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                 {
                   if((sdo_result != 0) && (sdo_result != 0xFF))
                   {
-                    printf(
-                        "ERR[%d on node %x state %d]: %s (SDO close error %d)\n",
-                        InternalError, nodeId, machine_state_index[nodeId],
-                        next_machine[nodeId][0]->error[1], sdo_result);
+                    printf("ERR[%d on node %x state %d]: %s (SDO close error %d)\n", InternalError,
+                        nodeId, machine_state_index[nodeId], next_machine[nodeId][0]->error[1],
+                        sdo_result);
                   }
                 }
 #endif
@@ -1656,27 +2280,25 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                 break;
             }
           }
-          else if(next_machine[nodeId][0]->function[machine_state_index[nodeId]
-              - 1] == &readNetworkDictCallback)
+          else if(next_machine[nodeId][0]->function[machine_state_index[nodeId] - 1]
+              == &readNetworkDictCallback)
           {
             function_call_number[nodeId]--;
             last_function = &readNetworkDictCallback;
 
             UNS32 size = 64;
 
-            sdo_result = getReadResultNetworkDict(d, nodeId,
-                &readNetworkDictCallback_result, &size,
+            sdo_result = getReadResultNetworkDict(d, nodeId, &readNetworkDictCallback_result, &size,
                 &canopen_abort_code);
 
             switch(sdo_result)
             {
               case SDO_DOWNLOAD_IN_PROGRESS:
-                case SDO_UPLOAD_IN_PROGRESS:
+              case SDO_UPLOAD_IN_PROGRESS:
                 while((sdo_result = getReadResultNetworkDict(d, nodeId,
-                    &readNetworkDictCallback_result,
-                    &size, &canopen_abort_code)) != SDO_DOWNLOAD_IN_PROGRESS)
-                  printf(
-                      "ERR[%d on node %x state %d]: Download in progress (getRead)\n",
+                    &readNetworkDictCallback_result, &size, &canopen_abort_code))
+                    != SDO_DOWNLOAD_IN_PROGRESS)
+                  printf("ERR[%d on node %x state %d]: Download in progress (getRead)\n",
                       InternalError, nodeId, machine_state_index[nodeId]);
                 ;
                 break;
@@ -1689,10 +2311,9 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                 {
                   if((sdo_result != 0) && (sdo_result != 0xFF))
                   {
-                    printf(
-                        "ERR[%d on node %x state %d]: %s (SDO close error %d)\n",
-                        InternalError, nodeId, machine_state_index[nodeId],
-                        next_machine[nodeId][0]->error[1], sdo_result);
+                    printf("ERR[%d on node %x state %d]: %s (SDO close error %d)\n", InternalError,
+                        nodeId, machine_state_index[nodeId], next_machine[nodeId][0]->error[1],
+                        sdo_result);
                   }
                 }
 #endif
@@ -1702,8 +2323,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 #ifdef CANOPENSHELL_VERBOSE
                   if(verbose_flag)
                   {
-                    printf(
-                        "ERR[%d on node %x state %d]: %s (Canopen abort code %x)\n",
+                    printf("ERR[%d on node %x state %d]: %s (Canopen abort code %x)\n",
                         CANOpenError, nodeId, machine_state_index[nodeId],
                         next_machine[nodeId][0]->error[1], canopen_abort_code);
                   }
@@ -1718,13 +2338,9 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                   // Nel caso in cui non è l'ultima funzione oppure ci sono altre
                   // macchine accodate, eseguo ora la funzione
 
-                  if((machine_state_index[nodeId]
-                      != next_machine[nodeId][0]->function_size)
-                      ||
-                      ((next_machine[nodeId] != NULL)
-                          && (next_machine_size[nodeId] > 1)))
-                    callback_user[nodeId](d, nodeId,
-                        machine_state_index[nodeId],
+                  if((machine_state_index[nodeId] != next_machine[nodeId][0]->function_size)
+                      || ((next_machine[nodeId] != NULL) && (next_machine_size[nodeId] > 1)))
+                    callback_user[nodeId](d, nodeId, machine_state_index[nodeId], 1,
                         readNetworkDictCallback_result);
                 }
 #ifdef CANOPENSHELL_VERBOSE
@@ -1732,8 +2348,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                 {
                   if(verbose_flag)
                   {
-                    printf(
-                        "WARN[%d on node %x state %d]: Lettura senza funzione di callback \n",
+                    printf("WARN[%d on node %x state %d]: Lettura senza funzione di callback \n",
                         InternalError, nodeId, machine_state_index[nodeId]);
                   }
                 }
@@ -1749,14 +2364,12 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                 {
                   if((sdo_result != 0) && (sdo_result != 0xFF))
                   {
-                    printf(
-                        "ERR[%d on node %x state %d]: %s (SDO close error %d)\n",
-                        InternalError, nodeId, machine_state_index[nodeId],
-                        next_machine[nodeId][0]->error[1], sdo_result);
+                    printf("ERR[%d on node %x state %d]: %s (SDO close error %d)\n", InternalError,
+                        nodeId, machine_state_index[nodeId], next_machine[nodeId][0]->error[1],
+                        sdo_result);
                   }
 
-                  printf(
-                      "ERR[%d on node %x state %d]: %s (SDO getReadResult error %d)\n",
+                  printf("ERR[%d on node %x state %d]: %s (SDO getReadResult error %d)\n",
                       InternalError, nodeId, machine_state_index[nodeId],
                       next_machine[nodeId][0]->error[1], sdo_result);
                 }
@@ -1767,11 +2380,10 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                 break;
 
               default:
-                #ifdef CANOPENSHELL_VERBOSE
+#ifdef CANOPENSHELL_VERBOSE
                 if(verbose_flag)
                 {
-                  printf(
-                      "ERR[%d on node %x state %d]: %s (SDO getReadResult error %d)\n",
+                  printf("ERR[%d on node %x state %d]: %s (SDO getReadResult error %d)\n",
                       InternalError, nodeId, machine_state_index[nodeId],
                       next_machine[nodeId][0]->error[1], sdo_result);
                 }
@@ -1784,10 +2396,9 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                 {
                   if((sdo_result != 0) && (sdo_result != 0xFF))
                   {
-                    printf(
-                        "ERR[%d on node %x state %d]: %s (SDO close error %d)\n",
-                        InternalError, nodeId, machine_state_index[nodeId],
-                        next_machine[nodeId][0]->error[1], sdo_result);
+                    printf("ERR[%d on node %x state %d]: %s (SDO close error %d)\n", InternalError,
+                        nodeId, machine_state_index[nodeId], next_machine[nodeId][0]->error[1],
+                        sdo_result);
                   }
                 }
 #endif
@@ -1818,8 +2429,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
       masterSendNMTstateChange_t machine_function =
           next_machine[nodeId][0]->function[machine_state_index[nodeId]];
 
-      last_function =
-          next_machine[nodeId][0]->function[machine_state_index[nodeId]];
+      last_function = next_machine[nodeId][0]->function[machine_state_index[nodeId]];
 
       // chimao EnterMutex e LeaveMutex solo se non sono in un callback
       if(!from_callback)
@@ -1841,26 +2451,22 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 #ifdef CANOPENSHELL_VERBOSE
       if(verbose_flag)
       {
-        if(machine_state_index[nodeId]
-            > next_machine[nodeId][0]->function_size)
+        if(machine_state_index[nodeId] > next_machine[nodeId][0]->function_size)
         {
-          printf(
-              "WARN[%d on node %x state %d]: Qualcuno uscito senza salutare...\n",
-              InternalError, nodeId, machine_state_index[nodeId]);
+          printf("WARN[%d on node %x state %d]: Qualcuno uscito senza salutare...\n", InternalError,
+              nodeId, machine_state_index[nodeId]);
         }
       }
 #endif
 
-      if(machine_state_index[nodeId]
-          == next_machine[nodeId][0]->function_size)
+      if(machine_state_index[nodeId] == next_machine[nodeId][0]->function_size)
         break;
     }
   }
 
   if(machine_state_index[nodeId] < next_machine[nodeId][0]->function_size)
   {
-    if(next_machine[nodeId][0]->function[machine_state_index[nodeId]]
-        == &writeNetworkDictCallBack)
+    if(next_machine[nodeId][0]->function[machine_state_index[nodeId]] == &writeNetworkDictCallBack)
     {
       writeNetworkDictCallBack_t machine_function =
           next_machine[nodeId][0]->function[machine_state_index[nodeId]];
@@ -1873,21 +2479,18 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
       {
         // se il parametro è pari a 0xFFFFFFFF allora significa che devo prenderlo da quelli
         // variabili
-        if(next_machine[nodeId][0]->param[machine_state_param_index[nodeId]]
-            == 0xFFFFFFFF)
+        if(next_machine[nodeId][0]->param[machine_state_param_index[nodeId]] == 0xFFFFFFFF)
         {
           if(next_var_count[nodeId] < 1)
           {
             if(var_count_total[nodeId] == 0)
-              user_param[i] =
-                  next_machine[nodeId][0]->param[machine_state_param_index[nodeId]];
+              user_param[i] = next_machine[nodeId][0]->param[machine_state_param_index[nodeId]];
             else
             {
 #ifdef CANOPENSHELL_VERBOSE
               if(verbose_flag)
               {
-                printf(
-                    "ERR[%d on node %x state %d]: %s (-1 insieme a parametri utente)\n",
+                printf("ERR[%d on node %x state %d]: %s (-1 insieme a parametri utente)\n",
                     InternalError, nodeId, machine_state_index[nodeId],
                     next_machine[nodeId][0]->error[1]);
               }
@@ -1906,8 +2509,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
           }
         }
         else
-          user_param[i] =
-              next_machine[nodeId][0]->param[machine_state_param_index[nodeId]];
+          user_param[i] = next_machine[nodeId][0]->param[machine_state_param_index[nodeId]];
 
         machine_state_param_index[nodeId]++;
       }
@@ -1924,9 +2526,8 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
         if(!from_callback)
           EnterMutex();
 
-        machine_function_return = machine_function(d, nodeId, user_param[0],
-            user_param[1], user_param[2], user_param[3], &user_param[4],
-            _machine_callback, 0);
+        machine_function_return = machine_function(d, nodeId, user_param[0], user_param[1],
+            user_param[2], user_param[3], &user_param[4], _machine_callback, 0);
 
         // chiamo EnterMutex e LeaveMutex solo se non sono in un callback
         if(!from_callback)
@@ -1939,11 +2540,9 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 #ifdef CANOPENSHELL_VERBOSE
           if(verbose_flag)
           {
-            if(machine_state_index[nodeId]
-                > next_machine[nodeId][0]->function_size)
+            if(machine_state_index[nodeId] > next_machine[nodeId][0]->function_size)
             {
-              printf(
-                  "WARN[%d on node %x state %d]: Qualcuno uscito senza salutare...\n",
+              printf("WARN[%d on node %x state %d]: Qualcuno uscito senza salutare...\n",
                   InternalError, nodeId, machine_state_index[nodeId]);
             }
 
@@ -1958,10 +2557,8 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 #ifdef CANOPENSHELL_VERBOSE
           if(verbose_flag)
           {
-            printf(
-                "ERR[%d on node %x state %d]: %s (writeNetwork error)\n",
-                InternalError, nodeId, machine_state_index[nodeId],
-                next_machine[nodeId][0]->error[1]);
+            printf("ERR[%d on node %x state %d]: %s (writeNetwork error)\n", InternalError, nodeId,
+                machine_state_index[nodeId], next_machine[nodeId][0]->error[1]);
           }
 #endif
 
@@ -1995,8 +2592,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
               lock_value = pthread_mutex_unlock(&machine_mux);
             }
 #endif
-            machine_state_param_index[i] =
-                machine_state_param_index[nodeId];
+            machine_state_param_index[i] = machine_state_param_index[nodeId];
             function_call_number[i]++;
 
             if(!from_callback)
@@ -2004,15 +2600,8 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
               EnterMutex();
             }
 
-            machine_function_return = machine_function(d, i,
-                user_param[0],
-                user_param[1],
-                user_param[2],
-                user_param[3],
-                &user_param[4],
-                _machine_callback,
-                0
-                );
+            machine_function_return = machine_function(d, i, user_param[0], user_param[1],
+                user_param[2], user_param[3], &user_param[4], _machine_callback, 0);
 
             if(!from_callback)
             {
@@ -2026,11 +2615,9 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 #ifdef CANOPENSHELL_VERBOSE
               if(verbose_flag)
               {
-                if(machine_state_index[i]
-                    > next_machine[i][0]->function_size)
+                if(machine_state_index[i] > next_machine[i][0]->function_size)
                 {
-                  printf(
-                      "WARN[%d on node %x state %d]: Qualcuno uscito senza salutare...\n",
+                  printf("WARN[%d on node %x state %d]: Qualcuno uscito senza salutare...\n",
                       InternalError, nodeId, machine_state_index[i]);
                 }
               }
@@ -2041,10 +2628,8 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 #ifdef CANOPENSHELL_VERBOSE
               if(verbose_flag)
               {
-                printf(
-                    "ERR[%d on node %x state %d]: %s (writeNetwork error)\n",
-                    InternalError, i, machine_state_index[i],
-                    next_machine[i][0]->error[1]);
+                printf("ERR[%d on node %x state %d]: %s (writeNetwork error)\n", InternalError, i,
+                    machine_state_index[i], next_machine[i][0]->error[1]);
               }
 #endif
             }
@@ -2073,21 +2658,18 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
       {
         // se il parametro è pari a 0xFFFFFFFF allora significa che devo prenderlo da quelli
         // variabili
-        if(next_machine[nodeId][0]->param[machine_state_param_index[nodeId]]
-            == 0xFFFFFFFF)
+        if(next_machine[nodeId][0]->param[machine_state_param_index[nodeId]] == 0xFFFFFFFF)
         {
           if(next_var_count[nodeId] < 1)
           {
             if(var_count_total[nodeId] == 0)
-              user_param[i] =
-                  next_machine[nodeId][0]->param[machine_state_param_index[nodeId]];
+              user_param[i] = next_machine[nodeId][0]->param[machine_state_param_index[nodeId]];
             else
             {
 #ifdef CANOPENSHELL_VERBOSE
               if(verbose_flag)
               {
-                printf(
-                    "ERR[%d on node %x state %d]: %s (-1 insieme a parametri utente)\n",
+                printf("ERR[%d on node %x state %d]: %s (-1 insieme a parametri utente)\n",
                     InternalError, nodeId, machine_state_index[nodeId],
                     next_machine[nodeId][0]->error[1]);
               }
@@ -2106,8 +2688,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
           }
         }
         else
-          user_param[i] =
-              next_machine[nodeId][0]->param[machine_state_param_index[nodeId]];
+          user_param[i] = next_machine[nodeId][0]->param[machine_state_param_index[nodeId]];
 
         machine_state_param_index[nodeId]++;
       }
@@ -2120,8 +2701,8 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
         if(!from_callback)
           EnterMutex();
 
-        machine_function_return = machine_function(d, nodeId, user_param[0],
-            user_param[1], user_param[2], _machine_callback, 0);
+        machine_function_return = machine_function(d, nodeId, user_param[0], user_param[1],
+            user_param[2], _machine_callback, 0);
 
         // chiamo EnterMutex e LeaveMutex solo se non sono in un callback
         if(!from_callback)
@@ -2134,11 +2715,9 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 #ifdef CANOPENSHELL_VERBOSE
           if(verbose_flag)
           {
-            if(machine_state_index[nodeId]
-                > next_machine[nodeId][0]->function_size)
+            if(machine_state_index[nodeId] > next_machine[nodeId][0]->function_size)
             {
-              printf(
-                  "WARN[%d on node %x state %d]: Qualcuno uscito senza salutare...\n",
+              printf("WARN[%d on node %x state %d]: Qualcuno uscito senza salutare...\n",
                   InternalError, nodeId, machine_state_index[nodeId]);
             }
 
@@ -2180,15 +2759,14 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 
               lock_value = pthread_mutex_unlock(&machine_mux);
 #endif
-            machine_state_param_index[i] =
-                machine_state_param_index[nodeId];
+            machine_state_param_index[i] = machine_state_param_index[nodeId];
             function_call_number[i]++;
 
             if(!from_callback)
               EnterMutex();
 
-            machine_function_return = machine_function(d, i, user_param[0],
-                user_param[1], user_param[2], _machine_callback, 0);
+            machine_function_return = machine_function(d, i, user_param[0], user_param[1],
+                user_param[2], _machine_callback, 0);
 
             if(!from_callback)
               LeaveMutex();
@@ -2211,15 +2789,14 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 #ifdef CANOPENSHELL_VERBOSE
       if(verbose_flag)
       {
-        printf("WARN[%d on node %x state %d]: Funzione utente inaspettata\n",
-            InternalError, nodeId, machine_state_index[nodeId]);
+        printf("WARN[%d on node %x state %d]: Funzione utente inaspettata\n", InternalError, nodeId,
+            machine_state_index[nodeId]);
       }
 #endif
 
       CustomFunction_t machine_function =
           next_machine[nodeId][0]->function[machine_state_index[nodeId]];
-      last_function =
-          next_machine[nodeId][0]->function[machine_state_index[nodeId]];
+      last_function = next_machine[nodeId][0]->function[machine_state_index[nodeId]];
 
       if(nodeId != 0)
       {
@@ -2228,11 +2805,9 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 #ifdef CANOPENSHELL_VERBOSE
         if(verbose_flag)
         {
-          if(machine_state_index[nodeId]
-              > next_machine[nodeId][0]->function_size)
+          if(machine_state_index[nodeId] > next_machine[nodeId][0]->function_size)
           {
-            printf(
-                "WARN[%d on node %x state %d]: Qualcuno uscito senza salutare...\n",
+            printf("WARN[%d on node %x state %d]: Qualcuno uscito senza salutare...\n",
                 InternalError, nodeId, machine_state_index[nodeId]);
           }
         }
@@ -2256,8 +2831,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
             machine_state_index[i]++;
             function_call_number[i]++;
 
-            machine_function(d, i, next_machine[i][0]->param,
-                next_machine[i][0]->param_size);
+            machine_function(d, i, next_machine[i][0]->param, next_machine[i][0]->param_size);
           }
         }
 
@@ -2274,8 +2848,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
     if(verbose_flag)
     {
       if(next_machine[nodeId][0]->error[0] != NULL)
-        printf("SUCC[node %x]: %s\n", nodeId,
-            next_machine[nodeId][0]->error[0]);
+        printf("SUCC[node %x]: %s\n", nodeId, next_machine[nodeId][0]->error[0]);
     }
 #endif
 
@@ -2305,11 +2878,9 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
     if(verbose_flag)
     {
 
-      printf(
-          "ERR[%d on node %x state %d]: Non dovresti essere arrivato qui...mmmh\n",
+      printf("ERR[%d on node %x state %d]: Non dovresti essere arrivato qui...mmmh\n",
           InternalError, nodeId, machine_state_index[nodeId]);
-      printf(
-          "Vediamo...\n Il numero di funzioni da eseguire era: %d. A quale sei arrivato?\n",
+      printf("Vediamo...\n Il numero di funzioni da eseguire era: %d. A quale sei arrivato?\n",
           next_machine[nodeId][0]->function_size);
     }
   }
@@ -2322,8 +2893,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
   finalize:
   // nel caso in cui la funzione broadcast chiudesse la macchina con una funzione che non
   // prevedesse un callback, allora devo deallocare tutte le variabili precedenti.
-  if((machine_state_index[nodeId] == next_machine[nodeId][0]->function_size)
-      && (nodeId == 0))
+  if((machine_state_index[nodeId] == next_machine[nodeId][0]->function_size) && (nodeId == 0))
   {
     for(i = 0; i < CANOPEN_NODE_NUMBER; i++)
     {
@@ -2364,10 +2934,8 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
         if(verbose_flag)
         {
           if(lock_value != 0)
-            printf(
-                "ERR[%d on node %x state %d]: Impossibile sbloccare il mutex 6: %d\n",
-                InternalError,
-                nodeId, machine_state_index[nodeId], lock_value);
+            printf("ERR[%d on node %x state %d]: Impossibile sbloccare il mutex 6: %d\n",
+                InternalError, nodeId, machine_state_index[nodeId], lock_value);
         }
 #endif
 #endif
@@ -2419,9 +2987,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
     if(verbose_flag)
     {
       if(lock_value != 0)
-        printf(
-            "ERR[%d on node %x state %d]: Impossibile sbloccare il mutex 7: %d\n",
-            InternalError,
+        printf("ERR[%d on node %x state %d]: Impossibile sbloccare il mutex 7: %d\n", InternalError,
             nodeId, machine_state_index[nodeId], lock_value);
     }
 #endif
@@ -2437,10 +3003,9 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
     if((callback_user[nodeId] != NULL) && (nodeId != 0))
     {
       if(last_function == &readNetworkDictCallback)
-        callback_user[nodeId](d, nodeId, machine_index,
-            readNetworkDictCallback_result);
+        callback_user[nodeId](d, nodeId, machine_index, 1, readNetworkDictCallback_result);
       else
-        callback_user[nodeId](d, nodeId, machine_index, result_value);
+        callback_user[nodeId](d, nodeId, machine_index, 0, result_value);
     }
   }
 

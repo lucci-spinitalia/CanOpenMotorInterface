@@ -26,6 +26,8 @@ long row_read[127];
 long row_total[127];
 float compleate_percent;
 
+int QueuePutPositionPipe(struct table_data *data);
+
 float FileCompleteGet(int nodeId, int point_in_table)
 {
   if(row_total[nodeId] != 0)
@@ -78,6 +80,18 @@ void *QueueRefiller(void *args)
   int data_refilled = 0;
   int err;
 
+  if(data->is_pipe)
+  {
+    if(QueueOpenFile(data) < 0)
+    {
+      printf("QueueRefiller open error\n");
+      data->end_reached = 1;
+      return NULL;
+    }
+
+    printf("Refilled opened\n");
+  }
+
   err = pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
   if(err != 0)
     printf("can't set thread as cancellable\n");
@@ -104,7 +118,7 @@ void *QueueRefiller(void *args)
         goto go_sleep;
     }
     else
-      data_refilled = QueuePutPipe(data, 10);
+      data_refilled = QueuePutPositionPipe(data);
 
     //printf("[%d] Refilled %d points\n", data->nodeId, data_refilled);
     if(data_refilled == -1)
@@ -119,10 +133,11 @@ void *QueueRefiller(void *args)
       break;
     }
     else if((data_refilled == 0) && (data->end_reached))
+    {
       break;
+    }
 
-    go_sleep:
-    if(data->is_pipe == 0)
+    go_sleep: if(data->is_pipe == 0)
       usleep(10000);
   }
 
@@ -204,11 +219,13 @@ int QueueFill(struct table_data *data)
 
   pthread_mutex_unlock(&data->table_mutex);
 
-  //printf("[%d] Queue fill\n", data->nodeId);
-  if(QueueOpenFile(data) < 0)
+  if(data->is_pipe == 0)
   {
-    data->end_reached = 1;
-    return -1;
+    if(QueueOpenFile(data) < 0)
+    {
+      data->end_reached = 1;
+      return -1;
+    }
   }
 
   if(data->table_refiller == 0)
@@ -487,7 +504,8 @@ int QueuePut(struct table_data *data, int line_number)
           printf("WARN[%d on node %x]: Riga %ld non valida (sintassi CT1 M)\n", InternalError,
               data->nodeId, row_read[data->nodeId] + line_count);
 
-          printf("line: %s, row read: %d, line count: %ld\n", line, row_read[data->nodeId], line_count);
+          printf("line: %s, row read: %ld, line count: %d\n", line, row_read[data->nodeId],
+              line_count);
           printf("cursor position on error: %ld\n", data->cursor_position);
         }
 #endif
@@ -914,4 +932,137 @@ int QueuePutPipe(struct table_data *data, int line_number)
   //fclose(file);
 
   return line_count;
+}
+
+/**
+ * Aggiunge alla coda i valori letti dal file di posizione.
+ *
+ * @return >= 0: letta una nuova riga; -1: errore file -2: buffer pieno
+ *
+ * @remark: questa funzione, come QueuePut, legge dal file le posizioni. Visto
+ * però che, in questo caso, si lavora con una pipe, la lettura viene fatta in
+ * modo continuo. Visto che non c'è un buffer circolare, la variabile write_pointer
+ * è stata utilizzata per indicare quando è arrivato il comando di start, mentre
+ * read_pointer indica quando è arrivata una stringa riguardante il motore.
+ */
+int QueuePutPositionPipe(struct table_data *data)
+{
+  char *line = NULL;
+  size_t len = 0;
+  ssize_t read;
+
+  char line_copy[256];
+  long lposition;
+  long lvelocity;
+  long lacceleration;
+  int start_flag;
+  int nodeid;
+  int line_count = 0;
+
+  if(data->end_reached == 1)
+    return 0;
+
+  if(data->position_file == NULL)
+  {
+#ifdef CANOPENSHELL_VERBOSE
+    if(verbose_flag)
+      perror("file");
+#endif
+    return -1;
+  }
+
+  int parse_num;
+  // Ogni informazione è delimitata da uno spazio
+  //if((read = getline(&line, &len, file)) != -1)
+  if((read = getline(&line, &len, data->position_file)) != -1)
+  {
+    if(strcmp(line, "\n") == 0)
+      return -1;
+
+    // controllo se la riga entra nel buffer
+    if(len < sizeof(line_copy))
+      strcpy(line_copy, line);
+    else
+      strncpy(line_copy, line, sizeof(line_copy));
+
+    parse_num = sscanf(line_copy, "CT1 M%d P%ld VM%ld AM%ld %d\n", &nodeid, &lposition, &lvelocity,
+        &lacceleration, &start_flag);
+
+    if(parse_num >= 4)
+    {
+      if(data->nodeId == 0)
+      {
+        int i;
+
+        for(i = (TABLE_MAX_NUM + 1); i >= 0; i--)
+        {
+          if(data[i - TABLE_MAX_NUM + 1].nodeId == nodeid)
+          {
+            break;
+          }
+        }
+
+        if(i == -1)
+          goto fault;
+
+        pthread_mutex_lock(&data->table_mutex);
+        data[i - TABLE_MAX_NUM + 1].read_pointer = 1;
+        data[i - TABLE_MAX_NUM + 1].position[0] = lposition;
+        data[i - TABLE_MAX_NUM + 1].forward_velocity = lvelocity;
+        pthread_mutex_unlock(&data->table_mutex);
+
+        if((parse_num == 5) && (start_flag > 0))
+        {
+          data[i - TABLE_MAX_NUM + 1].write_pointer = 1;
+        }
+      }
+      else
+      {
+        pthread_mutex_lock(&data->table_mutex);
+        data->read_pointer = 1;
+        data->position[0] = lposition;
+        data->forward_velocity = lvelocity;
+        pthread_mutex_unlock(&data->table_mutex);
+
+        if((parse_num == 5) && (start_flag > 0))
+        {
+          data->write_pointer = 1;
+        }
+      }
+    }
+    else
+    {
+#ifdef CANOPENSHELL_VERBOSE
+      if(verbose_flag)
+      {
+        printf("WARN[%d on node %x]: Riga %ld non valida (sintassi CT1 M)\n", InternalError,
+            data->nodeId, row_read[data->nodeId] + line_count);
+
+        printf("line: %s", line);
+      }
+#endif
+      data->type = 'E';
+
+      goto fault;
+    }
+  }
+  else
+  {
+    data->end_reached = 1;
+  }
+
+  row_read[data->nodeId] += line_count + 1;
+
+  free(line);
+  //fclose(file);
+
+  return line_count;
+
+  fault:
+
+  data->type = 'E';
+  sprintf(line_copy, "linea %ld", row_read[data->nodeId] + line_count + 1);
+  add_event(CERR_FileError, data->nodeId, 0, line_copy);
+
+  return -1;
 }

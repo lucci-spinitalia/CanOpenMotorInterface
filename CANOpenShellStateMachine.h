@@ -70,6 +70,9 @@ extern struct state_machine_struct smart_limit_disable_machine;
 extern struct state_machine_struct smart_following_error_get_machine;
 extern struct state_machine_struct smart_acceleration_pp_get_machine;
 extern struct state_machine_struct smart_off_machine;
+extern struct state_machine_struct gosub_machine;
+extern struct state_machine_struct smart_message_machine;
+extern struct state_machine_struct smart_set_mode_machine;
 
 typedef UNS8 (*writeNetworkDictCallBack_t)(CO_Data* d, UNS8 nodeId, UNS16 index,
     UNS8 subIndex, UNS32 count, UNS8 dataType, void *data,
@@ -84,7 +87,7 @@ typedef void (*CustomFunction_t)(CO_Data* d, UNS8 Node_ID, UNS32 *param_array,
     UNS32 param_array_size);
 
 typedef void (*MachineCallback_t)(CO_Data* d, UNS8 Node_ID, int machine_state,
-    UNS32 return_value);
+    int is_register, UNS32 return_value);
 
 void _machine_init();
 void _machine_destroy();

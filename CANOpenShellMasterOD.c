@@ -44,6 +44,24 @@ INTEGER32 InterpolationData[] =		/* Mapped at index 0x2502, subindex 0x01 - 0x06
     0x0	/* 0 */
   };
 UNS16 InterpolationStart = 0x0;		/* Mapped at index 0x2503, subindex 0x00 */
+UNS32 VelocityProfile[] =		/* Mapped at index 0x2504, subindex 0x01 - 0x06 */
+  {
+    0x0,	/* 0 */
+    0x0,	/* 0 */
+    0x0,	/* 0 */
+    0x0,	/* 0 */
+    0x0,	/* 0 */
+    0x0	/* 0 */
+  };
+INTEGER32 PositionTarget[] =		/* Mapped at index 0x2505, subindex 0x01 - 0x06 */
+  {
+    0x0,	/* 0 */
+    0x0,	/* 0 */
+    0x0,	/* 0 */
+    0x0,	/* 0 */
+    0x0,	/* 0 */
+    0x0	/* 0 */
+  };
 INTEGER8 InterpolationTimePeriod[] =		/* Mapped at index 0x2600, subindex 0x01 - 0x06 */
   {
     0x0,	/* 0 */
@@ -151,14 +169,14 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS32 CANOpenShellMasterOD_obj1000 = 0x20192;	/* 131474 */
                     subindex CANOpenShellMasterOD_Index1000[] = 
                      {
-                       { RO, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1000 }
+                       { RO, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1000, NULL }
                      };
 
 /* index 0x1001 :   Error Register. */
                     UNS8 CANOpenShellMasterOD_obj1001 = 0x0;	/* 0 */
                     subindex CANOpenShellMasterOD_Index1001[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1001 }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1001, NULL }
                      };
 
 /* index 0x1003 :   Pre-defined Error Field */
@@ -167,65 +185,52 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     {
                       0x0	/* 0 */
                     };
-                    ODCallback_t CANOpenShellMasterOD_Index1003_callbacks[] = 
-                     {
-                       NULL,
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index1003[] = 
                      {
-                       { RW, valueRange_EMC, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1003 },
-                       { RO, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1003[0] }
+                       { RW, valueRange_EMC, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1003, NULL },
+                       { RO, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1003[0], NULL }
                      };
 
 /* index 0x1005 :   SYNC COB ID. */
                     UNS32 CANOpenShellMasterOD_obj1005 = 0x40000080;	/* 1073741952 */
-                    ODCallback_t CANOpenShellMasterOD_Index1005_callbacks[] = 
-                     {
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index1005[] = 
                      {
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1005 }
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1005, NULL }
                      };
 
 /* index 0x1006 :   Communication / Cycle Period. */
                     UNS32 CANOpenShellMasterOD_obj1006 = 0x2710;	/* 10000 */
-                    ODCallback_t CANOpenShellMasterOD_Index1006_callbacks[] = 
-                     {
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index1006[] = 
                      {
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1006 }
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1006, NULL }
                      };
 
 /* index 0x1007 :   Synchronous Window Length. */
                     UNS32 CANOpenShellMasterOD_obj1007 = 0x1388;	/* 5000 */
                     subindex CANOpenShellMasterOD_Index1007[] = 
                      {
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1007 }
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1007, NULL }
                      };
 
 /* index 0x1008 :   Manufacturer Device Name. */
                     UNS8 CANOpenShellMasterOD_obj1008[10] = "";
                     subindex CANOpenShellMasterOD_Index1008[] = 
                      {
-                       { RO, visible_string, 10, (void*)&CANOpenShellMasterOD_obj1008 }
+                       { RO, visible_string, 10, (void*)&CANOpenShellMasterOD_obj1008, NULL }
                      };
 
 /* index 0x1009 :   Manufacturer Hardware Version. */
                     UNS8 CANOpenShellMasterOD_obj1009[10] = "";
                     subindex CANOpenShellMasterOD_Index1009[] = 
                      {
-                       { RO, visible_string, 10, (void*)&CANOpenShellMasterOD_obj1009 }
+                       { RO, visible_string, 10, (void*)&CANOpenShellMasterOD_obj1009, NULL }
                      };
 
 /* index 0x100A :   Manufacturer Software Version. */
                     UNS8 CANOpenShellMasterOD_obj100A[10] = "";
                     subindex CANOpenShellMasterOD_Index100A[] = 
                      {
-                       { RO, visible_string, 10, (void*)&CANOpenShellMasterOD_obj100A }
+                       { RO, visible_string, 10, (void*)&CANOpenShellMasterOD_obj100A, NULL }
                      };
 
 /* index 0x100C :   Guard Time */ 
@@ -241,10 +246,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS32 CANOpenShellMasterOD_obj1010_Save_Application_Parameters = 0x0;	/* 0 */
                     subindex CANOpenShellMasterOD_Index1010[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1010 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1010_Save_All_Parameters },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1010_Save_Communication_Parameters },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1010_Save_Application_Parameters }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1010, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1010_Save_All_Parameters, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1010_Save_Communication_Parameters, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1010_Save_Application_Parameters, NULL }
                      };
 
 /* index 0x1011 :   Restore Default Parameters. */
@@ -254,17 +259,17 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS32 CANOpenShellMasterOD_obj1011_Restore_Application_Default_Parameters = 0x0;	/* 0 */
                     subindex CANOpenShellMasterOD_Index1011[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1011 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1011_Restore_All_Default_Parameters },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1011_Restore_Communication_Default_Parameters },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1011_Restore_Application_Default_Parameters }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1011, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1011_Restore_All_Default_Parameters, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1011_Restore_Communication_Default_Parameters, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1011_Restore_Application_Default_Parameters, NULL }
                      };
 
 /* index 0x1013 :   High Resolution Timestamp. */
                     UNS32 CANOpenShellMasterOD_obj1013 = 0x0;	/* 0 */
                     subindex CANOpenShellMasterOD_Index1013[] = 
                      {
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1013 }
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1013, NULL }
                      };
 
 /* index 0x1014 :   Emergency COB ID */
@@ -276,26 +281,17 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     {
                       0x0	/* 0 */
                     };
-                    ODCallback_t CANOpenShellMasterOD_Index1016_callbacks[] = 
-                     {
-                       NULL,
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index1016[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1016 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1016[0] }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1016, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1016[0], NULL }
                      };
 
 /* index 0x1017 :   Producer Heartbeat Time. */
                     UNS16 CANOpenShellMasterOD_obj1017 = 0x0;	/* 0 */
-                    ODCallback_t CANOpenShellMasterOD_Index1017_callbacks[] = 
-                     {
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index1017[] = 
                      {
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1017 }
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1017, NULL }
                      };
 
 /* index 0x1018 :   Identity. */
@@ -306,11 +302,11 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS32 CANOpenShellMasterOD_obj1018_Serial_Number = 0x0;	/* 0 */
                     subindex CANOpenShellMasterOD_Index1018[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1018 },
-                       { RO, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1018_Vendor_ID },
-                       { RO, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1018_Product_Code },
-                       { RO, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1018_Revision_Number },
-                       { RO, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1018_Serial_Number }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1018, NULL },
+                       { RO, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1018_Vendor_ID, NULL },
+                       { RO, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1018_Product_Code, NULL },
+                       { RO, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1018_Revision_Number, NULL },
+                       { RO, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1018_Serial_Number, NULL }
                      };
 
 /* index 0x1280 :   Client SDO 1 Parameter. */
@@ -320,10 +316,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1280_Node_ID_of_the_SDO_Server = 0x0;	/* 0 */
                     subindex CANOpenShellMasterOD_Index1280[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1280 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1280_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1280_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1280_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1280, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1280_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1280_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1280_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x1281 :   Client SDO 2 Parameter. */
@@ -333,10 +329,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1281_Node_ID_of_the_SDO_Server = 0x1;	/* 1 */
                     subindex CANOpenShellMasterOD_Index1281[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1281 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1281_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1281_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1281_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1281, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1281_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1281_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1281_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x1282 :   Client SDO 3 Parameter. */
@@ -346,10 +342,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1282_Node_ID_of_the_SDO_Server = 0x2;	/* 2 */
                     subindex CANOpenShellMasterOD_Index1282[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1282 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1282_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1282_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1282_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1282, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1282_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1282_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1282_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x1283 :   Client SDO 4 Parameter. */
@@ -359,10 +355,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1283_Node_ID_of_the_SDO_Server = 0x3;	/* 3 */
                     subindex CANOpenShellMasterOD_Index1283[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1283 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1283_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1283_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1283_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1283, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1283_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1283_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1283_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x1284 :   Client SDO 5 Parameter. */
@@ -372,10 +368,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1284_Node_ID_of_the_SDO_Server = 0x4;	/* 4 */
                     subindex CANOpenShellMasterOD_Index1284[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1284 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1284_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1284_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1284_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1284, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1284_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1284_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1284_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x1285 :   Client SDO 6 Parameter. */
@@ -385,10 +381,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1285_Node_ID_of_the_SDO_Server = 0x5;	/* 5 */
                     subindex CANOpenShellMasterOD_Index1285[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1285 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1285_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1285_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1285_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1285, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1285_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1285_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1285_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x1286 :   Client SDO 7 Parameter. */
@@ -398,10 +394,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1286_Node_ID_of_the_SDO_Server = 0x6;	/* 6 */
                     subindex CANOpenShellMasterOD_Index1286[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1286 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1286_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1286_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1286_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1286, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1286_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1286_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1286_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x1287 :   Client SDO 8 Parameter. */
@@ -411,10 +407,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1287_Node_ID_of_the_SDO_Server = 0x7;	/* 7 */
                     subindex CANOpenShellMasterOD_Index1287[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1287 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1287_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1287_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1287_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1287, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1287_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1287_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1287_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x1288 :   Client SDO 9 Parameter. */
@@ -424,10 +420,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1288_Node_ID_of_the_SDO_Server = 0x8;	/* 8 */
                     subindex CANOpenShellMasterOD_Index1288[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1288 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1288_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1288_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1288_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1288, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1288_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1288_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1288_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x1289 :   Client SDO 10 Parameter. */
@@ -437,10 +433,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1289_Node_ID_of_the_SDO_Server = 0x9;	/* 9 */
                     subindex CANOpenShellMasterOD_Index1289[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1289 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1289_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1289_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1289_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1289, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1289_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1289_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1289_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x128A :   Client SDO 11 Parameter. */
@@ -450,10 +446,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj128A_Node_ID_of_the_SDO_Server = 0xA;	/* 10 */
                     subindex CANOpenShellMasterOD_Index128A[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj128A },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj128A_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj128A_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj128A_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj128A, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj128A_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj128A_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj128A_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x128B :   Client SDO 12 Parameter. */
@@ -463,10 +459,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj128B_Node_ID_of_the_SDO_Server = 0xB;	/* 11 */
                     subindex CANOpenShellMasterOD_Index128B[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj128B },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj128B_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj128B_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj128B_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj128B, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj128B_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj128B_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj128B_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x128C :   Client SDO 13 Parameter. */
@@ -476,10 +472,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj128C_Node_ID_of_the_SDO_Server = 0xC;	/* 12 */
                     subindex CANOpenShellMasterOD_Index128C[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj128C },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj128C_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj128C_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj128C_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj128C, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj128C_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj128C_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj128C_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x128D :   Client SDO 14 Parameter. */
@@ -489,10 +485,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj128D_Node_ID_of_the_SDO_Server = 0xD;	/* 13 */
                     subindex CANOpenShellMasterOD_Index128D[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj128D },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj128D_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj128D_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj128D_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj128D, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj128D_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj128D_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj128D_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x128E :   Client SDO 15 Parameter. */
@@ -502,10 +498,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj128E_Node_ID_of_the_SDO_Server = 0xE;	/* 14 */
                     subindex CANOpenShellMasterOD_Index128E[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj128E },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj128E_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj128E_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj128E_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj128E, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj128E_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj128E_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj128E_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x128F :   Client SDO 16 Parameter. */
@@ -515,10 +511,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj128F_Node_ID_of_the_SDO_Server = 0xF;	/* 15 */
                     subindex CANOpenShellMasterOD_Index128F[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj128F },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj128F_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj128F_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj128F_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj128F, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj128F_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj128F_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj128F_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x1290 :   Client SDO 17 Parameter. */
@@ -528,10 +524,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1290_Node_ID_of_the_SDO_Server = 0x10;	/* 16 */
                     subindex CANOpenShellMasterOD_Index1290[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1290 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1290_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1290_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1290_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1290, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1290_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1290_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1290_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x1291 :   Client SDO 18 Parameter. */
@@ -541,10 +537,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1291_Node_ID_of_the_SDO_Server = 0x11;	/* 17 */
                     subindex CANOpenShellMasterOD_Index1291[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1291 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1291_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1291_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1291_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1291, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1291_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1291_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1291_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x1292 :   Client SDO 19 Parameter. */
@@ -554,10 +550,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1292_Node_ID_of_the_SDO_Server = 0x12;	/* 18 */
                     subindex CANOpenShellMasterOD_Index1292[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1292 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1292_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1292_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1292_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1292, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1292_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1292_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1292_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x1293 :   Client SDO 20 Parameter. */
@@ -567,10 +563,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1293_Node_ID_of_the_SDO_Server = 0x13;	/* 19 */
                     subindex CANOpenShellMasterOD_Index1293[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1293 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1293_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1293_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1293_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1293, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1293_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1293_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1293_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x1294 :   Client SDO 21 Parameter. */
@@ -580,10 +576,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1294_Node_ID_of_the_SDO_Server = 0x14;	/* 20 */
                     subindex CANOpenShellMasterOD_Index1294[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1294 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1294_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1294_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1294_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1294, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1294_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1294_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1294_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x1295 :   Client SDO 22 Parameter. */
@@ -593,10 +589,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1295_Node_ID_of_the_SDO_Server = 0x15;	/* 21 */
                     subindex CANOpenShellMasterOD_Index1295[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1295 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1295_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1295_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1295_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1295, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1295_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1295_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1295_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x1296 :   Client SDO 23 Parameter. */
@@ -606,10 +602,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1296_Node_ID_of_the_SDO_Server = 0x16;	/* 22 */
                     subindex CANOpenShellMasterOD_Index1296[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1296 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1296_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1296_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1296_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1296, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1296_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1296_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1296_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x1297 :   Client SDO 24 Parameter. */
@@ -619,10 +615,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1297_Node_ID_of_the_SDO_Server = 0x17;	/* 23 */
                     subindex CANOpenShellMasterOD_Index1297[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1297 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1297_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1297_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1297_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1297, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1297_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1297_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1297_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x1298 :   Client SDO 25 Parameter. */
@@ -632,10 +628,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1298_Node_ID_of_the_SDO_Server = 0x18;	/* 24 */
                     subindex CANOpenShellMasterOD_Index1298[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1298 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1298_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1298_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1298_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1298, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1298_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1298_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1298_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x1299 :   Client SDO 26 Parameter. */
@@ -645,10 +641,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1299_Node_ID_of_the_SDO_Server = 0x19;	/* 25 */
                     subindex CANOpenShellMasterOD_Index1299[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1299 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1299_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1299_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1299_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1299, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1299_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1299_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1299_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x129A :   Client SDO 27 Parameter. */
@@ -658,10 +654,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj129A_Node_ID_of_the_SDO_Server = 0x1A;	/* 26 */
                     subindex CANOpenShellMasterOD_Index129A[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj129A },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj129A_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj129A_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj129A_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj129A, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj129A_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj129A_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj129A_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x129B :   Client SDO 28 Parameter. */
@@ -671,10 +667,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj129B_Node_ID_of_the_SDO_Server = 0x1B;	/* 27 */
                     subindex CANOpenShellMasterOD_Index129B[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj129B },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj129B_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj129B_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj129B_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj129B, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj129B_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj129B_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj129B_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x129C :   Client SDO 29 Parameter. */
@@ -684,10 +680,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj129C_Node_ID_of_the_SDO_Server = 0x1C;	/* 28 */
                     subindex CANOpenShellMasterOD_Index129C[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj129C },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj129C_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj129C_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj129C_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj129C, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj129C_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj129C_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj129C_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x129D :   Client SDO 30 Parameter. */
@@ -697,10 +693,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj129D_Node_ID_of_the_SDO_Server = 0x1D;	/* 29 */
                     subindex CANOpenShellMasterOD_Index129D[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj129D },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj129D_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj129D_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj129D_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj129D, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj129D_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj129D_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj129D_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x129E :   Client SDO 31 Parameter. */
@@ -710,10 +706,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj129E_Node_ID_of_the_SDO_Server = 0x1E;	/* 30 */
                     subindex CANOpenShellMasterOD_Index129E[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj129E },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj129E_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj129E_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj129E_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj129E, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj129E_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj129E_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj129E_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x129F :   Client SDO 32 Parameter. */
@@ -723,10 +719,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj129F_Node_ID_of_the_SDO_Server = 0x1F;	/* 31 */
                     subindex CANOpenShellMasterOD_Index129F[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj129F },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj129F_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj129F_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj129F_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj129F, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj129F_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj129F_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj129F_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12A0 :   Client SDO 33 Parameter. */
@@ -736,10 +732,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12A0_Node_ID_of_the_SDO_Server = 0x20;	/* 32 */
                     subindex CANOpenShellMasterOD_Index12A0[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12A0 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A0_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A0_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12A0_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12A0, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A0_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A0_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12A0_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12A1 :   Client SDO 34 Parameter. */
@@ -749,10 +745,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12A1_Node_ID_of_the_SDO_Server = 0x21;	/* 33 */
                     subindex CANOpenShellMasterOD_Index12A1[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12A1 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A1_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A1_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12A1_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12A1, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A1_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A1_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12A1_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12A2 :   Client SDO 35 Parameter. */
@@ -762,10 +758,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12A2_Node_ID_of_the_SDO_Server = 0x22;	/* 34 */
                     subindex CANOpenShellMasterOD_Index12A2[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12A2 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A2_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A2_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12A2_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12A2, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A2_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A2_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12A2_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12A3 :   Client SDO 36 Parameter. */
@@ -775,10 +771,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12A3_Node_ID_of_the_SDO_Server = 0x23;	/* 35 */
                     subindex CANOpenShellMasterOD_Index12A3[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12A3 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A3_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A3_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12A3_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12A3, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A3_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A3_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12A3_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12A4 :   Client SDO 37 Parameter. */
@@ -788,10 +784,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12A4_Node_ID_of_the_SDO_Server = 0x24;	/* 36 */
                     subindex CANOpenShellMasterOD_Index12A4[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12A4 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A4_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A4_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12A4_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12A4, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A4_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A4_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12A4_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12A5 :   Client SDO 38 Parameter. */
@@ -801,10 +797,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12A5_Node_ID_of_the_SDO_Server = 0x25;	/* 37 */
                     subindex CANOpenShellMasterOD_Index12A5[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12A5 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A5_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A5_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12A5_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12A5, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A5_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A5_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12A5_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12A6 :   Client SDO 39 Parameter. */
@@ -814,10 +810,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12A6_Node_ID_of_the_SDO_Server = 0x26;	/* 38 */
                     subindex CANOpenShellMasterOD_Index12A6[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12A6 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A6_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A6_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12A6_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12A6, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A6_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A6_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12A6_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12A7 :   Client SDO 40 Parameter. */
@@ -827,10 +823,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12A7_Node_ID_of_the_SDO_Server = 0x27;	/* 39 */
                     subindex CANOpenShellMasterOD_Index12A7[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12A7 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A7_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A7_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12A7_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12A7, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A7_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A7_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12A7_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12A8 :   Client SDO 41 Parameter. */
@@ -840,10 +836,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12A8_Node_ID_of_the_SDO_Server = 0x28;	/* 40 */
                     subindex CANOpenShellMasterOD_Index12A8[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12A8 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A8_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A8_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12A8_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12A8, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A8_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A8_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12A8_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12A9 :   Client SDO 42 Parameter. */
@@ -853,10 +849,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12A9_Node_ID_of_the_SDO_Server = 0x29;	/* 41 */
                     subindex CANOpenShellMasterOD_Index12A9[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12A9 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A9_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A9_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12A9_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12A9, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A9_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12A9_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12A9_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12AA :   Client SDO 43 Parameter. */
@@ -866,10 +862,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12AA_Node_ID_of_the_SDO_Server = 0x2A;	/* 42 */
                     subindex CANOpenShellMasterOD_Index12AA[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12AA },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12AA_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12AA_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12AA_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12AA, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12AA_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12AA_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12AA_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12AB :   Client SDO 44 Parameter. */
@@ -879,10 +875,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12AB_Node_ID_of_the_SDO_Server = 0x2B;	/* 43 */
                     subindex CANOpenShellMasterOD_Index12AB[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12AB },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12AB_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12AB_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12AB_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12AB, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12AB_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12AB_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12AB_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12AC :   Client SDO 45 Parameter. */
@@ -892,10 +888,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12AC_Node_ID_of_the_SDO_Server = 0x2C;	/* 44 */
                     subindex CANOpenShellMasterOD_Index12AC[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12AC },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12AC_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12AC_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12AC_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12AC, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12AC_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12AC_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12AC_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12AD :   Client SDO 46 Parameter. */
@@ -905,10 +901,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12AD_Node_ID_of_the_SDO_Server = 0x2D;	/* 45 */
                     subindex CANOpenShellMasterOD_Index12AD[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12AD },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12AD_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12AD_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12AD_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12AD, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12AD_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12AD_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12AD_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12AE :   Client SDO 47 Parameter. */
@@ -918,10 +914,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12AE_Node_ID_of_the_SDO_Server = 0x2E;	/* 46 */
                     subindex CANOpenShellMasterOD_Index12AE[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12AE },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12AE_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12AE_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12AE_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12AE, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12AE_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12AE_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12AE_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12AF :   Client SDO 48 Parameter. */
@@ -931,10 +927,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12AF_Node_ID_of_the_SDO_Server = 0x2F;	/* 47 */
                     subindex CANOpenShellMasterOD_Index12AF[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12AF },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12AF_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12AF_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12AF_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12AF, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12AF_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12AF_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12AF_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12B0 :   Client SDO 49 Parameter. */
@@ -944,10 +940,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12B0_Node_ID_of_the_SDO_Server = 0x30;	/* 48 */
                     subindex CANOpenShellMasterOD_Index12B0[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12B0 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B0_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B0_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12B0_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12B0, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B0_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B0_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12B0_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12B1 :   Client SDO 50 Parameter. */
@@ -957,10 +953,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12B1_Node_ID_of_the_SDO_Server = 0x31;	/* 49 */
                     subindex CANOpenShellMasterOD_Index12B1[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12B1 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B1_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B1_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12B1_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12B1, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B1_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B1_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12B1_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12B2 :   Client SDO 51 Parameter. */
@@ -970,10 +966,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12B2_Node_ID_of_the_SDO_Server = 0x32;	/* 50 */
                     subindex CANOpenShellMasterOD_Index12B2[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12B2 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B2_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B2_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12B2_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12B2, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B2_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B2_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12B2_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12B3 :   Client SDO 52 Parameter. */
@@ -983,10 +979,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12B3_Node_ID_of_the_SDO_Server = 0x33;	/* 51 */
                     subindex CANOpenShellMasterOD_Index12B3[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12B3 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B3_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B3_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12B3_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12B3, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B3_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B3_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12B3_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12B4 :   Client SDO 53 Parameter. */
@@ -996,10 +992,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12B4_Node_ID_of_the_SDO_Server = 0x34;	/* 52 */
                     subindex CANOpenShellMasterOD_Index12B4[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12B4 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B4_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B4_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12B4_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12B4, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B4_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B4_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12B4_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12B5 :   Client SDO 54 Parameter. */
@@ -1009,10 +1005,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12B5_Node_ID_of_the_SDO_Server = 0x35;	/* 53 */
                     subindex CANOpenShellMasterOD_Index12B5[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12B5 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B5_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B5_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12B5_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12B5, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B5_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B5_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12B5_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12B6 :   Client SDO 55 Parameter. */
@@ -1022,10 +1018,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12B6_Node_ID_of_the_SDO_Server = 0x36;	/* 54 */
                     subindex CANOpenShellMasterOD_Index12B6[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12B6 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B6_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B6_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12B6_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12B6, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B6_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B6_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12B6_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12B7 :   Client SDO 56 Parameter. */
@@ -1035,10 +1031,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12B7_Node_ID_of_the_SDO_Server = 0x37;	/* 55 */
                     subindex CANOpenShellMasterOD_Index12B7[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12B7 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B7_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B7_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12B7_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12B7, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B7_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B7_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12B7_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12B8 :   Client SDO 57 Parameter. */
@@ -1048,10 +1044,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12B8_Node_ID_of_the_SDO_Server = 0x38;	/* 56 */
                     subindex CANOpenShellMasterOD_Index12B8[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12B8 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B8_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B8_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12B8_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12B8, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B8_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B8_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12B8_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12B9 :   Client SDO 58 Parameter. */
@@ -1061,10 +1057,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12B9_Node_ID_of_the_SDO_Server = 0x39;	/* 57 */
                     subindex CANOpenShellMasterOD_Index12B9[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12B9 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B9_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B9_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12B9_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12B9, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B9_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12B9_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12B9_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12BA :   Client SDO 59 Parameter. */
@@ -1074,10 +1070,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12BA_Node_ID_of_the_SDO_Server = 0x3A;	/* 58 */
                     subindex CANOpenShellMasterOD_Index12BA[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12BA },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12BA_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12BA_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12BA_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12BA, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12BA_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12BA_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12BA_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12BB :   Client SDO 60 Parameter. */
@@ -1087,10 +1083,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12BB_Node_ID_of_the_SDO_Server = 0x3B;	/* 59 */
                     subindex CANOpenShellMasterOD_Index12BB[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12BB },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12BB_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12BB_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12BB_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12BB, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12BB_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12BB_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12BB_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12BC :   Client SDO 61 Parameter. */
@@ -1100,10 +1096,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12BC_Node_ID_of_the_SDO_Server = 0x3C;	/* 60 */
                     subindex CANOpenShellMasterOD_Index12BC[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12BC },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12BC_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12BC_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12BC_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12BC, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12BC_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12BC_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12BC_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12BD :   Client SDO 62 Parameter. */
@@ -1113,10 +1109,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12BD_Node_ID_of_the_SDO_Server = 0x3D;	/* 61 */
                     subindex CANOpenShellMasterOD_Index12BD[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12BD },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12BD_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12BD_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12BD_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12BD, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12BD_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12BD_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12BD_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12BE :   Client SDO 63 Parameter. */
@@ -1126,10 +1122,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12BE_Node_ID_of_the_SDO_Server = 0x3E;	/* 62 */
                     subindex CANOpenShellMasterOD_Index12BE[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12BE },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12BE_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12BE_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12BE_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12BE, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12BE_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12BE_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12BE_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12BF :   Client SDO 64 Parameter. */
@@ -1139,10 +1135,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12BF_Node_ID_of_the_SDO_Server = 0x3F;	/* 63 */
                     subindex CANOpenShellMasterOD_Index12BF[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12BF },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12BF_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12BF_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12BF_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12BF, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12BF_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12BF_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12BF_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12C0 :   Client SDO 65 Parameter. */
@@ -1152,10 +1148,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12C0_Node_ID_of_the_SDO_Server = 0x40;	/* 64 */
                     subindex CANOpenShellMasterOD_Index12C0[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12C0 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C0_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C0_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12C0_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12C0, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C0_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C0_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12C0_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12C1 :   Client SDO 66 Parameter. */
@@ -1165,10 +1161,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12C1_Node_ID_of_the_SDO_Server = 0x41;	/* 65 */
                     subindex CANOpenShellMasterOD_Index12C1[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12C1 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C1_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C1_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12C1_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12C1, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C1_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C1_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12C1_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12C2 :   Client SDO 67 Parameter. */
@@ -1178,10 +1174,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12C2_Node_ID_of_the_SDO_Server = 0x42;	/* 66 */
                     subindex CANOpenShellMasterOD_Index12C2[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12C2 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C2_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C2_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12C2_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12C2, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C2_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C2_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12C2_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12C3 :   Client SDO 68 Parameter. */
@@ -1191,10 +1187,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12C3_Node_ID_of_the_SDO_Server = 0x43;	/* 67 */
                     subindex CANOpenShellMasterOD_Index12C3[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12C3 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C3_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C3_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12C3_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12C3, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C3_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C3_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12C3_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12C4 :   Client SDO 69 Parameter. */
@@ -1204,10 +1200,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12C4_Node_ID_of_the_SDO_Server = 0x44;	/* 68 */
                     subindex CANOpenShellMasterOD_Index12C4[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12C4 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C4_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C4_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12C4_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12C4, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C4_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C4_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12C4_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12C5 :   Client SDO 70 Parameter. */
@@ -1217,10 +1213,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12C5_Node_ID_of_the_SDO_Server = 0x45;	/* 69 */
                     subindex CANOpenShellMasterOD_Index12C5[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12C5 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C5_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C5_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12C5_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12C5, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C5_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C5_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12C5_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12C6 :   Client SDO 71 Parameter. */
@@ -1230,10 +1226,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12C6_Node_ID_of_the_SDO_Server = 0x46;	/* 70 */
                     subindex CANOpenShellMasterOD_Index12C6[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12C6 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C6_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C6_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12C6_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12C6, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C6_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C6_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12C6_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12C7 :   Client SDO 72 Parameter. */
@@ -1243,10 +1239,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12C7_Node_ID_of_the_SDO_Server = 0x47;	/* 71 */
                     subindex CANOpenShellMasterOD_Index12C7[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12C7 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C7_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C7_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12C7_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12C7, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C7_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C7_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12C7_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12C8 :   Client SDO 73 Parameter. */
@@ -1256,10 +1252,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12C8_Node_ID_of_the_SDO_Server = 0x48;	/* 72 */
                     subindex CANOpenShellMasterOD_Index12C8[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12C8 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C8_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C8_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12C8_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12C8, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C8_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C8_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12C8_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12C9 :   Client SDO 74 Parameter. */
@@ -1269,10 +1265,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12C9_Node_ID_of_the_SDO_Server = 0x49;	/* 73 */
                     subindex CANOpenShellMasterOD_Index12C9[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12C9 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C9_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C9_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12C9_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12C9, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C9_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12C9_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12C9_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12CA :   Client SDO 75 Parameter. */
@@ -1282,10 +1278,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12CA_Node_ID_of_the_SDO_Server = 0x4A;	/* 74 */
                     subindex CANOpenShellMasterOD_Index12CA[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12CA },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12CA_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12CA_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12CA_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12CA, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12CA_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12CA_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12CA_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12CB :   Client SDO 76 Parameter. */
@@ -1295,10 +1291,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12CB_Node_ID_of_the_SDO_Server = 0x4B;	/* 75 */
                     subindex CANOpenShellMasterOD_Index12CB[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12CB },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12CB_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12CB_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12CB_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12CB, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12CB_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12CB_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12CB_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12CC :   Client SDO 77 Parameter. */
@@ -1308,10 +1304,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12CC_Node_ID_of_the_SDO_Server = 0x4C;	/* 76 */
                     subindex CANOpenShellMasterOD_Index12CC[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12CC },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12CC_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12CC_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12CC_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12CC, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12CC_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12CC_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12CC_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12CD :   Client SDO 78 Parameter. */
@@ -1321,10 +1317,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12CD_Node_ID_of_the_SDO_Server = 0x4D;	/* 77 */
                     subindex CANOpenShellMasterOD_Index12CD[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12CD },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12CD_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12CD_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12CD_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12CD, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12CD_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12CD_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12CD_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12CE :   Client SDO 79 Parameter. */
@@ -1334,10 +1330,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12CE_Node_ID_of_the_SDO_Server = 0x4E;	/* 78 */
                     subindex CANOpenShellMasterOD_Index12CE[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12CE },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12CE_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12CE_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12CE_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12CE, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12CE_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12CE_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12CE_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12CF :   Client SDO 80 Parameter. */
@@ -1347,10 +1343,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12CF_Node_ID_of_the_SDO_Server = 0x4F;	/* 79 */
                     subindex CANOpenShellMasterOD_Index12CF[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12CF },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12CF_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12CF_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12CF_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12CF, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12CF_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12CF_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12CF_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12D0 :   Client SDO 81 Parameter. */
@@ -1360,10 +1356,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12D0_Node_ID_of_the_SDO_Server = 0x50;	/* 80 */
                     subindex CANOpenShellMasterOD_Index12D0[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12D0 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D0_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D0_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12D0_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12D0, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D0_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D0_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12D0_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12D1 :   Client SDO 82 Parameter. */
@@ -1373,10 +1369,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12D1_Node_ID_of_the_SDO_Server = 0x51;	/* 81 */
                     subindex CANOpenShellMasterOD_Index12D1[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12D1 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D1_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D1_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12D1_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12D1, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D1_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D1_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12D1_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12D2 :   Client SDO 83 Parameter. */
@@ -1386,10 +1382,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12D2_Node_ID_of_the_SDO_Server = 0x52;	/* 82 */
                     subindex CANOpenShellMasterOD_Index12D2[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12D2 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D2_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D2_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12D2_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12D2, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D2_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D2_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12D2_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12D3 :   Client SDO 84 Parameter. */
@@ -1399,10 +1395,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12D3_Node_ID_of_the_SDO_Server = 0x53;	/* 83 */
                     subindex CANOpenShellMasterOD_Index12D3[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12D3 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D3_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D3_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12D3_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12D3, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D3_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D3_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12D3_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12D4 :   Client SDO 85 Parameter. */
@@ -1412,10 +1408,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12D4_Node_ID_of_the_SDO_Server = 0x54;	/* 84 */
                     subindex CANOpenShellMasterOD_Index12D4[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12D4 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D4_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D4_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12D4_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12D4, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D4_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D4_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12D4_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12D5 :   Client SDO 86 Parameter. */
@@ -1425,10 +1421,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12D5_Node_ID_of_the_SDO_Server = 0x55;	/* 85 */
                     subindex CANOpenShellMasterOD_Index12D5[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12D5 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D5_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D5_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12D5_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12D5, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D5_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D5_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12D5_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12D6 :   Client SDO 87 Parameter. */
@@ -1438,10 +1434,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12D6_Node_ID_of_the_SDO_Server = 0x56;	/* 86 */
                     subindex CANOpenShellMasterOD_Index12D6[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12D6 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D6_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D6_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12D6_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12D6, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D6_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D6_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12D6_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12D7 :   Client SDO 88 Parameter. */
@@ -1451,10 +1447,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12D7_Node_ID_of_the_SDO_Server = 0x57;	/* 87 */
                     subindex CANOpenShellMasterOD_Index12D7[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12D7 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D7_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D7_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12D7_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12D7, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D7_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D7_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12D7_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12D8 :   Client SDO 89 Parameter. */
@@ -1464,10 +1460,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12D8_Node_ID_of_the_SDO_Server = 0x58;	/* 88 */
                     subindex CANOpenShellMasterOD_Index12D8[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12D8 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D8_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D8_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12D8_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12D8, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D8_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D8_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12D8_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12D9 :   Client SDO 90 Parameter. */
@@ -1477,10 +1473,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12D9_Node_ID_of_the_SDO_Server = 0x59;	/* 89 */
                     subindex CANOpenShellMasterOD_Index12D9[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12D9 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D9_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D9_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12D9_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12D9, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D9_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12D9_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12D9_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12DA :   Client SDO 91 Parameter. */
@@ -1490,10 +1486,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12DA_Node_ID_of_the_SDO_Server = 0x5A;	/* 90 */
                     subindex CANOpenShellMasterOD_Index12DA[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12DA },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12DA_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12DA_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12DA_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12DA, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12DA_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12DA_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12DA_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12DB :   Client SDO 92 Parameter. */
@@ -1503,10 +1499,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12DB_Node_ID_of_the_SDO_Server = 0x5B;	/* 91 */
                     subindex CANOpenShellMasterOD_Index12DB[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12DB },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12DB_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12DB_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12DB_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12DB, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12DB_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12DB_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12DB_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12DC :   Client SDO 93 Parameter. */
@@ -1516,10 +1512,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12DC_Node_ID_of_the_SDO_Server = 0xDC;	/* 220 */
                     subindex CANOpenShellMasterOD_Index12DC[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12DC },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12DC_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12DC_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12DC_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12DC, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12DC_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12DC_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12DC_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12DD :   Client SDO 94 Parameter. */
@@ -1529,10 +1525,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12DD_Node_ID_of_the_SDO_Server = 0x5D;	/* 93 */
                     subindex CANOpenShellMasterOD_Index12DD[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12DD },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12DD_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12DD_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12DD_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12DD, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12DD_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12DD_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12DD_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12DE :   Client SDO 95 Parameter. */
@@ -1542,10 +1538,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12DE_Node_ID_of_the_SDO_Server = 0x5E;	/* 94 */
                     subindex CANOpenShellMasterOD_Index12DE[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12DE },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12DE_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12DE_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12DE_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12DE, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12DE_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12DE_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12DE_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12DF :   Client SDO 96 Parameter. */
@@ -1555,10 +1551,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12DF_Node_ID_of_the_SDO_Server = 0x5F;	/* 95 */
                     subindex CANOpenShellMasterOD_Index12DF[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12DF },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12DF_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12DF_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12DF_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12DF, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12DF_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12DF_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12DF_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12E0 :   Client SDO 97 Parameter. */
@@ -1568,10 +1564,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12E0_Node_ID_of_the_SDO_Server = 0x60;	/* 96 */
                     subindex CANOpenShellMasterOD_Index12E0[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12E0 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E0_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E0_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12E0_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12E0, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E0_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E0_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12E0_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12E1 :   Client SDO 98 Parameter. */
@@ -1581,10 +1577,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12E1_Node_ID_of_the_SDO_Server = 0x61;	/* 97 */
                     subindex CANOpenShellMasterOD_Index12E1[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12E1 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E1_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E1_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12E1_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12E1, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E1_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E1_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12E1_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12E2 :   Client SDO 99 Parameter. */
@@ -1594,10 +1590,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12E2_Node_ID_of_the_SDO_Server = 0x62;	/* 98 */
                     subindex CANOpenShellMasterOD_Index12E2[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12E2 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E2_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E2_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12E2_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12E2, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E2_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E2_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12E2_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12E3 :   Client SDO 100 Parameter. */
@@ -1607,10 +1603,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12E3_Node_ID_of_the_SDO_Server = 0x63;	/* 99 */
                     subindex CANOpenShellMasterOD_Index12E3[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12E3 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E3_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E3_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12E3_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12E3, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E3_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E3_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12E3_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12E4 :   Client SDO 101 Parameter. */
@@ -1620,10 +1616,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12E4_Node_ID_of_the_SDO_Server = 0x64;	/* 100 */
                     subindex CANOpenShellMasterOD_Index12E4[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12E4 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E4_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E4_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12E4_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12E4, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E4_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E4_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12E4_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12E5 :   Client SDO 102 Parameter. */
@@ -1633,10 +1629,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12E5_Node_ID_of_the_SDO_Server = 0x65;	/* 101 */
                     subindex CANOpenShellMasterOD_Index12E5[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12E5 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E5_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E5_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12E5_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12E5, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E5_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E5_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12E5_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12E6 :   Client SDO 103 Parameter. */
@@ -1646,10 +1642,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12E6_Node_ID_of_the_SDO_Server = 0x66;	/* 102 */
                     subindex CANOpenShellMasterOD_Index12E6[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12E6 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E6_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E6_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12E6_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12E6, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E6_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E6_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12E6_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12E7 :   Client SDO 104 Parameter. */
@@ -1659,10 +1655,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12E7_Node_ID_of_the_SDO_Server = 0x67;	/* 103 */
                     subindex CANOpenShellMasterOD_Index12E7[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12E7 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E7_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E7_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12E7_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12E7, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E7_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E7_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12E7_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12E8 :   Client SDO 105 Parameter. */
@@ -1672,10 +1668,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12E8_Node_ID_of_the_SDO_Server = 0x68;	/* 104 */
                     subindex CANOpenShellMasterOD_Index12E8[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12E8 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E8_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E8_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12E8_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12E8, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E8_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E8_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12E8_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12E9 :   Client SDO 106 Parameter. */
@@ -1685,10 +1681,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12E9_Node_ID_of_the_SDO_Server = 0x69;	/* 105 */
                     subindex CANOpenShellMasterOD_Index12E9[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12E9 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E9_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E9_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12E9_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12E9, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E9_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12E9_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12E9_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12EA :   Client SDO 107 Parameter. */
@@ -1698,10 +1694,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12EA_Node_ID_of_the_SDO_Server = 0x6A;	/* 106 */
                     subindex CANOpenShellMasterOD_Index12EA[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12EA },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12EA_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12EA_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12EA_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12EA, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12EA_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12EA_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12EA_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12EB :   Client SDO 108 Parameter. */
@@ -1711,10 +1707,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12EB_Node_ID_of_the_SDO_Server = 0x6B;	/* 107 */
                     subindex CANOpenShellMasterOD_Index12EB[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12EB },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12EB_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12EB_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12EB_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12EB, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12EB_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12EB_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12EB_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12EC :   Client SDO 109 Parameter. */
@@ -1724,10 +1720,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12EC_Node_ID_of_the_SDO_Server = 0x6C;	/* 108 */
                     subindex CANOpenShellMasterOD_Index12EC[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12EC },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12EC_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12EC_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12EC_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12EC, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12EC_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12EC_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12EC_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12ED :   Client SDO 110 Parameter. */
@@ -1737,10 +1733,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12ED_Node_ID_of_the_SDO_Server = 0x6D;	/* 109 */
                     subindex CANOpenShellMasterOD_Index12ED[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12ED },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12ED_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12ED_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12ED_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12ED, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12ED_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12ED_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12ED_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12EE :   Client SDO 111 Parameter. */
@@ -1750,10 +1746,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12EE_Node_ID_of_the_SDO_Server = 0x6E;	/* 110 */
                     subindex CANOpenShellMasterOD_Index12EE[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12EE },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12EE_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12EE_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12EE_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12EE, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12EE_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12EE_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12EE_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12EF :   Client SDO 112 Parameter. */
@@ -1763,10 +1759,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12EF_Node_ID_of_the_SDO_Server = 0x6F;	/* 111 */
                     subindex CANOpenShellMasterOD_Index12EF[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12EF },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12EF_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12EF_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12EF_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12EF, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12EF_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12EF_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12EF_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12F0 :   Client SDO 113 Parameter. */
@@ -1776,10 +1772,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12F0_Node_ID_of_the_SDO_Server = 0x70;	/* 112 */
                     subindex CANOpenShellMasterOD_Index12F0[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12F0 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F0_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F0_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12F0_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12F0, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F0_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F0_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12F0_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12F1 :   Client SDO 114 Parameter. */
@@ -1789,10 +1785,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12F1_Node_ID_of_the_SDO_Server = 0x71;	/* 113 */
                     subindex CANOpenShellMasterOD_Index12F1[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12F1 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F1_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F1_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12F1_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12F1, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F1_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F1_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12F1_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12F2 :   Client SDO 115 Parameter. */
@@ -1802,10 +1798,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12F2_Node_ID_of_the_SDO_Server = 0x72;	/* 114 */
                     subindex CANOpenShellMasterOD_Index12F2[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12F2 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F2_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F2_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12F2_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12F2, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F2_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F2_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12F2_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12F3 :   Client SDO 116 Parameter. */
@@ -1815,10 +1811,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12F3_Node_ID_of_the_SDO_Server = 0x73;	/* 115 */
                     subindex CANOpenShellMasterOD_Index12F3[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12F3 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F3_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F3_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12F3_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12F3, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F3_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F3_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12F3_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12F4 :   Client SDO 117 Parameter. */
@@ -1828,10 +1824,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12F4_Node_ID_of_the_SDO_Server = 0x74;	/* 116 */
                     subindex CANOpenShellMasterOD_Index12F4[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12F4 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F4_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F4_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12F4_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12F4, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F4_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F4_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12F4_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12F5 :   Client SDO 118 Parameter. */
@@ -1841,10 +1837,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12F5_Node_ID_of_the_SDO_Server = 0x75;	/* 117 */
                     subindex CANOpenShellMasterOD_Index12F5[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12F5 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F5_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F5_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12F5_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12F5, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F5_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F5_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12F5_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12F6 :   Client SDO 119 Parameter. */
@@ -1854,10 +1850,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12F6_Node_ID_of_the_SDO_Server = 0x76;	/* 118 */
                     subindex CANOpenShellMasterOD_Index12F6[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12F6 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F6_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F6_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12F6_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12F6, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F6_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F6_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12F6_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12F7 :   Client SDO 120 Parameter. */
@@ -1867,10 +1863,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12F7_Node_ID_of_the_SDO_Server = 0x77;	/* 119 */
                     subindex CANOpenShellMasterOD_Index12F7[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12F7 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F7_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F7_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12F7_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12F7, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F7_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F7_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12F7_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12F8 :   Client SDO 121 Parameter. */
@@ -1880,10 +1876,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12F8_Node_ID_of_the_SDO_Server = 0x78;	/* 120 */
                     subindex CANOpenShellMasterOD_Index12F8[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12F8 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F8_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F8_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12F8_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12F8, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F8_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F8_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12F8_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12F9 :   Client SDO 122 Parameter. */
@@ -1893,10 +1889,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12F9_Node_ID_of_the_SDO_Server = 0x79;	/* 121 */
                     subindex CANOpenShellMasterOD_Index12F9[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12F9 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F9_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F9_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12F9_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12F9, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F9_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12F9_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12F9_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12FA :   Client SDO 123 Parameter. */
@@ -1906,10 +1902,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12FA_Node_ID_of_the_SDO_Server = 0x7A;	/* 122 */
                     subindex CANOpenShellMasterOD_Index12FA[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12FA },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12FA_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12FA_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12FA_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12FA, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12FA_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12FA_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12FA_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12FB :   Client SDO 124 Parameter. */
@@ -1919,10 +1915,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12FB_Node_ID_of_the_SDO_Server = 0x7B;	/* 123 */
                     subindex CANOpenShellMasterOD_Index12FB[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12FB },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12FB_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12FB_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12FB_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12FB, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12FB_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12FB_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12FB_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12FC :   Client SDO 125 Parameter. */
@@ -1932,10 +1928,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12FC_Node_ID_of_the_SDO_Server = 0x7C;	/* 124 */
                     subindex CANOpenShellMasterOD_Index12FC[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12FC },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12FC_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12FC_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12FC_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12FC, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12FC_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12FC_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12FC_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12FD :   Client SDO 126 Parameter. */
@@ -1945,10 +1941,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12FD_Node_ID_of_the_SDO_Server = 0x7D;	/* 125 */
                     subindex CANOpenShellMasterOD_Index12FD[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12FD },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12FD_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12FD_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12FD_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12FD, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12FD_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12FD_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12FD_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x12FE :   Client SDO 127 Parameter. */
@@ -1958,10 +1954,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj12FE_Node_ID_of_the_SDO_Server = 0x7E;	/* 126 */
                     subindex CANOpenShellMasterOD_Index12FE[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12FE },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12FE_COB_ID_Client_to_Server_Transmit_SDO },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12FE_COB_ID_Server_to_Client_Receive_SDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12FE_Node_ID_of_the_SDO_Server }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj12FE, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12FE_COB_ID_Client_to_Server_Transmit_SDO, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj12FE_COB_ID_Server_to_Client_Receive_SDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj12FE_Node_ID_of_the_SDO_Server, NULL }
                      };
 
 /* index 0x1400 :   Receive PDO 1 Parameter. */
@@ -1974,13 +1970,13 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1400_SYNC_start_value = 0x0;	/* 0 */
                     subindex CANOpenShellMasterOD_Index1400[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1400 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1400_COB_ID_used_by_PDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1400_Transmission_Type },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1400_Inhibit_Time },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1400_Compatibility_Entry },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1400_Event_Timer },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1400_SYNC_start_value }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1400, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1400_COB_ID_used_by_PDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1400_Transmission_Type, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1400_Inhibit_Time, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1400_Compatibility_Entry, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1400_Event_Timer, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1400_SYNC_start_value, NULL }
                      };
 
 /* index 0x1401 :   Receive PDO 2 Parameter. */
@@ -1993,13 +1989,13 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1401_SYNC_start_value = 0x0;	/* 0 */
                     subindex CANOpenShellMasterOD_Index1401[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1401 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1401_COB_ID_used_by_PDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1401_Transmission_Type },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1401_Inhibit_Time },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1401_Compatibility_Entry },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1401_Event_Timer },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1401_SYNC_start_value }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1401, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1401_COB_ID_used_by_PDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1401_Transmission_Type, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1401_Inhibit_Time, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1401_Compatibility_Entry, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1401_Event_Timer, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1401_SYNC_start_value, NULL }
                      };
 
 /* index 0x1600 :   Receive PDO 1 Mapping. */
@@ -2013,11 +2009,11 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     };
                     subindex CANOpenShellMasterOD_Index1600[] = 
                      {
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1600 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1600[0] },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1600[1] },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1600[2] },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1600[3] }
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1600, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1600[0], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1600[1], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1600[2], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1600[3], NULL }
                      };
 
 /* index 0x1601 :   Receive PDO 2 Mapping. */
@@ -2029,9 +2025,9 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     };
                     subindex CANOpenShellMasterOD_Index1601[] = 
                      {
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1601 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1601[0] },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1601[1] }
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1601, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1601[0], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1601[1], NULL }
                      };
 
 /* index 0x1800 :   Transmit PDO 1 Parameter. */
@@ -2042,25 +2038,15 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1800_Compatibility_Entry = 0x0;	/* 0 */
                     UNS16 CANOpenShellMasterOD_obj1800_Event_Timer = 0x0;	/* 0 */
                     UNS8 CANOpenShellMasterOD_obj1800_SYNC_start_value = 0x0;	/* 0 */
-                    ODCallback_t CANOpenShellMasterOD_Index1800_callbacks[] = 
-                     {
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index1800[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1800 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1800_COB_ID_used_by_PDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1800_Transmission_Type },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1800_Inhibit_Time },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1800_Compatibility_Entry },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1800_Event_Timer },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1800_SYNC_start_value }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1800, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1800_COB_ID_used_by_PDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1800_Transmission_Type, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1800_Inhibit_Time, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1800_Compatibility_Entry, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1800_Event_Timer, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1800_SYNC_start_value, NULL }
                      };
 
 /* index 0x1801 :   Transmit PDO 2 Parameter. */
@@ -2071,25 +2057,15 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1801_Compatibility_Entry = 0x0;	/* 0 */
                     UNS16 CANOpenShellMasterOD_obj1801_Event_Timer = 0x0;	/* 0 */
                     UNS8 CANOpenShellMasterOD_obj1801_SYNC_start_value = 0x0;	/* 0 */
-                    ODCallback_t CANOpenShellMasterOD_Index1801_callbacks[] = 
-                     {
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index1801[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1801 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1801_COB_ID_used_by_PDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1801_Transmission_Type },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1801_Inhibit_Time },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1801_Compatibility_Entry },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1801_Event_Timer },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1801_SYNC_start_value }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1801, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1801_COB_ID_used_by_PDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1801_Transmission_Type, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1801_Inhibit_Time, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1801_Compatibility_Entry, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1801_Event_Timer, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1801_SYNC_start_value, NULL }
                      };
 
 /* index 0x1802 :   Transmit PDO 3 Parameter. */
@@ -2100,25 +2076,15 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1802_Compatibility_Entry = 0x0;	/* 0 */
                     UNS16 CANOpenShellMasterOD_obj1802_Event_Timer = 0x0;	/* 0 */
                     UNS8 CANOpenShellMasterOD_obj1802_SYNC_start_value = 0x0;	/* 0 */
-                    ODCallback_t CANOpenShellMasterOD_Index1802_callbacks[] = 
-                     {
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index1802[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1802 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1802_COB_ID_used_by_PDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1802_Transmission_Type },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1802_Inhibit_Time },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1802_Compatibility_Entry },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1802_Event_Timer },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1802_SYNC_start_value }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1802, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1802_COB_ID_used_by_PDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1802_Transmission_Type, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1802_Inhibit_Time, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1802_Compatibility_Entry, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1802_Event_Timer, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1802_SYNC_start_value, NULL }
                      };
 
 /* index 0x1803 :   Transmit PDO 4 Parameter. */
@@ -2129,25 +2095,15 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1803_Compatibility_Entry = 0x0;	/* 0 */
                     UNS16 CANOpenShellMasterOD_obj1803_Event_Timer = 0x0;	/* 0 */
                     UNS8 CANOpenShellMasterOD_obj1803_SYNC_start_value = 0x0;	/* 0 */
-                    ODCallback_t CANOpenShellMasterOD_Index1803_callbacks[] = 
-                     {
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index1803[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1803 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1803_COB_ID_used_by_PDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1803_Transmission_Type },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1803_Inhibit_Time },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1803_Compatibility_Entry },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1803_Event_Timer },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1803_SYNC_start_value }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1803, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1803_COB_ID_used_by_PDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1803_Transmission_Type, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1803_Inhibit_Time, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1803_Compatibility_Entry, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1803_Event_Timer, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1803_SYNC_start_value, NULL }
                      };
 
 /* index 0x1804 :   Transmit PDO 5 Parameter. */
@@ -2158,25 +2114,15 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1804_Compatibility_Entry = 0x0;	/* 0 */
                     UNS16 CANOpenShellMasterOD_obj1804_Event_Timer = 0x0;	/* 0 */
                     UNS8 CANOpenShellMasterOD_obj1804_SYNC_start_value = 0x0;	/* 0 */
-                    ODCallback_t CANOpenShellMasterOD_Index1804_callbacks[] = 
-                     {
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index1804[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1804 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1804_COB_ID_used_by_PDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1804_Transmission_Type },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1804_Inhibit_Time },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1804_Compatibility_Entry },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1804_Event_Timer },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1804_SYNC_start_value }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1804, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1804_COB_ID_used_by_PDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1804_Transmission_Type, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1804_Inhibit_Time, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1804_Compatibility_Entry, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1804_Event_Timer, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1804_SYNC_start_value, NULL }
                      };
 
 /* index 0x1805 :   Transmit PDO 6 Parameter. */
@@ -2187,25 +2133,15 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1805_Compatibility_Entry = 0x0;	/* 0 */
                     UNS16 CANOpenShellMasterOD_obj1805_Event_Timer = 0x0;	/* 0 */
                     UNS8 CANOpenShellMasterOD_obj1805_SYNC_start_value = 0x0;	/* 0 */
-                    ODCallback_t CANOpenShellMasterOD_Index1805_callbacks[] = 
-                     {
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index1805[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1805 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1805_COB_ID_used_by_PDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1805_Transmission_Type },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1805_Inhibit_Time },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1805_Compatibility_Entry },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1805_Event_Timer },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1805_SYNC_start_value }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1805, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1805_COB_ID_used_by_PDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1805_Transmission_Type, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1805_Inhibit_Time, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1805_Compatibility_Entry, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1805_Event_Timer, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1805_SYNC_start_value, NULL }
                      };
 
 /* index 0x1806 :   Transmit PDO 7 Parameter. */
@@ -2216,25 +2152,15 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1806_Compatibility_Entry = 0x0;	/* 0 */
                     UNS16 CANOpenShellMasterOD_obj1806_Event_Timer = 0x0;	/* 0 */
                     UNS8 CANOpenShellMasterOD_obj1806_SYNC_start_value = 0x0;	/* 0 */
-                    ODCallback_t CANOpenShellMasterOD_Index1806_callbacks[] = 
-                     {
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index1806[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1806 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1806_COB_ID_used_by_PDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1806_Transmission_Type },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1806_Inhibit_Time },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1806_Compatibility_Entry },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1806_Event_Timer },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1806_SYNC_start_value }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1806, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1806_COB_ID_used_by_PDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1806_Transmission_Type, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1806_Inhibit_Time, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1806_Compatibility_Entry, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1806_Event_Timer, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1806_SYNC_start_value, NULL }
                      };
 
 /* index 0x1807 :   Transmit PDO 8 Parameter. */
@@ -2245,25 +2171,15 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1807_Compatibility_Entry = 0x0;	/* 0 */
                     UNS16 CANOpenShellMasterOD_obj1807_Event_Timer = 0x0;	/* 0 */
                     UNS8 CANOpenShellMasterOD_obj1807_SYNC_start_value = 0x0;	/* 0 */
-                    ODCallback_t CANOpenShellMasterOD_Index1807_callbacks[] = 
-                     {
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index1807[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1807 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1807_COB_ID_used_by_PDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1807_Transmission_Type },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1807_Inhibit_Time },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1807_Compatibility_Entry },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1807_Event_Timer },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1807_SYNC_start_value }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1807, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1807_COB_ID_used_by_PDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1807_Transmission_Type, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1807_Inhibit_Time, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1807_Compatibility_Entry, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1807_Event_Timer, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1807_SYNC_start_value, NULL }
                      };
 
 /* index 0x1808 :   Transmit PDO 9 Parameter. */
@@ -2274,25 +2190,15 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1808_Compatibility_Entry = 0x0;	/* 0 */
                     UNS16 CANOpenShellMasterOD_obj1808_Event_Timer = 0x0;	/* 0 */
                     UNS8 CANOpenShellMasterOD_obj1808_SYNC_start_value = 0x0;	/* 0 */
-                    ODCallback_t CANOpenShellMasterOD_Index1808_callbacks[] = 
-                     {
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index1808[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1808 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1808_COB_ID_used_by_PDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1808_Transmission_Type },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1808_Inhibit_Time },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1808_Compatibility_Entry },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1808_Event_Timer },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1808_SYNC_start_value }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1808, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1808_COB_ID_used_by_PDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1808_Transmission_Type, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1808_Inhibit_Time, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1808_Compatibility_Entry, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1808_Event_Timer, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1808_SYNC_start_value, NULL }
                      };
 
 /* index 0x1809 :   Transmit PDO 10 Parameter. */
@@ -2303,25 +2209,15 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1809_Compatibility_Entry = 0x0;	/* 0 */
                     UNS16 CANOpenShellMasterOD_obj1809_Event_Timer = 0x0;	/* 0 */
                     UNS8 CANOpenShellMasterOD_obj1809_SYNC_start_value = 0x0;	/* 0 */
-                    ODCallback_t CANOpenShellMasterOD_Index1809_callbacks[] = 
-                     {
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index1809[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1809 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1809_COB_ID_used_by_PDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1809_Transmission_Type },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1809_Inhibit_Time },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1809_Compatibility_Entry },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1809_Event_Timer },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1809_SYNC_start_value }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1809, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1809_COB_ID_used_by_PDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1809_Transmission_Type, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1809_Inhibit_Time, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1809_Compatibility_Entry, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1809_Event_Timer, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1809_SYNC_start_value, NULL }
                      };
 
 /* index 0x180A :   Transmit PDO 11 Parameter. */
@@ -2332,25 +2228,15 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj180A_Compatibility_Entry = 0x0;	/* 0 */
                     UNS16 CANOpenShellMasterOD_obj180A_Event_Timer = 0x0;	/* 0 */
                     UNS8 CANOpenShellMasterOD_obj180A_SYNC_start_value = 0x0;	/* 0 */
-                    ODCallback_t CANOpenShellMasterOD_Index180A_callbacks[] = 
-                     {
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index180A[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj180A },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj180A_COB_ID_used_by_PDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180A_Transmission_Type },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180A_Inhibit_Time },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180A_Compatibility_Entry },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180A_Event_Timer },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180A_SYNC_start_value }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj180A, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj180A_COB_ID_used_by_PDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180A_Transmission_Type, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180A_Inhibit_Time, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180A_Compatibility_Entry, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180A_Event_Timer, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180A_SYNC_start_value, NULL }
                      };
 
 /* index 0x180B :   Transmit PDO 12 Parameter. */
@@ -2361,54 +2247,34 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj180B_Compatibility_Entry = 0x0;	/* 0 */
                     UNS16 CANOpenShellMasterOD_obj180B_Event_Timer = 0x0;	/* 0 */
                     UNS8 CANOpenShellMasterOD_obj180B_SYNC_start_value = 0x0;	/* 0 */
-                    ODCallback_t CANOpenShellMasterOD_Index180B_callbacks[] = 
-                     {
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index180B[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj180B },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj180B_COB_ID_used_by_PDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180B_Transmission_Type },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180B_Inhibit_Time },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180B_Compatibility_Entry },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180B_Event_Timer },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180B_SYNC_start_value }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj180B, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj180B_COB_ID_used_by_PDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180B_Transmission_Type, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180B_Inhibit_Time, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180B_Compatibility_Entry, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180B_Event_Timer, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180B_SYNC_start_value, NULL }
                      };
 
 /* index 0x180C :   Transmit PDO 13 Parameter. */
                     UNS8 CANOpenShellMasterOD_highestSubIndex_obj180C = 6; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj180C_COB_ID_used_by_PDO = 0x400;	/* 1024 */
-                    UNS8 CANOpenShellMasterOD_obj180C_Transmission_Type = 0x0;	/* 0 */
+                    UNS8 CANOpenShellMasterOD_obj180C_Transmission_Type = 0xFF;	/* 255 */
                     UNS16 CANOpenShellMasterOD_obj180C_Inhibit_Time = 0x0;	/* 0 */
                     UNS8 CANOpenShellMasterOD_obj180C_Compatibility_Entry = 0x0;	/* 0 */
                     UNS16 CANOpenShellMasterOD_obj180C_Event_Timer = 0x0;	/* 0 */
                     UNS8 CANOpenShellMasterOD_obj180C_SYNC_start_value = 0x0;	/* 0 */
-                    ODCallback_t CANOpenShellMasterOD_Index180C_callbacks[] = 
-                     {
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index180C[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj180C },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj180C_COB_ID_used_by_PDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180C_Transmission_Type },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180C_Inhibit_Time },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180C_Compatibility_Entry },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180C_Event_Timer },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180C_SYNC_start_value }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj180C, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj180C_COB_ID_used_by_PDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180C_Transmission_Type, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180C_Inhibit_Time, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180C_Compatibility_Entry, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180C_Event_Timer, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180C_SYNC_start_value, NULL }
                      };
 
 /* index 0x180D :   Transmit PDO 14 Parameter. */
@@ -2419,25 +2285,15 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj180D_Compatibility_Entry = 0x0;	/* 0 */
                     UNS16 CANOpenShellMasterOD_obj180D_Event_Timer = 0x0;	/* 0 */
                     UNS8 CANOpenShellMasterOD_obj180D_SYNC_start_value = 0x0;	/* 0 */
-                    ODCallback_t CANOpenShellMasterOD_Index180D_callbacks[] = 
-                     {
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index180D[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj180D },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj180D_COB_ID_used_by_PDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180D_Transmission_Type },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180D_Inhibit_Time },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180D_Compatibility_Entry },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180D_Event_Timer },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180D_SYNC_start_value }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj180D, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj180D_COB_ID_used_by_PDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180D_Transmission_Type, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180D_Inhibit_Time, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180D_Compatibility_Entry, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180D_Event_Timer, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180D_SYNC_start_value, NULL }
                      };
 
 /* index 0x180E :   Transmit PDO 15 Parameter. */
@@ -2448,25 +2304,15 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj180E_Compatibility_Entry = 0x0;	/* 0 */
                     UNS16 CANOpenShellMasterOD_obj180E_Event_Timer = 0x0;	/* 0 */
                     UNS8 CANOpenShellMasterOD_obj180E_SYNC_start_value = 0x0;	/* 0 */
-                    ODCallback_t CANOpenShellMasterOD_Index180E_callbacks[] = 
-                     {
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index180E[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj180E },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj180E_COB_ID_used_by_PDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180E_Transmission_Type },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180E_Inhibit_Time },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180E_Compatibility_Entry },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180E_Event_Timer },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180E_SYNC_start_value }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj180E, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj180E_COB_ID_used_by_PDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180E_Transmission_Type, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180E_Inhibit_Time, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180E_Compatibility_Entry, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180E_Event_Timer, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180E_SYNC_start_value, NULL }
                      };
 
 /* index 0x180F :   Transmit PDO 16 Parameter. */
@@ -2477,25 +2323,15 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj180F_Compatibility_Entry = 0x0;	/* 0 */
                     UNS16 CANOpenShellMasterOD_obj180F_Event_Timer = 0x0;	/* 0 */
                     UNS8 CANOpenShellMasterOD_obj180F_SYNC_start_value = 0x0;	/* 0 */
-                    ODCallback_t CANOpenShellMasterOD_Index180F_callbacks[] = 
-                     {
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index180F[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj180F },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj180F_COB_ID_used_by_PDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180F_Transmission_Type },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180F_Inhibit_Time },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180F_Compatibility_Entry },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180F_Event_Timer },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180F_SYNC_start_value }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj180F, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj180F_COB_ID_used_by_PDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180F_Transmission_Type, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180F_Inhibit_Time, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180F_Compatibility_Entry, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj180F_Event_Timer, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj180F_SYNC_start_value, NULL }
                      };
 
 /* index 0x1810 :   Transmit PDO 17 Parameter. */
@@ -2506,25 +2342,15 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1810_Compatibility_Entry = 0x0;	/* 0 */
                     UNS16 CANOpenShellMasterOD_obj1810_Event_Timer = 0x0;	/* 0 */
                     UNS8 CANOpenShellMasterOD_obj1810_SYNC_start_value = 0x0;	/* 0 */
-                    ODCallback_t CANOpenShellMasterOD_Index1810_callbacks[] = 
-                     {
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index1810[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1810 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1810_COB_ID_used_by_PDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1810_Transmission_Type },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1810_Inhibit_Time },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1810_Compatibility_Entry },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1810_Event_Timer },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1810_SYNC_start_value }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1810, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1810_COB_ID_used_by_PDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1810_Transmission_Type, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1810_Inhibit_Time, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1810_Compatibility_Entry, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1810_Event_Timer, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1810_SYNC_start_value, NULL }
                      };
 
 /* index 0x1811 :   Transmit PDO 18 Parameter. */
@@ -2535,25 +2361,15 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1811_Compatibility_Entry = 0x0;	/* 0 */
                     UNS16 CANOpenShellMasterOD_obj1811_Event_Timer = 0x0;	/* 0 */
                     UNS8 CANOpenShellMasterOD_obj1811_SYNC_start_value = 0x0;	/* 0 */
-                    ODCallback_t CANOpenShellMasterOD_Index1811_callbacks[] = 
-                     {
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index1811[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1811 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1811_COB_ID_used_by_PDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1811_Transmission_Type },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1811_Inhibit_Time },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1811_Compatibility_Entry },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1811_Event_Timer },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1811_SYNC_start_value }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1811, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1811_COB_ID_used_by_PDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1811_Transmission_Type, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1811_Inhibit_Time, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1811_Compatibility_Entry, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1811_Event_Timer, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1811_SYNC_start_value, NULL }
                      };
 
 /* index 0x1812 :   Transmit PDO 19 Parameter. */
@@ -2564,97 +2380,99 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     UNS8 CANOpenShellMasterOD_obj1812_Compatibility_Entry = 0x0;	/* 0 */
                     UNS16 CANOpenShellMasterOD_obj1812_Event_Timer = 0x0;	/* 0 */
                     UNS8 CANOpenShellMasterOD_obj1812_SYNC_start_value = 0x0;	/* 0 */
-                    ODCallback_t CANOpenShellMasterOD_Index1812_callbacks[] = 
-                     {
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index1812[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1812 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1812_COB_ID_used_by_PDO },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1812_Transmission_Type },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1812_Inhibit_Time },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1812_Compatibility_Entry },
-                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1812_Event_Timer },
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1812_SYNC_start_value }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1812, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1812_COB_ID_used_by_PDO, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1812_Transmission_Type, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1812_Inhibit_Time, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1812_Compatibility_Entry, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&CANOpenShellMasterOD_obj1812_Event_Timer, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_obj1812_SYNC_start_value, NULL }
                      };
 
 /* index 0x1A00 :   Transmit PDO 1 Mapping. */
-                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A00 = 1; /* number of subindex - 1*/
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A00 = 2; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj1A00[] = 
                     {
-                      0x26000108	/* 637534472 */
+                      0x26000108,	/* 637534472 */
+                      0x25010108	/* 620822792 */
                     };
                     subindex CANOpenShellMasterOD_Index1A00[] = 
                      {
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A00 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A00[0] }
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A00, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A00[0], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A00[1], NULL }
                      };
 
 /* index 0x1A01 :   Transmit PDO 2 Mapping. */
-                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A01 = 1; /* number of subindex - 1*/
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A01 = 2; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj1A01[] = 
                     {
-                      0x26000208	/* 637534728 */
+                      0x26000208,	/* 637534728 */
+                      0x25010208	/* 620823048 */
                     };
                     subindex CANOpenShellMasterOD_Index1A01[] = 
                      {
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A01 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A01[0] }
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A01, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A01[0], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A01[1], NULL }
                      };
 
 /* index 0x1A02 :   Transmit PDO 3 Mapping. */
-                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A02 = 1; /* number of subindex - 1*/
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A02 = 2; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj1A02[] = 
                     {
-                      0x26000308	/* 637534984 */
+                      0x26000308,	/* 637534984 */
+                      0x25010308	/* 620823304 */
                     };
                     subindex CANOpenShellMasterOD_Index1A02[] = 
                      {
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A02 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A02[0] }
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A02, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A02[0], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A02[1], NULL }
                      };
 
 /* index 0x1A03 :   Transmit PDO 4 Mapping. */
-                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A03 = 1; /* number of subindex - 1*/
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A03 = 2; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj1A03[] = 
                     {
-                      0x26000408	/* 637535240 */
+                      0x26000408,	/* 637535240 */
+                      0x25010408	/* 620823560 */
                     };
                     subindex CANOpenShellMasterOD_Index1A03[] = 
                      {
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A03 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A03[0] }
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A03, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A03[0], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A03[1], NULL }
                      };
 
 /* index 0x1A04 :   Transmit PDO 5 Mapping. */
-                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A04 = 1; /* number of subindex - 1*/
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A04 = 2; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj1A04[] = 
                     {
-                      0x26000508	/* 637535496 */
+                      0x26000508,	/* 637535496 */
+                      0x25010508	/* 620823816 */
                     };
                     subindex CANOpenShellMasterOD_Index1A04[] = 
                      {
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A04 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A04[0] }
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A04, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A04[0], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A04[1], NULL }
                      };
 
 /* index 0x1A05 :   Transmit PDO 6 Mapping. */
-                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A05 = 1; /* number of subindex - 1*/
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A05 = 2; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj1A05[] = 
                     {
-                      0x26000608	/* 637535752 */
+                      0x26000608,	/* 637535752 */
+                      0x25010608	/* 620824072 */
                     };
                     subindex CANOpenShellMasterOD_Index1A05[] = 
                      {
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A05 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A05[0] }
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A05, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A05[0], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A05[1], NULL }
                      };
 
 /* index 0x1A06 :   Transmit PDO 7 Mapping. */
@@ -2665,8 +2483,8 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     };
                     subindex CANOpenShellMasterOD_Index1A06[] = 
                      {
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A06 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A06[0] }
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A06, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A06[0], NULL }
                      };
 
 /* index 0x1A07 :   Transmit PDO 8 Mapping. */
@@ -2677,8 +2495,8 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     };
                     subindex CANOpenShellMasterOD_Index1A07[] = 
                      {
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A07 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A07[0] }
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A07, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A07[0], NULL }
                      };
 
 /* index 0x1A08 :   Transmit PDO 9 Mapping. */
@@ -2689,8 +2507,8 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     };
                     subindex CANOpenShellMasterOD_Index1A08[] = 
                      {
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A08 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A08[0] }
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A08, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A08[0], NULL }
                      };
 
 /* index 0x1A09 :   Transmit PDO 10 Mapping. */
@@ -2701,8 +2519,8 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     };
                     subindex CANOpenShellMasterOD_Index1A09[] = 
                      {
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A09 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A09[0] }
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A09, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A09[0], NULL }
                      };
 
 /* index 0x1A0A :   Transmit PDO 11 Mapping. */
@@ -2713,8 +2531,8 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     };
                     subindex CANOpenShellMasterOD_Index1A0A[] = 
                      {
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A0A },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A0A[0] }
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A0A, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A0A[0], NULL }
                      };
 
 /* index 0x1A0B :   Transmit PDO 12 Mapping. */
@@ -2725,8 +2543,8 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     };
                     subindex CANOpenShellMasterOD_Index1A0B[] = 
                      {
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A0B },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A0B[0] }
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A0B, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A0B[0], NULL }
                      };
 
 /* index 0x1A0C :   Transmit PDO 13 Mapping. */
@@ -2737,552 +2555,532 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                     };
                     subindex CANOpenShellMasterOD_Index1A0C[] = 
                      {
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A0C },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A0C[0] }
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A0C, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A0C[0], NULL }
                      };
 
 /* index 0x1A0D :   Transmit PDO 14 Mapping. */
-                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A0D = 1; /* number of subindex - 1*/
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A0D = 2; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj1A0D[] = 
                     {
-                      0x25010108	/* 620822792 */
+                      0x25040120,	/* 621019424 */
+                      0x25050120	/* 621084960 */
                     };
                     subindex CANOpenShellMasterOD_Index1A0D[] = 
                      {
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A0D },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A0D[0] }
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A0D, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A0D[0], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A0D[1], NULL }
                      };
 
 /* index 0x1A0E :   Transmit PDO 15 Mapping. */
-                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A0E = 1; /* number of subindex - 1*/
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A0E = 2; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj1A0E[] = 
                     {
-                      0x25010208	/* 620823048 */
+                      0x25040220,	/* 621019680 */
+                      0x25050220	/* 621085216 */
                     };
                     subindex CANOpenShellMasterOD_Index1A0E[] = 
                      {
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A0E },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A0E[0] }
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A0E, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A0E[0], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A0E[1], NULL }
                      };
 
 /* index 0x1A0F :   Transmit PDO 16 Mapping. */
-                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A0F = 1; /* number of subindex - 1*/
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A0F = 2; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj1A0F[] = 
                     {
-                      0x25010308	/* 620823304 */
+                      0x25040320,	/* 621019936 */
+                      0x25050320	/* 621085472 */
                     };
                     subindex CANOpenShellMasterOD_Index1A0F[] = 
                      {
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A0F },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A0F[0] }
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A0F, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A0F[0], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A0F[1], NULL }
                      };
 
 /* index 0x1A10 :   Transmit PDO 17 Mapping. */
-                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A10 = 1; /* number of subindex - 1*/
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A10 = 2; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj1A10[] = 
                     {
-                      0x25010408	/* 620823560 */
+                      0x25040420,	/* 621020192 */
+                      0x25050420	/* 621085728 */
                     };
                     subindex CANOpenShellMasterOD_Index1A10[] = 
                      {
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A10 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A10[0] }
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A10, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A10[0], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A10[1], NULL }
                      };
 
 /* index 0x1A11 :   Transmit PDO 18 Mapping. */
-                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A11 = 1; /* number of subindex - 1*/
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A11 = 2; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj1A11[] = 
                     {
-                      0x25010508	/* 620823816 */
+                      0x25040520,	/* 621020448 */
+                      0x25050520	/* 621085984 */
                     };
                     subindex CANOpenShellMasterOD_Index1A11[] = 
                      {
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A11 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A11[0] }
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A11, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A11[0], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A11[1], NULL }
                      };
 
 /* index 0x1A12 :   Transmit PDO 19 Mapping. */
-                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A12 = 1; /* number of subindex - 1*/
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1A12 = 2; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj1A12[] = 
                     {
-                      0x26000608	/* 637535752 */
+                      0x25040620,	/* 621020704 */
+                      0x25050620	/* 621086240 */
                     };
                     subindex CANOpenShellMasterOD_Index1A12[] = 
                      {
-                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A12 },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A12[0] }
+                       { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1A12, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A12[0], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1A12[1], NULL }
                      };
 
 /* index 0x2000 :   Mapped variable NodeId */
-                    ODCallback_t NodeId_callbacks[] = 
-                     {
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index2000[] = 
                      {
-                       { RW, uint8, sizeof (UNS8), (void*)&NodeId }
+                       { RW, uint8, sizeof (UNS8), (void*)&NodeId, NULL }
                      };
 
 /* index 0x2001 :   Mapped variable BitRate */
                     subindex CANOpenShellMasterOD_Index2001[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&BitRate }
+                       { RO, uint8, sizeof (UNS8), (void*)&BitRate, NULL }
                      };
 
 /* index 0x2100 :   Mapped variable Port Configuration */
                     subindex CANOpenShellMasterOD_Index2100[] = 
                      {
-                       { RW, uint32, sizeof (UNS32), (void*)&Port_Configuration }
+                       { RW, uint32, sizeof (UNS32), (void*)&Port_Configuration, NULL }
                      };
 
 /* index 0x2200 :   Mapped variable Poll List */
                     UNS8 CANOpenShellMasterOD_highestSubIndex_obj2200 = 4; /* number of subindex - 1*/
                     subindex CANOpenShellMasterOD_Index2200[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj2200 },
-                       { RW, int32, sizeof (INTEGER32), (void*)&Poll_List_poll_list_entry_1 },
-                       { RW, int32, sizeof (INTEGER32), (void*)&Poll_List_poll_list_entry_2 },
-                       { RW, int32, sizeof (INTEGER32), (void*)&Poll_List_poll_list_entry_3 },
-                       { RW, int32, sizeof (INTEGER32), (void*)&Poll_List_poll_list_entry_4 }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj2200, NULL },
+                       { RW, int32, sizeof (INTEGER32), (void*)&Poll_List_poll_list_entry_1, NULL },
+                       { RW, int32, sizeof (INTEGER32), (void*)&Poll_List_poll_list_entry_2, NULL },
+                       { RW, int32, sizeof (INTEGER32), (void*)&Poll_List_poll_list_entry_3, NULL },
+                       { RW, int32, sizeof (INTEGER32), (void*)&Poll_List_poll_list_entry_4, NULL }
                      };
 
 /* index 0x2201 :   Mapped variable User Variable */
                     UNS8 CANOpenShellMasterOD_highestSubIndex_obj2201 = 2; /* number of subindex - 1*/
                     subindex CANOpenShellMasterOD_Index2201[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj2201 },
-                       { RW, int32, sizeof (INTEGER32), (void*)&User_Variable_User_Array_Index },
-                       { RW, int32, sizeof (INTEGER32), (void*)&User_Variable_User_Array_Value }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj2201, NULL },
+                       { RW, int32, sizeof (INTEGER32), (void*)&User_Variable_User_Array_Index, NULL },
+                       { RW, int32, sizeof (INTEGER32), (void*)&User_Variable_User_Array_Value, NULL }
                      };
 
 /* index 0x2202 :   Mapped variable Set Actual Position */
                     subindex CANOpenShellMasterOD_Index2202[] = 
                      {
-                       { RW, uint32, sizeof (UNS32), (void*)&Set_Actual_Position }
+                       { RW, uint32, sizeof (UNS32), (void*)&Set_Actual_Position, NULL }
                      };
 
 /* index 0x2300 :   Mapped variable Bus Voltage */
                     subindex CANOpenShellMasterOD_Index2300[] = 
                      {
-                       { RO, uint16, sizeof (UNS16), (void*)&Bus_Voltage }
+                       { RO, uint16, sizeof (UNS16), (void*)&Bus_Voltage, NULL }
                      };
 
 /* index 0x2301 :   Mapped variable RMS Current */
                     subindex CANOpenShellMasterOD_Index2301[] = 
                      {
-                       { RO, uint16, sizeof (UNS16), (void*)&RMS_Current }
+                       { RO, uint16, sizeof (UNS16), (void*)&RMS_Current, NULL }
                      };
 
 /* index 0x2302 :   Mapped variable Internal Temperature */
                     subindex CANOpenShellMasterOD_Index2302[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&Internal_Temperature }
+                       { RO, uint8, sizeof (UNS8), (void*)&Internal_Temperature, NULL }
                      };
 
 /* index 0x2303 :   Mapped variable Internal Clock */
                     subindex CANOpenShellMasterOD_Index2303[] = 
                      {
-                       { RW, uint32, sizeof (UNS32), (void*)&Internal_Clock }
+                       { RW, uint32, sizeof (UNS32), (void*)&Internal_Clock, NULL }
                      };
 
 /* index 0x2304 :   Mapped variable Motor Status */
                     subindex CANOpenShellMasterOD_Index2304[] = 
                      {
-                       { RO, uint16, sizeof (UNS16), (void*)&Motor_Status }
+                       { RO, uint16, sizeof (UNS16), (void*)&Motor_Status, NULL }
                      };
 
 /* index 0x2305 :   Mapped variable Motor Control */
                     subindex CANOpenShellMasterOD_Index2305[] = 
                      {
-                       { RW, uint16, sizeof (UNS16), (void*)&Motor_Control }
+                       { RW, uint16, sizeof (UNS16), (void*)&Motor_Control, NULL }
                      };
 
 /* index 0x2306 :   Mapped variable Motor Subroutine Index */
                     subindex CANOpenShellMasterOD_Index2306[] = 
                      {
-                       { RW, int16, sizeof (INTEGER16), (void*)&Motor_Subroutine_Index }
+                       { RW, int16, sizeof (INTEGER16), (void*)&Motor_Subroutine_Index, NULL }
                      };
 
 /* index 0x2307 :   Mapped variable Sample Period */
                     subindex CANOpenShellMasterOD_Index2307[] = 
                      {
-                       { RO, uint16, sizeof (UNS16), (void*)&Sample_Period }
+                       { RO, uint16, sizeof (UNS16), (void*)&Sample_Period, NULL }
                      };
 
 /* index 0x2400 :   Mapped variable Interpolation Mode Status */
-                    ODCallback_t Interpolation_Mode_Status_callbacks[] = 
-                     {
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index2400[] = 
                      {
-                       { RW, uint16, sizeof (UNS16), (void*)&Interpolation_Mode_Status }
+                       { RW, uint16, sizeof (UNS16), (void*)&Interpolation_Mode_Status, NULL }
                      };
 
 /* index 0x2501 :   Mapped variable InterpolationTimeValue */
                     UNS8 CANOpenShellMasterOD_highestSubIndex_obj2501 = 6; /* number of subindex - 1*/
-                    ODCallback_t InterpolationTimeValue_callbacks[] = 
-                     {
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index2501[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj2501 },
-                       { RW, uint8, sizeof (UNS8), (void*)&InterpolationTimeValue[0] },
-                       { RW, uint8, sizeof (UNS8), (void*)&InterpolationTimeValue[1] },
-                       { RW, uint8, sizeof (UNS8), (void*)&InterpolationTimeValue[2] },
-                       { RW, uint8, sizeof (UNS8), (void*)&InterpolationTimeValue[3] },
-                       { RW, uint8, sizeof (UNS8), (void*)&InterpolationTimeValue[4] },
-                       { RW, uint8, sizeof (UNS8), (void*)&InterpolationTimeValue[5] }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj2501, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&InterpolationTimeValue[0], NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&InterpolationTimeValue[1], NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&InterpolationTimeValue[2], NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&InterpolationTimeValue[3], NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&InterpolationTimeValue[4], NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&InterpolationTimeValue[5], NULL }
                      };
 
 /* index 0x2502 :   Mapped variable InterpolationData */
                     UNS8 CANOpenShellMasterOD_highestSubIndex_obj2502 = 6; /* number of subindex - 1*/
-                    ODCallback_t InterpolationData_callbacks[] = 
-                     {
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index2502[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj2502 },
-                       { RW, int32, sizeof (INTEGER32), (void*)&InterpolationData[0] },
-                       { RW, int32, sizeof (INTEGER32), (void*)&InterpolationData[1] },
-                       { RW, int32, sizeof (INTEGER32), (void*)&InterpolationData[2] },
-                       { RW, int32, sizeof (INTEGER32), (void*)&InterpolationData[3] },
-                       { RW, int32, sizeof (INTEGER32), (void*)&InterpolationData[4] },
-                       { RW, int32, sizeof (INTEGER32), (void*)&InterpolationData[5] }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj2502, NULL },
+                       { RW, int32, sizeof (INTEGER32), (void*)&InterpolationData[0], NULL },
+                       { RW, int32, sizeof (INTEGER32), (void*)&InterpolationData[1], NULL },
+                       { RW, int32, sizeof (INTEGER32), (void*)&InterpolationData[2], NULL },
+                       { RW, int32, sizeof (INTEGER32), (void*)&InterpolationData[3], NULL },
+                       { RW, int32, sizeof (INTEGER32), (void*)&InterpolationData[4], NULL },
+                       { RW, int32, sizeof (INTEGER32), (void*)&InterpolationData[5], NULL }
                      };
 
 /* index 0x2503 :   Mapped variable InterpolationStart */
-                    ODCallback_t InterpolationStart_callbacks[] = 
-                     {
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index2503[] = 
                      {
-                       { RW, uint16, sizeof (UNS16), (void*)&InterpolationStart }
+                       { RW, uint16, sizeof (UNS16), (void*)&InterpolationStart, NULL }
+                     };
+
+/* index 0x2504 :   Mapped variable VelocityProfile */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj2504 = 6; /* number of subindex - 1*/
+                    subindex CANOpenShellMasterOD_Index2504[] = 
+                     {
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj2504, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&VelocityProfile[0], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&VelocityProfile[1], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&VelocityProfile[2], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&VelocityProfile[3], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&VelocityProfile[4], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&VelocityProfile[5], NULL }
+                     };
+
+/* index 0x2505 :   Mapped variable PositionTarget */
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj2505 = 6; /* number of subindex - 1*/
+                    subindex CANOpenShellMasterOD_Index2505[] = 
+                     {
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj2505, NULL },
+                       { RW, int32, sizeof (INTEGER32), (void*)&PositionTarget[0], NULL },
+                       { RW, int32, sizeof (INTEGER32), (void*)&PositionTarget[1], NULL },
+                       { RW, int32, sizeof (INTEGER32), (void*)&PositionTarget[2], NULL },
+                       { RW, int32, sizeof (INTEGER32), (void*)&PositionTarget[3], NULL },
+                       { RW, int32, sizeof (INTEGER32), (void*)&PositionTarget[4], NULL },
+                       { RW, int32, sizeof (INTEGER32), (void*)&PositionTarget[5], NULL }
                      };
 
 /* index 0x2600 :   Mapped variable InterpolationTimePeriod */
                     UNS8 CANOpenShellMasterOD_highestSubIndex_obj2600 = 6; /* number of subindex - 1*/
-                    ODCallback_t InterpolationTimePeriod_callbacks[] = 
-                     {
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index2600[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj2600 },
-                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[0] },
-                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[1] },
-                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[2] },
-                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[3] },
-                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[4] },
-                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[5] }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj2600, NULL },
+                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[0], NULL },
+                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[1], NULL },
+                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[2], NULL },
+                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[3], NULL },
+                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[4], NULL },
+                       { RW, int8, sizeof (INTEGER8), (void*)&InterpolationTimePeriod[5], NULL }
                      };
 
 /* index 0x6040 :   Mapped variable Controlword */
-                    ODCallback_t Controlword_callbacks[] = 
-                     {
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index6040[] = 
                      {
-                       { RW, uint16, sizeof (UNS16), (void*)&Controlword }
+                       { RW, uint16, sizeof (UNS16), (void*)&Controlword, NULL }
                      };
 
 /* index 0x6041 :   Mapped variable Statusword */
-                    ODCallback_t Statusword_callbacks[] = 
-                     {
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index6041[] = 
                      {
-                       { RO, uint16, sizeof (UNS16), (void*)&Statusword }
+                       { RO, uint16, sizeof (UNS16), (void*)&Statusword, NULL }
                      };
 
 /* index 0x605A :   Mapped variable Quick Stop Option Code */
                     subindex CANOpenShellMasterOD_Index605A[] = 
                      {
-                       { RW, int16, sizeof (INTEGER16), (void*)&Quick_Stop_Option_Code }
+                       { RW, int16, sizeof (INTEGER16), (void*)&Quick_Stop_Option_Code, NULL }
                      };
 
 /* index 0x605D :   Mapped variable Halt Option Code */
                     subindex CANOpenShellMasterOD_Index605D[] = 
                      {
-                       { RW, int16, sizeof (INTEGER16), (void*)&Halt_Option_Code }
+                       { RW, int16, sizeof (INTEGER16), (void*)&Halt_Option_Code, NULL }
                      };
 
 /* index 0x6060 :   Mapped variable Modes of operation */
                     subindex CANOpenShellMasterOD_Index6060[] = 
                      {
-                       { RW, int8, sizeof (INTEGER8), (void*)&Modes_of_operation }
+                       { RW, int8, sizeof (INTEGER8), (void*)&Modes_of_operation, NULL }
                      };
 
 /* index 0x6061 :   Mapped variable Modes of operation display */
-                    ODCallback_t Modes_of_operation_display_callbacks[] = 
-                     {
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index6061[] = 
                      {
-                       { RO, int8, sizeof (INTEGER8), (void*)&Modes_of_operation_display }
+                       { RO, int8, sizeof (INTEGER8), (void*)&Modes_of_operation_display, NULL }
                      };
 
 /* index 0x6063 :   Mapped variable Position Actual Value */
-                    ODCallback_t Position_Actual_Value_callbacks[] = 
-                     {
-                       NULL,
-                     };
                     subindex CANOpenShellMasterOD_Index6063[] = 
                      {
-                       { RO, int32, sizeof (INTEGER32), (void*)&Position_Actual_Value }
+                       { RO, int32, sizeof (INTEGER32), (void*)&Position_Actual_Value, NULL }
                      };
 
 /* index 0x6065 :   Mapped variable Maximal following error */
                     subindex CANOpenShellMasterOD_Index6065[] = 
                      {
-                       { RW, uint32, sizeof (UNS32), (void*)&Maximal_following_error }
+                       { RW, uint32, sizeof (UNS32), (void*)&Maximal_following_error, NULL }
                      };
 
 /* index 0x606C :   Mapped variable Velocity actual value */
                     subindex CANOpenShellMasterOD_Index606C[] = 
                      {
-                       { RO, int32, sizeof (INTEGER32), (void*)&Velocity_actual_value }
+                       { RO, int32, sizeof (INTEGER32), (void*)&Velocity_actual_value, NULL }
                      };
 
 /* index 0x6071 :   Mapped variable Target Torque */
                     subindex CANOpenShellMasterOD_Index6071[] = 
                      {
-                       { RW, int16, sizeof (INTEGER16), (void*)&Target_Torque }
+                       { RW, int16, sizeof (INTEGER16), (void*)&Target_Torque, NULL }
                      };
 
 /* index 0x6072 :   Mapped variable Max Torque */
                     subindex CANOpenShellMasterOD_Index6072[] = 
                      {
-                       { RW, uint16, sizeof (UNS16), (void*)&Max_Torque }
+                       { RW, uint16, sizeof (UNS16), (void*)&Max_Torque, NULL }
                      };
 
 /* index 0x6073 :   Mapped variable Max Current */
                     subindex CANOpenShellMasterOD_Index6073[] = 
                      {
-                       { RW, uint16, sizeof (UNS16), (void*)&Max_Current }
+                       { RW, uint16, sizeof (UNS16), (void*)&Max_Current, NULL }
                      };
 
 /* index 0x607A :   Mapped variable Target position */
                     subindex CANOpenShellMasterOD_Index607A[] = 
                      {
-                       { RW, int32, sizeof (INTEGER32), (void*)&Target_position }
+                       { RW, int32, sizeof (INTEGER32), (void*)&Target_position, NULL }
                      };
 
 /* index 0x607C :   Mapped variable Home offset */
                     subindex CANOpenShellMasterOD_Index607C[] = 
                      {
-                       { RW, int32, sizeof (INTEGER32), (void*)&Home_offset }
+                       { RW, int32, sizeof (INTEGER32), (void*)&Home_offset, NULL }
                      };
 
 /* index 0x607D :   Mapped variable Software position limit */
                     UNS8 CANOpenShellMasterOD_highestSubIndex_obj607D = 2; /* number of subindex - 1*/
                     subindex CANOpenShellMasterOD_Index607D[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj607D },
-                       { RW, int32, sizeof (INTEGER32), (void*)&Software_position_limit_Minimal_position_limit },
-                       { RW, int32, sizeof (INTEGER32), (void*)&Software_position_limit_Maximal_position_limit }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj607D, NULL },
+                       { RW, int32, sizeof (INTEGER32), (void*)&Software_position_limit_Minimal_position_limit, NULL },
+                       { RW, int32, sizeof (INTEGER32), (void*)&Software_position_limit_Maximal_position_limit, NULL }
                      };
 
 /* index 0x607E :   Mapped variable Polarity */
                     subindex CANOpenShellMasterOD_Index607E[] = 
                      {
-                       { RW, uint8, sizeof (UNS8), (void*)&Polarity }
+                       { RW, uint8, sizeof (UNS8), (void*)&Polarity, NULL }
                      };
 
 /* index 0x607F :   Mapped variable Maximal profile velocity */
                     subindex CANOpenShellMasterOD_Index607F[] = 
                      {
-                       { RW, uint32, sizeof (UNS32), (void*)&Maximal_profile_velocity }
+                       { RW, uint32, sizeof (UNS32), (void*)&Maximal_profile_velocity, NULL }
                      };
 
 /* index 0x6081 :   Mapped variable Profile velocity */
                     subindex CANOpenShellMasterOD_Index6081[] = 
                      {
-                       { RW, uint32, sizeof (UNS32), (void*)&Profile_velocity }
+                       { RW, uint32, sizeof (UNS32), (void*)&Profile_velocity, NULL }
                      };
 
 /* index 0x6083 :   Mapped variable Profile acceleration */
                     subindex CANOpenShellMasterOD_Index6083[] = 
                      {
-                       { RW, uint32, sizeof (UNS32), (void*)&Profile_acceleration }
+                       { RW, uint32, sizeof (UNS32), (void*)&Profile_acceleration, NULL }
                      };
 
 /* index 0x6085 :   Mapped variable Quick stop deceleration */
                     subindex CANOpenShellMasterOD_Index6085[] = 
                      {
-                       { RW, uint32, sizeof (UNS32), (void*)&Quick_stop_deceleration }
+                       { RW, uint32, sizeof (UNS32), (void*)&Quick_stop_deceleration, NULL }
                      };
 
 /* index 0x608F :   Mapped variable Position Encoder Resolution */
                     UNS8 CANOpenShellMasterOD_highestSubIndex_obj608F = 2; /* number of subindex - 1*/
                     subindex CANOpenShellMasterOD_Index608F[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj608F },
-                       { RW, uint32, sizeof (UNS32), (void*)&Position_Encoder_Resolution_Encoder_Increments },
-                       { RW, uint32, sizeof (UNS32), (void*)&Position_Encoder_Resolution_Motor_Revolutions }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj608F, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&Position_Encoder_Resolution_Encoder_Increments, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&Position_Encoder_Resolution_Motor_Revolutions, NULL }
                      };
 
 /* index 0x6098 :   Mapped variable Homing method */
                     subindex CANOpenShellMasterOD_Index6098[] = 
                      {
-                       { RW, int8, sizeof (INTEGER8), (void*)&Homing_method }
+                       { RW, int8, sizeof (INTEGER8), (void*)&Homing_method, NULL }
                      };
 
 /* index 0x6099 :   Mapped variable Homing speeds */
                     UNS8 CANOpenShellMasterOD_highestSubIndex_obj6099 = 2; /* number of subindex - 1*/
                     subindex CANOpenShellMasterOD_Index6099[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj6099 },
-                       { RW, uint32, sizeof (UNS32), (void*)&Homing_speeds_Speed_for_switch_search },
-                       { RW, uint32, sizeof (UNS32), (void*)&Homing_speeds_Speed_for_zero_search }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj6099, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&Homing_speeds_Speed_for_switch_search, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&Homing_speeds_Speed_for_zero_search, NULL }
                      };
 
 /* index 0x609A :   Mapped variable Homing acceleration */
                     subindex CANOpenShellMasterOD_Index609A[] = 
                      {
-                       { RW, uint32, sizeof (UNS32), (void*)&Homing_acceleration }
+                       { RW, uint32, sizeof (UNS32), (void*)&Homing_acceleration, NULL }
                      };
 
 /* index 0x60F4 :   Mapped variable Following Error Actual Value */
                     subindex CANOpenShellMasterOD_Index60F4[] = 
                      {
-                       { RO, int32, sizeof (INTEGER32), (void*)&Following_Error_Actual_Value }
+                       { RO, int32, sizeof (INTEGER32), (void*)&Following_Error_Actual_Value, NULL }
                      };
 
 /* index 0x60FB :   Mapped variable Position Control Parameter Set */
                     UNS8 CANOpenShellMasterOD_highestSubIndex_obj60FB = 8; /* number of subindex - 1*/
                     subindex CANOpenShellMasterOD_Index60FB[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj60FB },
-                       { RW, uint16, sizeof (UNS16), (void*)&Position_Control_Parameter_Set_KP_Proportional_Gain },
-                       { RW, uint16, sizeof (UNS16), (void*)&Position_Control_Parameter_Set_KI_Integral_Gain },
-                       { RW, uint16, sizeof (UNS16), (void*)&Position_Control_Parameter_Set_KL_Integral_Limit },
-                       { RW, uint16, sizeof (UNS16), (void*)&Position_Control_Parameter_Set_KD_Derivative_Gain },
-                       { RW, uint8, sizeof (UNS8), (void*)&Position_Control_Parameter_Set_KS_Derivative_Damping_Sample_Rate },
-                       { RW, uint16, sizeof (UNS16), (void*)&Position_Control_Parameter_Set_KV_Velocity_Feedforward_Gain },
-                       { RW, uint16, sizeof (UNS16), (void*)&Position_Control_Parameter_Set_KA_Acceleration_Feedforward_Gain },
-                       { RW, int32, sizeof (INTEGER32), (void*)&Position_Control_Parameter_Set_KG_Gravitational_Offset }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj60FB, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&Position_Control_Parameter_Set_KP_Proportional_Gain, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&Position_Control_Parameter_Set_KI_Integral_Gain, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&Position_Control_Parameter_Set_KL_Integral_Limit, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&Position_Control_Parameter_Set_KD_Derivative_Gain, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&Position_Control_Parameter_Set_KS_Derivative_Damping_Sample_Rate, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&Position_Control_Parameter_Set_KV_Velocity_Feedforward_Gain, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&Position_Control_Parameter_Set_KA_Acceleration_Feedforward_Gain, NULL },
+                       { RW, int32, sizeof (INTEGER32), (void*)&Position_Control_Parameter_Set_KG_Gravitational_Offset, NULL }
                      };
 
 /* index 0x60FD :   Mapped variable Digital Inputs */
                     subindex CANOpenShellMasterOD_Index60FD[] = 
                      {
-                       { RO, uint32, sizeof (UNS32), (void*)&Digital_Inputs }
+                       { RO, uint32, sizeof (UNS32), (void*)&Digital_Inputs, NULL }
                      };
 
 /* index 0x60FE :   Mapped variable Digital Outputs */
                     UNS8 CANOpenShellMasterOD_highestSubIndex_obj60FE = 1; /* number of subindex - 1*/
                     subindex CANOpenShellMasterOD_Index60FE[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj60FE },
-                       { RW, uint32, sizeof (UNS32), (void*)&Digital_Outputs_Physical_Outputs }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj60FE, NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&Digital_Outputs_Physical_Outputs, NULL }
                      };
 
 /* index 0x60FF :   Mapped variable Target velocity */
                     subindex CANOpenShellMasterOD_Index60FF[] = 
                      {
-                       { RW, int32, sizeof (INTEGER32), (void*)&Target_velocity }
+                       { RW, int32, sizeof (INTEGER32), (void*)&Target_velocity, NULL }
                      };
 
 /* index 0x6401 :   Mapped variable Read Analog Input 16 Bit */
                     UNS8 CANOpenShellMasterOD_highestSubIndex_obj6401 = 7; /* number of subindex - 1*/
                     subindex CANOpenShellMasterOD_Index6401[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj6401 },
-                       { RO, int16, sizeof (INTEGER16), (void*)&Read_Analog_Input_16_Bit_16_Bit_analog_Input_1 },
-                       { RO, int16, sizeof (INTEGER16), (void*)&Read_Analog_Input_16_Bit_16_Bit_analog_Input_2 },
-                       { RO, int16, sizeof (INTEGER16), (void*)&Read_Analog_Input_16_Bit_16_Bit_analog_Input_3 },
-                       { RO, int16, sizeof (INTEGER16), (void*)&Read_Analog_Input_16_Bit_16_Bit_analog_Input_4 },
-                       { RO, int16, sizeof (INTEGER16), (void*)&Read_Analog_Input_16_Bit_16_Bit_analog_Input_5 },
-                       { RO, int16, sizeof (INTEGER16), (void*)&Read_Analog_Input_16_Bit_16_Bit_analog_Input_6 },
-                       { RO, int16, sizeof (INTEGER16), (void*)&Read_Analog_Input_16_Bit_16_Bit_analog_Input_7 }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj6401, NULL },
+                       { RO, int16, sizeof (INTEGER16), (void*)&Read_Analog_Input_16_Bit_16_Bit_analog_Input_1, NULL },
+                       { RO, int16, sizeof (INTEGER16), (void*)&Read_Analog_Input_16_Bit_16_Bit_analog_Input_2, NULL },
+                       { RO, int16, sizeof (INTEGER16), (void*)&Read_Analog_Input_16_Bit_16_Bit_analog_Input_3, NULL },
+                       { RO, int16, sizeof (INTEGER16), (void*)&Read_Analog_Input_16_Bit_16_Bit_analog_Input_4, NULL },
+                       { RO, int16, sizeof (INTEGER16), (void*)&Read_Analog_Input_16_Bit_16_Bit_analog_Input_5, NULL },
+                       { RO, int16, sizeof (INTEGER16), (void*)&Read_Analog_Input_16_Bit_16_Bit_analog_Input_6, NULL },
+                       { RO, int16, sizeof (INTEGER16), (void*)&Read_Analog_Input_16_Bit_16_Bit_analog_Input_7, NULL }
                      };
 
 /* index 0x6402 :   Mapped variable Motor type */
                     subindex CANOpenShellMasterOD_Index6402[] = 
                      {
-                       { RW, uint16, sizeof (UNS16), (void*)&Motor_type }
+                       { RW, uint16, sizeof (UNS16), (void*)&Motor_type, NULL }
                      };
 
 /* index 0x6403 :   Mapped variable Motor Catalogue Number */
                     subindex CANOpenShellMasterOD_Index6403[] = 
                      {
-                       { RW, visible_string, 10, (void*)&Motor_Catalogue_Number }
+                       { RW, visible_string, 10, (void*)&Motor_Catalogue_Number, NULL }
                      };
 
 /* index 0x6404 :   Mapped variable Motor Manufacturer */
                     subindex CANOpenShellMasterOD_Index6404[] = 
                      {
-                       { RO, visible_string, 21, (void*)&Motor_Manufacturer }
+                       { RO, visible_string, 21, (void*)&Motor_Manufacturer, NULL }
                      };
 
 /* index 0x6405 :   Mapped variable Http Motor Catalog Address */
                     subindex CANOpenShellMasterOD_Index6405[] = 
                      {
-                       { RO, visible_string, 17, (void*)&Http_Motor_Catalog_Address }
+                       { RO, visible_string, 17, (void*)&Http_Motor_Catalog_Address, NULL }
                      };
 
 /* index 0x6502 :   Mapped variable Supported drive modes */
                     subindex CANOpenShellMasterOD_Index6502[] = 
                      {
-                       { RO, uint32, sizeof (UNS32), (void*)&Supported_drive_modes }
+                       { RO, uint32, sizeof (UNS32), (void*)&Supported_drive_modes, NULL }
                      };
 
 /* index 0x6503 :   Mapped variable Drive Catalog Number */
                     subindex CANOpenShellMasterOD_Index6503[] = 
                      {
-                       { RW, visible_string, 10, (void*)&Drive_Catalog_Number }
+                       { RW, visible_string, 10, (void*)&Drive_Catalog_Number, NULL }
                      };
 
 /* index 0x6504 :   Mapped variable Drive Manufacturer */
                     subindex CANOpenShellMasterOD_Index6504[] = 
                      {
-                       { RO, visible_string, 21, (void*)&Drive_Manufacturer }
+                       { RO, visible_string, 21, (void*)&Drive_Manufacturer, NULL }
                      };
 
 /* index 0x6505 :   Mapped variable Http Drive Catalog Address */
                     subindex CANOpenShellMasterOD_Index6505[] = 
                      {
-                       { RO, visible_string, 17, (void*)&Http_Drive_Catalog_Address }
+                       { RO, visible_string, 17, (void*)&Http_Drive_Catalog_Address, NULL }
                      };
 
 /* index 0x6510 :   Mapped variable Drive Data */
                     UNS8 CANOpenShellMasterOD_highestSubIndex_obj6510 = 2; /* number of subindex - 1*/
                     subindex CANOpenShellMasterOD_Index6510[] = 
                      {
-                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj6510 },
-                       { RW, uint16, sizeof (UNS16), (void*)&Drive_Data_RMS_time_before_shutdown },
-                       { RW, uint8, sizeof (UNS8), (void*)&Drive_Data_Internal_Temperature_Limit }
+                       { RO, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj6510, NULL },
+                       { RW, uint16, sizeof (UNS16), (void*)&Drive_Data_RMS_time_before_shutdown, NULL },
+                       { RW, uint8, sizeof (UNS8), (void*)&Drive_Data_Internal_Temperature_Limit, NULL }
                      };
 
 /* index 0x67FF :   Mapped variable Single Device Type */
                     subindex CANOpenShellMasterOD_Index67FF[] = 
                      {
-                       { RO, uint32, sizeof (UNS32), (void*)&Single_Device_Type }
+                       { RO, uint32, sizeof (UNS32), (void*)&Single_Device_Type, NULL }
                      };
 
 /**************************************************************************/
@@ -3492,6 +3290,8 @@ const indextable CANOpenShellMasterOD_objdict[] =
   { (subindex*)CANOpenShellMasterOD_Index2501,sizeof(CANOpenShellMasterOD_Index2501)/sizeof(CANOpenShellMasterOD_Index2501[0]), 0x2501},
   { (subindex*)CANOpenShellMasterOD_Index2502,sizeof(CANOpenShellMasterOD_Index2502)/sizeof(CANOpenShellMasterOD_Index2502[0]), 0x2502},
   { (subindex*)CANOpenShellMasterOD_Index2503,sizeof(CANOpenShellMasterOD_Index2503)/sizeof(CANOpenShellMasterOD_Index2503[0]), 0x2503},
+  { (subindex*)CANOpenShellMasterOD_Index2504,sizeof(CANOpenShellMasterOD_Index2504)/sizeof(CANOpenShellMasterOD_Index2504[0]), 0x2504},
+  { (subindex*)CANOpenShellMasterOD_Index2505,sizeof(CANOpenShellMasterOD_Index2505)/sizeof(CANOpenShellMasterOD_Index2505[0]), 0x2505},
   { (subindex*)CANOpenShellMasterOD_Index2600,sizeof(CANOpenShellMasterOD_Index2600)/sizeof(CANOpenShellMasterOD_Index2600[0]), 0x2600},
   { (subindex*)CANOpenShellMasterOD_Index6040,sizeof(CANOpenShellMasterOD_Index6040)/sizeof(CANOpenShellMasterOD_Index6040[0]), 0x6040},
   { (subindex*)CANOpenShellMasterOD_Index6041,sizeof(CANOpenShellMasterOD_Index6041)/sizeof(CANOpenShellMasterOD_Index6041[0]), 0x6041},
@@ -3535,15 +3335,14 @@ const indextable CANOpenShellMasterOD_objdict[] =
   { (subindex*)CANOpenShellMasterOD_Index67FF,sizeof(CANOpenShellMasterOD_Index67FF)/sizeof(CANOpenShellMasterOD_Index67FF[0]), 0x67FF},
 };
 
-const indextable * CANOpenShellMasterOD_scanIndexOD (UNS16 wIndex, UNS32 * errorCode, ODCallback_t **callbacks)
+const indextable * CANOpenShellMasterOD_scanIndexOD (CO_Data *d, UNS16 wIndex, UNS32 * errorCode)
 {
 	int i;
-	*callbacks = NULL;
 	switch(wIndex){
 		case 0x1000: i = 0;break;
 		case 0x1001: i = 1;break;
-		case 0x1005: i = 2;*callbacks = CANOpenShellMasterOD_Index1005_callbacks; break;
-		case 0x1006: i = 3;*callbacks = CANOpenShellMasterOD_Index1006_callbacks; break;
+		case 0x1005: i = 2;break;
+		case 0x1006: i = 3;break;
 		case 0x1007: i = 4;break;
 		case 0x1008: i = 5;break;
 		case 0x1009: i = 6;break;
@@ -3551,8 +3350,8 @@ const indextable * CANOpenShellMasterOD_scanIndexOD (UNS16 wIndex, UNS32 * error
 		case 0x1010: i = 8;break;
 		case 0x1011: i = 9;break;
 		case 0x1013: i = 10;break;
-		case 0x1016: i = 11;*callbacks = CANOpenShellMasterOD_Index1016_callbacks; break;
-		case 0x1017: i = 12;*callbacks = CANOpenShellMasterOD_Index1017_callbacks; break;
+		case 0x1016: i = 11;break;
+		case 0x1017: i = 12;break;
 		case 0x1018: i = 13;break;
 		case 0x1280: i = 14;break;
 		case 0x1281: i = 15;break;
@@ -3685,25 +3484,25 @@ const indextable * CANOpenShellMasterOD_scanIndexOD (UNS16 wIndex, UNS32 * error
 		case 0x1401: i = 142;break;
 		case 0x1600: i = 143;break;
 		case 0x1601: i = 144;break;
-		case 0x1800: i = 145;*callbacks = CANOpenShellMasterOD_Index1800_callbacks; break;
-		case 0x1801: i = 146;*callbacks = CANOpenShellMasterOD_Index1801_callbacks; break;
-		case 0x1802: i = 147;*callbacks = CANOpenShellMasterOD_Index1802_callbacks; break;
-		case 0x1803: i = 148;*callbacks = CANOpenShellMasterOD_Index1803_callbacks; break;
-		case 0x1804: i = 149;*callbacks = CANOpenShellMasterOD_Index1804_callbacks; break;
-		case 0x1805: i = 150;*callbacks = CANOpenShellMasterOD_Index1805_callbacks; break;
-		case 0x1806: i = 151;*callbacks = CANOpenShellMasterOD_Index1806_callbacks; break;
-		case 0x1807: i = 152;*callbacks = CANOpenShellMasterOD_Index1807_callbacks; break;
-		case 0x1808: i = 153;*callbacks = CANOpenShellMasterOD_Index1808_callbacks; break;
-		case 0x1809: i = 154;*callbacks = CANOpenShellMasterOD_Index1809_callbacks; break;
-		case 0x180A: i = 155;*callbacks = CANOpenShellMasterOD_Index180A_callbacks; break;
-		case 0x180B: i = 156;*callbacks = CANOpenShellMasterOD_Index180B_callbacks; break;
-		case 0x180C: i = 157;*callbacks = CANOpenShellMasterOD_Index180C_callbacks; break;
-		case 0x180D: i = 158;*callbacks = CANOpenShellMasterOD_Index180D_callbacks; break;
-		case 0x180E: i = 159;*callbacks = CANOpenShellMasterOD_Index180E_callbacks; break;
-		case 0x180F: i = 160;*callbacks = CANOpenShellMasterOD_Index180F_callbacks; break;
-		case 0x1810: i = 161;*callbacks = CANOpenShellMasterOD_Index1810_callbacks; break;
-		case 0x1811: i = 162;*callbacks = CANOpenShellMasterOD_Index1811_callbacks; break;
-		case 0x1812: i = 163;*callbacks = CANOpenShellMasterOD_Index1812_callbacks; break;
+		case 0x1800: i = 145;break;
+		case 0x1801: i = 146;break;
+		case 0x1802: i = 147;break;
+		case 0x1803: i = 148;break;
+		case 0x1804: i = 149;break;
+		case 0x1805: i = 150;break;
+		case 0x1806: i = 151;break;
+		case 0x1807: i = 152;break;
+		case 0x1808: i = 153;break;
+		case 0x1809: i = 154;break;
+		case 0x180A: i = 155;break;
+		case 0x180B: i = 156;break;
+		case 0x180C: i = 157;break;
+		case 0x180D: i = 158;break;
+		case 0x180E: i = 159;break;
+		case 0x180F: i = 160;break;
+		case 0x1810: i = 161;break;
+		case 0x1811: i = 162;break;
+		case 0x1812: i = 163;break;
 		case 0x1A00: i = 164;break;
 		case 0x1A01: i = 165;break;
 		case 0x1A02: i = 166;break;
@@ -3723,7 +3522,7 @@ const indextable * CANOpenShellMasterOD_scanIndexOD (UNS16 wIndex, UNS32 * error
 		case 0x1A10: i = 180;break;
 		case 0x1A11: i = 181;break;
 		case 0x1A12: i = 182;break;
-		case 0x2000: i = 183;*callbacks = NodeId_callbacks; break;
+		case 0x2000: i = 183;break;
 		case 0x2001: i = 184;break;
 		case 0x2100: i = 185;break;
 		case 0x2200: i = 186;break;
@@ -3737,51 +3536,53 @@ const indextable * CANOpenShellMasterOD_scanIndexOD (UNS16 wIndex, UNS32 * error
 		case 0x2305: i = 194;break;
 		case 0x2306: i = 195;break;
 		case 0x2307: i = 196;break;
-		case 0x2400: i = 197;*callbacks = Interpolation_Mode_Status_callbacks; break;
-		case 0x2501: i = 198;*callbacks = InterpolationTimeValue_callbacks; break;
-		case 0x2502: i = 199;*callbacks = InterpolationData_callbacks; break;
-		case 0x2503: i = 200;*callbacks = InterpolationStart_callbacks; break;
-		case 0x2600: i = 201;*callbacks = InterpolationTimePeriod_callbacks; break;
-		case 0x6040: i = 202;*callbacks = Controlword_callbacks; break;
-		case 0x6041: i = 203;*callbacks = Statusword_callbacks; break;
-		case 0x605A: i = 204;break;
-		case 0x605D: i = 205;break;
-		case 0x6060: i = 206;break;
-		case 0x6061: i = 207;*callbacks = Modes_of_operation_display_callbacks; break;
-		case 0x6063: i = 208;*callbacks = Position_Actual_Value_callbacks; break;
-		case 0x6065: i = 209;break;
-		case 0x606C: i = 210;break;
-		case 0x6071: i = 211;break;
-		case 0x6072: i = 212;break;
-		case 0x6073: i = 213;break;
-		case 0x607A: i = 214;break;
-		case 0x607C: i = 215;break;
-		case 0x607D: i = 216;break;
-		case 0x607E: i = 217;break;
-		case 0x607F: i = 218;break;
-		case 0x6081: i = 219;break;
-		case 0x6083: i = 220;break;
-		case 0x6085: i = 221;break;
-		case 0x608F: i = 222;break;
-		case 0x6098: i = 223;break;
-		case 0x6099: i = 224;break;
-		case 0x609A: i = 225;break;
-		case 0x60F4: i = 226;break;
-		case 0x60FB: i = 227;break;
-		case 0x60FD: i = 228;break;
-		case 0x60FE: i = 229;break;
-		case 0x60FF: i = 230;break;
-		case 0x6401: i = 231;break;
-		case 0x6402: i = 232;break;
-		case 0x6403: i = 233;break;
-		case 0x6404: i = 234;break;
-		case 0x6405: i = 235;break;
-		case 0x6502: i = 236;break;
-		case 0x6503: i = 237;break;
-		case 0x6504: i = 238;break;
-		case 0x6505: i = 239;break;
-		case 0x6510: i = 240;break;
-		case 0x67FF: i = 241;break;
+		case 0x2400: i = 197;break;
+		case 0x2501: i = 198;break;
+		case 0x2502: i = 199;break;
+		case 0x2503: i = 200;break;
+		case 0x2504: i = 201;break;
+		case 0x2505: i = 202;break;
+		case 0x2600: i = 203;break;
+		case 0x6040: i = 204;break;
+		case 0x6041: i = 205;break;
+		case 0x605A: i = 206;break;
+		case 0x605D: i = 207;break;
+		case 0x6060: i = 208;break;
+		case 0x6061: i = 209;break;
+		case 0x6063: i = 210;break;
+		case 0x6065: i = 211;break;
+		case 0x606C: i = 212;break;
+		case 0x6071: i = 213;break;
+		case 0x6072: i = 214;break;
+		case 0x6073: i = 215;break;
+		case 0x607A: i = 216;break;
+		case 0x607C: i = 217;break;
+		case 0x607D: i = 218;break;
+		case 0x607E: i = 219;break;
+		case 0x607F: i = 220;break;
+		case 0x6081: i = 221;break;
+		case 0x6083: i = 222;break;
+		case 0x6085: i = 223;break;
+		case 0x608F: i = 224;break;
+		case 0x6098: i = 225;break;
+		case 0x6099: i = 226;break;
+		case 0x609A: i = 227;break;
+		case 0x60F4: i = 228;break;
+		case 0x60FB: i = 229;break;
+		case 0x60FD: i = 230;break;
+		case 0x60FE: i = 231;break;
+		case 0x60FF: i = 232;break;
+		case 0x6401: i = 233;break;
+		case 0x6402: i = 234;break;
+		case 0x6403: i = 235;break;
+		case 0x6404: i = 236;break;
+		case 0x6405: i = 237;break;
+		case 0x6502: i = 238;break;
+		case 0x6503: i = 239;break;
+		case 0x6504: i = 240;break;
+		case 0x6505: i = 241;break;
+		case 0x6510: i = 242;break;
+		case 0x67FF: i = 243;break;
 		default:
 			*errorCode = OD_NO_SUCH_OBJECT;
 			return NULL;

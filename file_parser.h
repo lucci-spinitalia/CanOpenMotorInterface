@@ -9,7 +9,7 @@
 #define FILE_PARSER_H_
 
 #define FILE_DIR "/tmp/spinitalia/motor_data/"
-#define POSITION_DATA_NUM_MAX 450
+#define POSITION_DATA_NUM_MAX 450 // non deve essere minore del massimo indirizzo dei motori
 
 struct table_data
 {
