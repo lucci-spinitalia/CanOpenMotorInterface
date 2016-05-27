@@ -20,6 +20,8 @@ void smartmotor_path_reset(int nodeid, UNS16 *motor_status);
 int smartmotor_path_generate(int nodeid, int encoder_count, long start_step,
     long stop_step, long velocity, long acceleration);
 void smartmotor_path_read(int nodeid, UNS16 *motor_status, long *position);
+void smartmotor_path_lock();
+void smartmotor_path_unlock();
 
 
 

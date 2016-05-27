@@ -51,7 +51,14 @@ long FileLineCount(int nodeId)
   if(fake_flag == 0)
     sprintf(file_path, "%s%d.mot", FILE_DIR, nodeId);
   else
+  {
+#ifndef CBRN
     sprintf(file_path, "%s%d.mot.fake", FILE_DIR, nodeId);
+#else
+    sprintf(file_path, "%s%d.mot.cbrn", FILE_DIR, nodeId);
+#endif
+  }
+
 
   file = fopen(file_path, "r");
 
@@ -151,10 +158,15 @@ int QueueOpenFile(struct table_data *data)
   char file_path[256];
   if(data->position_file == NULL)
   {
+
     if(fake_flag == 0)
       sprintf(file_path, "%s%d.mot", FILE_DIR, data->nodeId);
     else
-      sprintf(file_path, "%s%d.mot.fake", FILE_DIR, data->nodeId);
+#ifndef CBRN
+    sprintf(file_path, "%s%d.mot.fake", FILE_DIR, data->nodeId);
+#else
+    sprintf(file_path, "%s%d.mot.cbrn", FILE_DIR, data->nodeId);
+#endif
 
     data->position_file = fopen(file_path, "r");
 

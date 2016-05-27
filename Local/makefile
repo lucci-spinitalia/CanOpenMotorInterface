@@ -31,7 +31,7 @@ all: SW.33.05.02.0.0
 SW.33.05.02.0.0: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: Cross GCC Linker'
-	arm-linux-gnueabihf-gcc -L/home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/drivers/can_socket -o "SW.33.05.02.0.0" $(OBJS) $(USER_OBJS) $(LIBS)
+	gcc  -o "SW.33.05.02.0.0" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 

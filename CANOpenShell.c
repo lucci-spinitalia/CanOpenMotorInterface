@@ -57,12 +57,15 @@
 #define INTERPOLATION_DATA_INDEX_OFFSET 6
 #define INTERPOLATION_START_INDEX_OFFSET 12
 #define TARGET_POSITION_INDEX_OFFSET 13
+
+#ifndef CBRN
 #define POSITION_FIFO_FILE "/tmp/alma_3d_spinitalia_pos_stream_pipe"
+#else
+#define POSITION_FIFO_FILE "/tmp/cbrn_spinitalia_pos_stream_pipe"
+#endif
+
 #define SYNC_DIVIDER_STATUS 15
 #define SYNC_DIVIDER_TIMESTAMP 100
-
-//#define CBRN
-//#define NO_LIMITS
 
 /*
  * Studio banda necessaria:
@@ -735,7 +738,8 @@ UNS32 OnStatusUpdate(CO_Data* d, const indextable * indextable_curr, UNS8 bSubin
         else
         {
           motor_mode[nodeid] = 0x3;
-          smartmotor_path_reset(nodeid, &motor_status[nodeid]);
+          //smartmotor_path_reset(nodeid, &motor_status[nodeid]);
+          motor_status[nodeid] &= 0b1111101111111111;
           //motor_status[nodeid] &= ~0b0001010000000000;
 
 #ifdef CANOPENSHELL_VERBOSE
@@ -1539,19 +1543,16 @@ int SimulationStart(UNS8 nodeid)
     int motor_table_index = MotorTableIndexFromNodeId(nodeid);
     simulation_ready[motor_table_index] = 0;
 
-    if(robot_state != MOVIMENTO_LIBERO)
+    if(motor_table_index >= 0)
     {
-      if(motor_table_index >= 0)
+      motor_table[motor_table_index].is_pipe = 0;
+
+      QueueInit(motor_table[motor_table_index].nodeId, &motor_table[motor_table_index]);
+
+      if(QueueFill(&motor_table[motor_table_index]) < 0)
       {
-        motor_table[motor_table_index].is_pipe = 0;
-
-        QueueInit(motor_table[motor_table_index].nodeId, &motor_table[motor_table_index]);
-
-        if(QueueFill(&motor_table[motor_table_index]) < 0)
-        {
-          CERR("CT4", CERR_FileError);
-          return -1;
-        }
+        CERR("CT4", CERR_FileError);
+        return -1;
       }
     }
 
@@ -1580,17 +1581,14 @@ int SimulationStart(UNS8 nodeid)
     {
       simulation_ready[motor_index] = 0;
 
-      if(robot_state != MOVIMENTO_LIBERO)
+      motor_table[motor_index].is_pipe = 0;
+
+      QueueInit(motor_table[motor_index].nodeId, &motor_table[motor_index]);
+
+      if(QueueFill(&motor_table[motor_index]) < 0)
       {
-        motor_table[motor_index].is_pipe = 0;
-
-        QueueInit(motor_table[motor_index].nodeId, &motor_table[motor_index]);
-
-        if(QueueFill(&motor_table[motor_index]) < 0)
-        {
-          CERR("CT4", CERR_FileError);
-          return -1;
-        }
+        CERR("CT4", CERR_FileError);
+        return -1;
       }
 
       if(simulation_first_start[motor_table[motor_index].nodeId])
@@ -1702,17 +1700,33 @@ void SmartPosition(UNS8 nodeid, long position, long velocity, long acceleration,
 
       if(fake_flag)
       {
-        smartmotor_path_reset(motor_table[motor_index].nodeId,
-            &motor_status[motor_table[motor_index].nodeId]);
+        if(motor_started[motor_table[motor_index].nodeId] == 0)
+        {
+          smartmotor_path_reset(motor_table[motor_index].nodeId,
+              &motor_status[motor_table[motor_index].nodeId]);
 
+          motor_started[motor_table[motor_index].nodeId] = 1;
+          QueueInit(motor_table[motor_index].nodeId, &motor_table[motor_index]);
+
+          motor_mode[motor_table[motor_index].nodeId] = 0x1;
+        }
+        else
+        {
+          VelocityProfile[motor_table[motor_index].nodeId - MOTOR_INDEX_FIRST] = velocity;
+          PositionTarget[motor_table[motor_index].nodeId - MOTOR_INDEX_FIRST] = position;
+
+          //motor_position[motor_table[motor_index].nodeId] = position;
+          if(start)
+            motor_status[motor_table[motor_index].nodeId] |= 0b0001000000000000;
+        }
+
+#ifdef CBRN
+        smartmotor_path_generate(motor_table[motor_index].nodeId, 4000,
+            motor_position[motor_table[motor_index].nodeId], position, velocity, acceleration);
+#else
         smartmotor_path_generate(motor_table[motor_index].nodeId, 8000,
             motor_position[motor_table[motor_index].nodeId], position, velocity, acceleration);
-
-        motor_started[motor_table[motor_index].nodeId] = 1;
-        motor_mode[motor_table[motor_index].nodeId] = 0x1;
-        //motor_position[motor_table[motor_index].nodeId] = position;
-        if(start)
-          motor_status[motor_table[motor_index].nodeId] |= 0b0001000000000000;
+#endif
 
 #ifdef CANOPENSHELL_VERBOSE
         if(verbose_flag)
@@ -1797,34 +1811,52 @@ void SmartPosition(UNS8 nodeid, long position, long velocity, long acceleration,
     }
     else
     {
+      if(motor_started[nodeid] == 0)
+      {
+        smartmotor_path_reset(nodeid, &motor_status[nodeid]);
+
+        motor_started[nodeid] = 1;
+
+        motor_table_index = MotorTableIndexFromNodeId(nodeid);
+
+        QueueInit(nodeid, &motor_table[motor_table_index]);
+
 #ifdef CANOPENSHELL_VERBOSE
-      if(verbose_flag)
-      {
-        printf("SUCC[node %x]: smart motor go to target point. . .\n", nodeid);
-      }
-#endif
-      smartmotor_path_reset(nodeid, &motor_status[nodeid]);
-
-      smartmotor_path_generate(nodeid, 8000, motor_position[nodeid], position, velocity,
-          acceleration);
-
-      motor_mode[nodeid] = 0x1;
-      motor_started[nodeid] = 1;
-//motor_position[nodeid] = position;
-
-      if(start)
-      {
-        int motor_index;
-        for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+        if(verbose_flag)
         {
-          motor_status[motor_table[motor_index].nodeId] |= 0b0001000000000000;
+          printf("SUCC[node %x]: smart motor go to target point. . .\n", nodeid);
         }
+#endif
+        motor_mode[nodeid] = 0x1;
       }
       else
-        motor_status[nodeid] &= 0b1110111111111111;
+      {
+        //printf("[%d] Resume position %ld with velocity %ld\n", nodeid, position, velocity);
+        VelocityProfile[nodeid - MOTOR_INDEX_FIRST] = velocity;
+        PositionTarget[nodeid - MOTOR_INDEX_FIRST] = position;
 
-      if((from_callback == 0) && (start == 0))
-        OK("CT1");
+        if(start)
+        {
+          int motor_index;
+          for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+          {
+            motor_status[motor_table[motor_index].nodeId] |= 0b0001000000000000;
+          }
+        }
+        else
+          motor_status[nodeid] &= 0b1110111111111111;
+
+        if((from_callback == 0) && (start == 0))
+          OK("CT1");
+      }
+
+#ifdef CBRN
+      smartmotor_path_generate(nodeid, 4000, motor_position[nodeid], position, velocity,
+          acceleration);
+#else
+      smartmotor_path_generate(nodeid, 8000, motor_position[nodeid], position, velocity,
+          acceleration);
+#endif
     }
   }
 }
@@ -3345,36 +3377,43 @@ void CANOpenShellOD_post_sync(CO_Data* d)
       timeout_count = 0;
     }
   }
-  else
+
+  pthread_mutex_lock(&robot_state_mux);
+  if(robot_state == MOVIMENTO_LIBERO)
   {
-    pthread_mutex_lock(&robot_state_mux);
-    if(robot_state == MOVIMENTO_LIBERO)
+    pthread_mutex_unlock(&robot_state_mux);
+
+    int motor_index;
+
+    for(motor_index = 0; motor_index < motor_active_number; motor_index++)
     {
-      pthread_mutex_unlock(&robot_state_mux);
+      /*printf("SmartPosition [%d] pos [%ld] read [%d] write [%d]\n",
+       motor_table[motor_index].nodeId, motor_table[motor_index].position[0],
+       motor_table[motor_index].read_pointer,
+       motor_table[motor_index].write_pointer);*/
 
-      int motor_index;
-
-      for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+      if(motor_table[motor_index].read_pointer)
       {
-        /*printf("SmartPosition [%d] pos [%ld] read [%d] write [%d]\n",
-         motor_table[motor_index].nodeId, motor_table[motor_index].position[0],
-         motor_table[motor_index].read_pointer,
-         motor_table[motor_index].write_pointer);*/
+        if(fake_flag)
+          smartmotor_path_lock();
 
-        if(motor_table[motor_index].read_pointer)
-        {
-          SmartPosition(motor_table[motor_index].nodeId, motor_table[motor_index].position[0],
-              motor_table[motor_index].forward_velocity, 100,
-              motor_table[motor_index].write_pointer, 1);
+        //printf("[%d] smartmotor_path_generate: %ld\n", motor_table[motor_index].nodeId, motor_position[motor_table[motor_index].nodeId]);
 
-          if(motor_table[motor_index].write_pointer)
-            motor_table[motor_index].write_pointer = 0;
-        }
+        SmartPosition(motor_table[motor_index].nodeId, motor_table[motor_index].position[0],
+            motor_table[motor_index].forward_velocity, 100, motor_table[motor_index].write_pointer,
+            1);
+
+        if(fake_flag)
+          smartmotor_path_unlock();
+
+        if(motor_table[motor_index].write_pointer)
+          motor_table[motor_index].write_pointer = 0;
       }
     }
-    else
-      pthread_mutex_unlock(&robot_state_mux);
   }
+  else
+    pthread_mutex_unlock(&robot_state_mux);
+
 }
 
 void CANOpenShellOD_post_TPDO(CO_Data* d)
@@ -3539,12 +3578,12 @@ void DiscoverTimeout(sigval_t val)
 #ifdef NO_LIMITS
     struct state_machine_struct *exit_from_limit_machine[] =
     {
-      &smart_statusword_machine
+    &smart_statusword_machine
     };
 #else
     struct state_machine_struct *exit_from_limit_machine[] =
     {
-    &smart_limit_enable_machine, &smart_statusword_machine
+      &smart_limit_enable_machine, &smart_statusword_machine
     };
 #endif
 
@@ -3941,13 +3980,11 @@ int ProcessCommandTripode(char* command)
 
   return 0;
 
-  fail:
-  command[3] = '\0';
+  fail: command[3] = '\0';
   CERR(command, CERR_ParamError);
   return 0;
 
-  permission_denied:
-  command[3] = '\0';
+  permission_denied: command[3] = '\0';
   CERR(command, CERR_PermissionDenied);
   return 0;
 }
@@ -4097,7 +4134,8 @@ int ProcessCommandBraccio(char* command)
 
       _machine_exe(CANOpenShellOD_Data, 0, NULL, set_position_machine, 1, 0, 0);
 
-      CANOpenShellOD_Data->post_sync = CANOpenShellOD_post_sync;
+      if(fake_flag == 0)
+        CANOpenShellOD_Data->post_sync = CANOpenShellOD_post_sync;
 
       pthread_mutex_lock(&robot_state_mux);
       if(queuefill_return == 0)
@@ -4105,19 +4143,6 @@ int ProcessCommandBraccio(char* command)
         robot_state = JOYSTICK_COLLEGATO;
         OK("CB3");
       }
-      pthread_mutex_unlock(&robot_state_mux);
-
-      break;
-
-    case 4:
-      pthread_mutex_lock(&robot_state_mux);
-      if(robot_state != JOYSTICK_COLLEGATO)
-      {
-        pthread_mutex_unlock(&robot_state_mux);
-        goto permission_denied;
-      }
-
-      robot_state = MOVIMENTO_LIBERO;
       pthread_mutex_unlock(&robot_state_mux);
 
       break;
@@ -4131,6 +4156,9 @@ int ProcessCommandBraccio(char* command)
       }
 
       pthread_mutex_unlock(&robot_state_mux);
+
+      if(fake_flag == 0)
+        CANOpenShellOD_Data->post_sync = NULL;
 
       SmartStop(0, 0);
       break;
@@ -4439,7 +4467,13 @@ void signal_handler(int signum)
       if(fake_flag == 0)
         remove(POSITION_FIFO_FILE);
       else
+      {
+#ifndef CBRN
         remove("/tmp/fake_alma_3d_spinitalia_pos_stream_pipe");
+#else
+        remove("/tmp/fake_cbrn_spinitalia_pos_stream_pipe");
+#endif
+      }
 
       _machine_destroy();
 
@@ -4511,6 +4545,8 @@ void *PipePositionWriteHandler()
 
     if(fake_flag)
     {
+      smartmotor_path_lock();
+
       for(motor_index = 0; motor_index < motor_active_number; motor_index++)
       {
         if((motor_mode[motor_table[motor_index].nodeId] == 0x1)
@@ -4523,6 +4559,7 @@ void *PipePositionWriteHandler()
           smartmotor_path_read(motor_table[motor_index].nodeId,
               &motor_status[motor_table[motor_index].nodeId],
               &motor_position[motor_table[motor_index].nodeId]);
+
         }
         else if((motor_mode[motor_table[motor_index].nodeId] == 0x7)
             && (motor_interp_status[motor_table[motor_index].nodeId] & 0b1000000000000000))
@@ -4538,6 +4575,8 @@ void *PipePositionWriteHandler()
           //}
         }
       }
+
+      smartmotor_path_unlock();
     }
 
     // Carico la stringa delle posizioni da inviare
@@ -4553,29 +4592,18 @@ void *PipePositionWriteHandler()
 
     for(motor_index = 0; motor_index < motor_active_number; motor_index++)
     {
-      if(robot_state != MOVIMENTO_LIBERO)
-      {
-        if(fake_flag == 0)
-          file_complete[motor_table[motor_index].nodeId] = FileCompleteGet(
-              motor_table[motor_index].nodeId,
-              SMART_TABLE_SIZE - (motor_interp_status[motor_table[motor_index].nodeId] & 0x3F));
-        else
-          file_complete[motor_table[motor_index].nodeId] = FileCompleteGet(
-              motor_table[motor_index].nodeId, 1);
-
-        // restituisco la percentuale di completamento più bassa
-        if((file_complete_min == 0)
-            || (file_complete[motor_table[motor_index].nodeId] < file_complete_min))
-          file_complete_min = file_complete[motor_table[motor_index].nodeId];
-      }
+      if(fake_flag == 0)
+        file_complete[motor_table[motor_index].nodeId] = FileCompleteGet(
+            motor_table[motor_index].nodeId,
+            SMART_TABLE_SIZE - (motor_interp_status[motor_table[motor_index].nodeId] & 0x3F));
       else
-      {
-        // il campo della percentuale di completamento diventa il numero di posizioni attualmente
-        // pronte per essere lette dal motore al prossimo ciclo di update.
-        if((file_complete_min == 0)
-            || (file_complete[motor_table[motor_index].nodeId] < file_complete_min))
-          file_complete_min = motor_table[motor_index].count;
-      }
+        file_complete[motor_table[motor_index].nodeId] = FileCompleteGet(
+            motor_table[motor_index].nodeId, 1);
+
+      // restituisco la percentuale di completamento più bassa
+      if((file_complete_min == 0)
+          || (file_complete[motor_table[motor_index].nodeId] < file_complete_min))
+        file_complete_min = file_complete[motor_table[motor_index].nodeId];
     }
 
     if(position_fp != NULL)
@@ -4607,10 +4635,6 @@ void *PipePositionWriteHandler()
 
       if(robot_state == SIMULAZIONE)
         sprintf(position_message, "%s C%.0f\n", position_message, file_complete_min);
-      /*else if(robot_state == MOVIMENTO_LIBERO)
-       sprintf(position_message, "%s C%f\n", position_message, file_complete_min);
-       else
-       sprintf(position_message, "%s C0\n", position_message);*/
       else
         sprintf(position_message, "%s C%.0f\n", position_message, file_complete_min);
 
@@ -4709,10 +4733,18 @@ int main(int argc, char** argv)
   {
     // inizializzo la named pipe per i dati di posizione
     umask(0);
+#ifndef CBRN
     mknod("/tmp/fake_alma_3d_spinitalia_pos_stream_pipe", S_IFIFO | 0666, 0);
 
     open_pipe("/tmp/fake_alma_3d_spinitalia_pos_stream_pipe", &pipe_handler,
         &PipePositionOpenHandler, &pipe_write_handler, &PipePositionWriteHandler);
+#else
+    mknod("/tmp/fake_cbrn_spinitalia_pos_stream_pipe", S_IFIFO | 0666, 0);
+
+    open_pipe("/tmp/fake_cbrn_spinitalia_pos_stream_pipe", &pipe_handler, &PipePositionOpenHandler,
+        &pipe_write_handler, &PipePositionWriteHandler);
+#endif
+
   }
 
 #ifdef CANOPENSHELL_VERBOSE
@@ -4778,7 +4810,11 @@ int main(int argc, char** argv)
   if(fake_flag == 0)
     unlink(POSITION_FIFO_FILE);
   else
+#ifndef CBRN
     unlink("/tmp/fake_alma_3d_spinitalia_pos_stream_pipe");
+#else
+    unlink("/tmp/fake_cbrn_spinitalia_pos_stream_pipe");
+#endif
 
   init_fail: TimerCleanup();
   return 0;
