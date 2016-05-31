@@ -60,7 +60,8 @@
 #define POSITION_FIFO_FILE "/tmp/alma_3d_spinitalia_pos_stream_pipe"
 #define SYNC_DIVIDER_STATUS 15
 #define SYNC_DIVIDER_TIMESTAMP 100
-
+// bug quando do posizioni il motore si affloscia
+// il simulatore è a specchio
 //#define CBRN
 //#define NO_LIMITS
 
@@ -798,8 +799,8 @@ UNS32 OnStatusUpdate(CO_Data* d, const indextable * indextable_curr, UNS8 bSubin
         &smart_limit_enable_machine, &smart_position_set_machine, &smart_position_start_machine
         };
 
-        _machine_exe(CANOpenShellOD_Data, nodeid, NULL, origin_machine, 3, 1, 4,
-            motor_table[motor_table_index].backward_velocity, 10, 10, 0);
+        _machine_exe(CANOpenShellOD_Data, nodeid, NULL, origin_machine, 3, 1, 4, 10, 10,
+            motor_table[motor_table_index].backward_velocity, 0);
       }
     }
   }
@@ -1132,7 +1133,6 @@ void SimulationTableStart(CO_Data* d)
   {
     if(fake_flag == 0)
     {
-      printf("interpolation start\n");
       InterpolationStart = 0x1f;
 
 //d->PDO_status[0].last_message.cob_id = 0;
@@ -1773,6 +1773,7 @@ void SmartPosition(UNS8 nodeid, long position, long velocity, long acceleration,
 
         _machine_exe(CANOpenShellOD_Data, nodeid, machine_callback, machine, 1, from_callback, 4,
             acceleration, acceleration, velocity, position);
+
       }
       else
       {
@@ -1790,10 +1791,10 @@ void SmartPosition(UNS8 nodeid, long position, long velocity, long acceleration,
 
         if(start)
           SmartPositionCallback(CANOpenShellOD_Data, nodeid, 0, 0, 0);
-
-        if((from_callback == 0) && (start == 0))
-          OK("CT1");
       }
+
+      if((from_callback == 0) && (start == 0))
+        OK("CT1");
     }
     else
     {
@@ -2771,13 +2772,13 @@ UNS32 return_value)
 
     if((return_value & 0b0100000000000000) > 0) // right(+) limit
     {
-      _machine_exe(d, nodeId, NULL, position_machine, 2, 1, 4, 100000, 10, 10, -4000);
+      _machine_exe(d, nodeId, NULL, position_machine, 2, 1, 4, 10, 10, 100000, -16000);
 
       return;
     }
     else if((return_value & 0b1000000000000000) > 0)  // left(-) limit
     {
-      _machine_exe(d, nodeId, NULL, position_machine, 2, 1, 4, 100000, 10, 10, 4000);
+      _machine_exe(d, nodeId, NULL, position_machine, 2, 1, 4, 10, 10, 100000, 16000);
       return;
     }
   }

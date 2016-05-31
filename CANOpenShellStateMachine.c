@@ -563,6 +563,7 @@ void *smart_position_set_function[9] =
     &writeNetworkDictCallBack,
 // Enable command, single setpoint (motion not actually started yet)
     };
+
 /*
  * param
  * profile speed
@@ -571,46 +572,14 @@ void *smart_position_set_function[9] =
  */UNS32 smart_position_set_param[45] =
 {
 0x6040, 0x0, 2, 0, 0x80, // Reset status word
-    0x6060,
-    0x0,
-    1,
-    0,
-    0x1, // Set mode position
-    0x6083,
-    0x0,
-    4,
-    0,
-    0xFFFFFFFF, // Set acceleration
-    0x6084,
-    0x0,
-    4,
-    0,
-    0xFFFFFFFF, // Set deceleration
-    0x6040,
-    0x0,
-    2,
-    0,
-    0x6, // Change state: ready to switch on
-    0x6040,
-    0x0,
-    2,
-    0,
-    0x7, // Change state: switched on
-    0x6040,
-    0x0,
-    2,
-    0,
-    0x2F, // Enable command, single setpoint (motion not actually started yet)
-    0x6081,
-    0x0,
-    4,
-    0,
-    0xFFFFFFFF, // Set profile speed
-    0x607A,
-    0x0,
-    4,
-    0,
-    0xFFFFFFFF, // Set target position to destination
+    0x6060, 0x0, 1, 0, 0x1, // Set mode position
+    0x6083, 0x0, 4, 0, 0xFFFFFFFF, // Set acceleration
+    0x6084, 0x0, 4, 0, 0xFFFFFFFF, // Set deceleration
+    0x6040, 0x0, 2, 0, 0x6, // Change state: ready to switch on
+    0x6040, 0x0, 2, 0, 0x7, // Change state: switched on
+    0x6040, 0x0, 2, 0, 0x2F, // Enable command, single setpoint (motion not actually started yet)
+    0x6081, 0x0, 4, 0, 0xFFFFFFFF, // Set profile speed
+    0x607A, 0x0, 4, 0, 0xFFFFFFFF, // Set target position to destination
 
     };
 
