@@ -187,7 +187,7 @@ int smartmotor_path_generate(int nodeid, int encoder_count, long start_step,
 
   const float time_step = 0.01;
   long last_position;
-  long last_vel;
+  double last_vel;
   double last_acc_time;
 
   double time_approx;
@@ -243,41 +243,44 @@ int smartmotor_path_generate(int nodeid, int encoder_count, long start_step,
     last_acc_time = path_acc[nodeid][smartmotor_path_ptr_rd[nodeid] - 1];
   }
 
-  printf("ptr: %d, last_vel: %ld acc: %f\n", smartmotor_path_ptr_rd[nodeid], last_vel, last_acc_time);
+  printf("ptr: %d, last_vel: %f acc: %f\n", smartmotor_path_ptr_rd[nodeid], last_vel, last_acc_time);
   //path_acc[nodeid][smartmotor_path_ptr_rd[nodeid]] = dir * acc_step_per_sec_sec;
 
+  last_vel = 0;
+  last_acc_time = 0;
   // todo: tenere in considerazione anche lo spazio percorso a velocità costante
-  delta = sqrt(pow(last_vel, 2) + ((stop_step - start_step) + 0.5 * acc_step_per_sec_sec * pow(last_acc_time, 2)) * dir * acc_step_per_sec_sec);
+  delta = sqrt(pow(last_vel, 2) + ((stop_step - start_step) + dir * acc_step_per_sec_sec * pow(last_acc_time, 2)) * dir * acc_step_per_sec_sec);
   t1 = (-last_vel + delta) / (dir * acc_step_per_sec_sec);
 
   t2 = (-last_vel - delta) / (dir * acc_step_per_sec_sec);
-
+/*
   if(t1 > 0)
     acc_time = t1;
   else
     acc_time = t2;
-
+*/
   time_approx = round((2 * acc_time + vel_time) / time_step - 0.5) * time_step;
 
   if((time_approx / time_step) > PATH_MAX_SIZE)
   {
-    //printf("Too much point for [%d]. I can't handle %f\n", nodeid, (time_approx / time_step));
+    printf("Too much point for [%d]. I can't handle %f\n", nodeid, (time_approx / time_step));
     return -1;
   }
 
 
   smartmotor_path_ptr_rd[nodeid] = 0;
 
-  index_end = ((acc_time -  last_acc_time)/ time_step);
+  index_end = round(acc_time / time_step);
+  time_quantum = acc_time/ index_end;
 
-  time_quantum = acc_time / index_end;
+  index_end = ((acc_time -  last_acc_time) / time_step);
 
   // rampa di velocità iniziale
   for(index = 0; index < index_end; index++)
   {
     path_acc[nodeid][index] = last_acc_time + (index + 1) * time_quantum;
     path_vel[nodeid][index] = 0.5 * dir * acc_step_per_sec_sec * (index + 1) * time_quantum + last_vel;
-    path_point[nodeid][index] = start_step + path_vel[nodeid][index] * (index + 1) * time_quantum + last_vel * (index + 1) * time_quantum;
+    path_point[nodeid][index] = start_step + (path_vel[nodeid][index] + last_vel) * (index + 1) * time_quantum;
   }
 
   printf("1. index: %d\n", index);
@@ -286,7 +289,7 @@ int smartmotor_path_generate(int nodeid, int encoder_count, long start_step,
   last_position = path_point[nodeid][index - 1];
   last_vel = path_vel[nodeid][index - 1];
 
-  index_end = ((acc_time + vel_time) / time_step);
+  index_end = ((acc_time -  last_acc_time + vel_time) / time_step);
   for(; index < index_end; index++)
   {
     path_acc[nodeid][index] = 0;
@@ -305,8 +308,8 @@ int smartmotor_path_generate(int nodeid, int encoder_count, long start_step,
 
   // alla decellerazione che serve per tornare alla velocità di partenza, devo aggiungere quella
   // necessaria a tornare a zero
-  index_start = ((acc_time + vel_time) / time_step);
-  index_end = ((time_approx + last_acc_time) / time_step);
+  index_start = ((acc_time -  last_acc_time + vel_time) / time_step);
+  index_end = ((time_approx - last_acc_time) / time_step);
   for(index = index_start; index < index_end; index++)
   {
     path_acc[nodeid][index] = last_acc_time - (index - index_start + 1) * time_quantum;
