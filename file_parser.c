@@ -219,14 +219,14 @@ int QueueFill(struct table_data *data)
 
   pthread_mutex_unlock(&data->table_mutex);
 
-  if(data->is_pipe == 0)
+  /*if(data->is_pipe == 0)
   {
     if(QueueOpenFile(data) < 0)
     {
       data->end_reached = 1;
       return -1;
     }
-  }
+  }*/
 
   if(data->table_refiller == 0)
   {
@@ -432,7 +432,7 @@ int QueueSeek(struct table_data *data, int point_number)
  */
 int QueuePut(struct table_data *data, int line_number)
 {
-  //FILE *file = NULL;
+  FILE *file = NULL;
   char *line = NULL;
   size_t len = 0;
   ssize_t read;
@@ -440,7 +440,7 @@ int QueuePut(struct table_data *data, int line_number)
   char *token;
   char *token_save;
   char line_copy[256];
-  //char file_path[256];
+  char file_path[256];
   char position[12];
   char time[12];
   char vel_forw[12];
@@ -455,14 +455,23 @@ int QueuePut(struct table_data *data, int line_number)
   if(data->count == POSITION_DATA_NUM_MAX)
     return -2;
 
-  /*if(fake_flag == 0)
+  if(fake_flag == 0)
    sprintf(file_path, "%s%d.mot", FILE_DIR, data->nodeId);
    else
    sprintf(file_path, "%s%d.mot.fake", FILE_DIR, data->nodeId);
 
-   file = fopen(file_path, "r");*/
+   file = fopen(file_path, "r");
 
-  if(data->position_file == NULL)
+   if(file == NULL)
+   {
+ #ifdef CANOPENSHELL_VERBOSE
+     if(verbose_flag)
+       perror("file");
+ #endif
+     return -1;
+   }
+
+  /*if(data->position_file == NULL)
   {
 #ifdef CANOPENSHELL_VERBOSE
     if(verbose_flag)
@@ -471,20 +480,20 @@ int QueuePut(struct table_data *data, int line_number)
 
     data->end_reached = 1;
     return -1;
-  }
+  }*/
 
-  //if(fseek(file, data->cursor_position, SEEK_SET) != 0)
-  if(fseek(data->position_file, data->cursor_position, SEEK_SET) != 0)
+  if(fseek(file, data->cursor_position, SEEK_SET) != 0)
+  //if(fseek(data->position_file, data->cursor_position, SEEK_SET) != 0)
   {
-    //fclose(file);
+    fclose(file);
     return -1;
   }
 
   for(line_count = 0; line_count < line_number; line_count++)
   {
     // Ogni informazione è delimitata da uno spazio
-    //if((read = getline(&line, &len, file)) != -1)
-    if((read = getline(&line, &len, data->position_file)) != -1)
+    if((read = getline(&line, &len, file)) != -1)
+    //if((read = getline(&line, &len, data->position_file)) != -1)
     {
       if(strcmp(line, "\n") == 0)
         continue;
@@ -691,7 +700,7 @@ int QueuePut(struct table_data *data, int line_number)
   row_read[data->nodeId] += line_count + 1;
 
   free(line);
-  //fclose(file);
+  fclose(file);
 
   return line_count;
 }

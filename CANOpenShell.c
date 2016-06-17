@@ -62,6 +62,9 @@
 #define SYNC_DIVIDER_TIMESTAMP 100
 // bug quando do posizioni il motore si affloscia
 // il simulatore è a specchio
+// bug quando mando in rilasciato il programma di Enrico inonda di messaggi lo stream
+// add comando azzeramento motore
+
 //#define CBRN
 //#define NO_LIMITS
 
@@ -1136,7 +1139,7 @@ void SimulationTableStart(CO_Data* d)
       InterpolationStart = 0x1f;
 
 //d->PDO_status[0].last_message.cob_id = 0;
-//sendPDOevent(d);
+      sendPDOevent(d);
     }
     else
     {
@@ -1210,8 +1213,8 @@ void SimulationTableUpdate(CO_Data* d, UNS8 nodeid, UNS16 interpolation_status, 
 
   pthread_mutex_unlock(&motor_table[motor_table_index].table_mutex);
 
-  if(motor_table[motor_table_index].is_pipe == 1)
-    QueueSeek(&motor_table[motor_table_index], point_to_send);
+  /*if(motor_table[motor_table_index].is_pipe == 1)
+    QueueSeek(&motor_table[motor_table_index], point_to_send);*/
 
   // se i punti da scrivere sono 44, allora il contatore deve andare da
   // 0 a 43
@@ -3768,7 +3771,7 @@ int ProcessCommandTripode(char* command)
           {
             QueueInit(motor_table[parse_num].nodeId, &motor_table[parse_num]);
 
-            file_status = QueueOpenFile(&motor_table[parse_num]);
+            //file_status = QueueOpenFile(&motor_table[parse_num]);
 
             if(file_status < 0)
             {
@@ -3879,7 +3882,7 @@ int ProcessCommandTripode(char* command)
 #ifdef CBRN
           SmartRelease(0, 0, 1);
 #else
-          SmartRelease(0, 0, 0);
+          SmartRelease(0, 0, 1);
 #endif
           break;
 
