@@ -1248,14 +1248,16 @@ void *smart_limit_enable_function[2] =
  *   homing offset
  */UNS32 smart_limit_enable_param[10] =
 {
-0x2309, 0x0, 2, 0, -4, // Enable positive limit switch
     0x2309,
     0x0,
     2,
     0,
-    -5
-// Enable negative limit switch
-
+    -4, // Enable positive limit switch
+    0x2309,
+    0x0,
+    2,
+    0,
+    -5 // Enable negative limit switch
     };
 
 char *smart_limit_enable_error[2] =

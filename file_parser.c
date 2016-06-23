@@ -84,7 +84,7 @@ void *QueueRefiller(void *args)
   {
     if(QueueOpenFile(data) < 0)
     {
-      printf("QueueRefiller open error\n");
+      printf("QueueRefiller open error: %s\n", strerror(err));
       data->end_reached = 1;
       return NULL;
     }
@@ -154,7 +154,11 @@ int QueueOpenFile(struct table_data *data)
     if(fake_flag == 0)
       sprintf(file_path, "%s%d.mot", FILE_DIR, data->nodeId);
     else
-      sprintf(file_path, "%s%d.mot.fake", FILE_DIR, data->nodeId);
+#ifdef CBRN
+      sprintf(file_path, "%s%d.mot.cbrn", FILE_DIR, data->nodeId);
+#else
+    sprintf(file_path, "%s%d.mot.fake", FILE_DIR, data->nodeId);
+#endif
 
     data->position_file = fopen(file_path, "r");
 
