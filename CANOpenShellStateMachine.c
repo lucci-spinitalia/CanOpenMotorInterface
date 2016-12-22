@@ -572,14 +572,46 @@ void *smart_position_set_function[9] =
  */UNS32 smart_position_set_param[45] =
 {
 0x6040, 0x0, 2, 0, 0x80, // Reset status word
-    0x6060, 0x0, 1, 0, 0x1, // Set mode position
-    0x6083, 0x0, 4, 0, 0xFFFFFFFF, // Set acceleration
-    0x6084, 0x0, 4, 0, 0xFFFFFFFF, // Set deceleration
-    0x6040, 0x0, 2, 0, 0x6, // Change state: ready to switch on
-    0x6040, 0x0, 2, 0, 0x7, // Change state: switched on
-    0x6040, 0x0, 2, 0, 0x2F, // Enable command, single setpoint (motion not actually started yet)
-    0x6081, 0x0, 4, 0, 0xFFFFFFFF, // Set profile speed
-    0x607A, 0x0, 4, 0, 0xFFFFFFFF, // Set target position to destination
+    0x6060,
+    0x0,
+    1,
+    0,
+    0x1, // Set mode position
+    0x6083,
+    0x0,
+    4,
+    0,
+    0xFFFFFFFF, // Set acceleration
+    0x6084,
+    0x0,
+    4,
+    0,
+    0xFFFFFFFF, // Set deceleration
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x6, // Change state: ready to switch on
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x7, // Change state: switched on
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x2F, // Enable command, single setpoint (motion not actually started yet)
+    0x6081,
+    0x0,
+    4,
+    0,
+    0xFFFFFFFF, // Set profile speed
+    0x607A,
+    0x0,
+    4,
+    0,
+    0xFFFFFFFF, // Set target position to destination
 
     };
 
@@ -617,35 +649,36 @@ smart_position_start_function, 1, smart_position_start_param, 5, smart_position_
 
 void *smart_set_mode_function[4] =
 {
-&writeNetworkDictCallBack,
-&writeNetworkDictCallBack,
-&writeNetworkDictCallBack,
-&writeNetworkDictCallBack
-    };
+    &writeNetworkDictCallBack,
+    &writeNetworkDictCallBack,
+    &writeNetworkDictCallBack,
+    &writeNetworkDictCallBack
+};
 
 UNS32 smart_set_mode_param[25] =
 {
-    0x6040, 0x0, 2, 0, 0x80, // Reset status word
-        0x6060,
-        0x0,
-        1,
-        0,
-        0x1, // Set mode position
-        0x6040,
-        0x0,
-        2,
-        0,
-        0x6, // Change state: ready to switch on
-        0x6040,
-        0x0,
-        2,
-        0,
-        0x7, // Change state: switched on
-        0x6040,
-        0x0,
-        2,
-        0,
-        0x2F // Enable command, single setpoint (motion not actually started yet)
+0x6040, 0x0, 2, 0, 0x80, // Reset status word
+    0x6060,
+    0x0,
+    1,
+    0,
+    0x1, // Set mode position
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x6, // Change state: ready to switch on
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x7, // Change state: switched on
+    0x6040,
+    0x0,
+    2,
+    0,
+    0x2F
+// Enable command, single setpoint (motion not actually started yet)
     };
 
 char *smart_set_mode_error[2] =
@@ -1064,19 +1097,13 @@ gosub_function, 1, gosub_param, 5, gosub_error
 void *stop_interpolation_function[2] =
 {
 &writeNetworkDictCallBack, // Write zero-length segment
-    &writeNetworkDictCallBack,
-// Repeat final data
+    &writeNetworkDictCallBack,// Repeat final data
     //&writeNetworkDictCallBack // leave drive on but holding at the ending position
     };
 UNS32 stop_interpolation_param[10] =
 {
-0x60C2, 0x1, 1, 0, 0x0, // Write zero-length segment
-    0x60C1,
-    0x1,
-    4,
-    0,
-    0xFFFFFFFF,
-// Repeat final data
+    0x60C2, 0x1, 1, 0, 0x0, // Write zero-length segment
+    0x60C1, 0x1, 4, 0, 0xFFFFFFFF,// Repeat final data
     //0x6040, 0x0, 2, 0, 0x0F, // leave drive on but holding at the ending position
     };
 
@@ -1248,16 +1275,13 @@ void *smart_limit_enable_function[2] =
  *   homing offset
  */UNS32 smart_limit_enable_param[10] =
 {
+0x2309, 0x0, 2, 0, -4, // Enable positive limit switch
     0x2309,
     0x0,
     2,
     0,
-    -4, // Enable positive limit switch
-    0x2309,
-    0x0,
-    2,
-    0,
-    -5 // Enable negative limit switch
+    -5
+// Enable negative limit switch
     };
 
 char *smart_limit_enable_error[2] =
@@ -1700,11 +1724,25 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
     }
     else
     {
+      if(motor_active_number == 0)
+      {
+#ifdef CANOPENSHELL_VERBOSE
+        if(verbose_flag)
+        {
+          printf("ERR[%d on node %x state %d]: Nessun motore attivo\n", InternalError, nodeId,
+              machine_state_index[nodeId]);
+        }
+#endif
+
+        machine_callback(d, nodeId, 0, 0, 1);
+        return 1;
+      }
+
       for(i = 0; i < CANOPEN_NODE_NUMBER; i++)
       {
+
         if(motor_active[i] > 0)
         {
-
           lock_value = pthread_mutex_lock(&machine_mux[i]);
 
           if(machine_run[i] == 1)
@@ -1728,6 +1766,8 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
           lock_value = pthread_mutex_unlock(&machine_mux[i]);
         }
       }
+
+      // Controllo che sia attivo almeno un motore
     }
 
 #else

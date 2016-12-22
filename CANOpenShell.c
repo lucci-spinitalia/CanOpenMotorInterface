@@ -69,6 +69,11 @@
 
 #define SYNC_DIVIDER_STATUS 15
 #define SYNC_DIVIDER_TIMESTAMP 100
+
+/* Macro */
+#undef max
+#define max(x,y) ((x) > (y) ? (x) : (y))
+
 // bug quando do posizioni il motore si affloscia
 // il simulatore è a specchio
 // bug quando mando in rilasciato il programma di Enrico inonda di messaggi lo stream
@@ -194,6 +199,7 @@
 #define IN_POSIZIONE       13 /**< movimento in modalità posizione */
 #define JOYSTICK_COLLEGATO 14 /**< movimento tramite streaming */
 #define MOVIMENTO_LIBERO   15 /**< movimento tramite streaming */
+#define CHIUSURA           16 /**< programma in chiusura */
 
 #define cst_str2(c1, c2) ((unsigned int)0 | \
     (char)c2) << 8 | (char)c1
@@ -208,6 +214,8 @@
 #define QUIT 1
 
 static int robot_state = ACCESO;
+static volatile int quit_flag = 0;
+
 pthread_mutex_t robot_state_mux = PTHREAD_MUTEX_INITIALIZER
 ;
 volatile int simulation_ready[TABLE_MAX_NUM];
@@ -222,7 +230,7 @@ void CheckWriteProgramUpload(CO_Data* d, UNS8 nodeid);
 void CheckReadProgramDownload(CO_Data* d, UNS8 nodeid);
 void CheckReadProgramUpload(CO_Data* d, UNS8 nodeid);
 UNS32 OnInterpUpdate(CO_Data* d, UNS8 nodeid);
-void SmartStop(UNS8 nodeid, int from_callback);
+int SmartStop(UNS8 nodeid, int from_callback);
 void SimulationTableUpdate(CO_Data* d, UNS8 nodeid, UNS16 interpolation_status, int point_number,
     int from_callback);
 void SimulationTableEnd(CO_Data* d, UNS8 nodeId, int machine_state,
@@ -235,6 +243,8 @@ UNS32 return_value);
 void SmartPosition(UNS8 nodeid, long position, long velocity, long acceleration, int start,
     int from_callback);
 void CANOpenShellOD_post_sync(CO_Data* d);
+void closing();
+void Exit(CO_Data* d, UNS32 nodeid);
 
 //****************************************************************************
 // GLOBALS
@@ -357,6 +367,7 @@ void SmartClear(UNS8 nodeid)
       pthread_mutex_unlock(&interpolator_mux[motor_table[motor_index].nodeId]);
 
       simulation_first_start[motor_table[motor_index].nodeId] = 1;
+
       motor_started[motor_table[motor_index].nodeId] = 0;
     }
   }
@@ -1124,12 +1135,31 @@ UNS32 return_value)
       pthread_mutex_unlock(&robot_state_mux);
 
       OK("CT4");
+
+      InterpolationStart = 0x2f;
+
+      CANOpenShellOD_Data->PDO_status[INTERPOLATION_START_INDEX_OFFSET].last_message.cob_id = 0;
+
+      int send_pdo_result;
+      send_pdo_result = sendPDOevent(d);
+
+      if(send_pdo_result != 0)
+        printf("Errore PDO!\n");
+
+      struct state_machine_struct *set_position_machine[] =
+      {
+      &smart_set_mode_machine
+      };
+
+      _machine_exe(d, 0, NULL, set_position_machine, 1, 1, 0);
+
       fflush(stdout);
     }
     else
       pthread_mutex_unlock(&robot_state_mux);
   }
 }
+
 void SimulationTableStart(CO_Data* d)
 {
   int motor_index = 0;
@@ -1919,9 +1949,10 @@ UNS32 return_value)
   static pthread_mutex_t stop_mutex;
 
   int stop_in_progress = 0;
+  static int stop_message = 0;
+
   int motor_index;
 
-  printf("[%d] SmartStopCallback: %d\n", nodeId, return_value);
   if(return_value)
   {
     if(robot_state == SIMULAZIONE)
@@ -1930,13 +1961,43 @@ UNS32 return_value)
       CERR("CT2", CERR_InternalError);
     else if(robot_state == MOVIMENTO_LIBERO)
       CERR("CB5", CERR_SimulationError);
+    else if(robot_state == CHIUSURA)
+      CERR("CT6", CERR_InternalError);
     else
       add_event(InternalError, nodeId, 0, NULL);
+
+    stop_message = 0;
+    return;
+  }
+
+  printf("[%d] SmartStopCallback \n", nodeId);
+
+  pthread_mutex_lock(&robot_state_mux);
+  if((robot_state != SIMULAZIONE) && (robot_state != MOVIMENTO_LIBERO)
+      && (robot_state != RICERCA_CENTRO) && (robot_state != CENTRAGGIO))
+  {
+    if(robot_state == CHIUSURA)
+    {
+      pthread_mutex_unlock(&robot_state_mux);
+
+      stop_message++;
+
+      if(stop_message == motor_active_number)
+      {
+        stop_message = 0;
+
+        quit_flag = QUIT;
+      }
+    }
+    else
+      pthread_mutex_unlock(&robot_state_mux);
 
     return;
   }
 
+  pthread_mutex_unlock(&robot_state_mux);
   pthread_mutex_lock(&stop_mutex);
+
   SmartClear(nodeId);
 
   for(motor_index = 0; motor_index < motor_active_number; motor_index++)
@@ -1978,7 +2039,6 @@ UNS32 return_value)
   // per tutti i motori
   if(stop_in_progress == 0)
   {
-    printf("stop in progress ok\n");
     if(fake_flag)
     {
       for(motor_index = 0; motor_index < motor_active_number; motor_index++)
@@ -1988,7 +2048,6 @@ UNS32 return_value)
         motor_interp_status[NodeId] = 0x122d;
         motor_mode[NodeId] = 0x1;
         //printf("[%d] motor_status %d on smart stop\n", NodeId, motor_status[NodeId]);
-
       }
     }
 
@@ -1999,37 +2058,44 @@ UNS32 return_value)
 
     pthread_mutex_lock(&robot_state_mux);
     if((robot_state == SIMULAZIONE) || (robot_state == RILASCIATO)
-        || (robot_state == MOVIMENTO_LIBERO))
+        || (robot_state == MOVIMENTO_LIBERO) || (robot_state == CHIUSURA))
     {
       if(robot_state == SIMULAZIONE)
       {
         CERR("CT4", CERR_SimulationError);
         OK("CT5");
+
+        robot_state = FERMO;
+        pthread_mutex_unlock(&robot_state_mux);
       }
       else if(robot_state == MOVIMENTO_LIBERO)
       {
         CERR("CB7", CERR_SimulationError);
         OK("CB5");
-      }
 
-      robot_state = FERMO;
+        robot_state = FERMO;
+        pthread_mutex_unlock(&robot_state_mux);
+      }
+      else
+        pthread_mutex_unlock(&robot_state_mux);
     }
 
     /*else if(robot_state == INIZIALIZZATO)
      {
      CERR("CT2", CERR_ConfigError);
      }*/
-    pthread_mutex_unlock(&robot_state_mux);
+
   }
 }
 
-void SmartStop(UNS8 nodeid, int from_callback)
+int SmartStop(UNS8 nodeid, int from_callback)
 {
   printf("[%d] SmartStop from_callback: %d\n", nodeid, from_callback);
   if(fake_flag == 0)
   {
     struct state_machine_struct *machine = &smart_stop_machine;
-    _machine_exe(CANOpenShellOD_Data, nodeid, &SmartStopCallback, &machine, 1, from_callback, 0);
+    if(_machine_exe(CANOpenShellOD_Data, nodeid, &SmartStopCallback, &machine, 1, from_callback, 0))
+      return 1;
   }
   else
   {
@@ -2066,6 +2132,8 @@ void SmartStop(UNS8 nodeid, int from_callback)
       SmartStopCallback(CANOpenShellOD_Data, nodeid, 0, 0, 0);
     }
   }
+
+  return 0;
 }
 
 void SmartReleaseBrakeCallback(CO_Data* d, UNS8 Node_ID, int machine_state, int is_register,
@@ -2535,6 +2603,111 @@ void StopNode(UNS8 nodeid)
 }
 
 int get_info_step = 0;
+
+/**
+ * buffer must be 80 characte minimum
+ */
+void AbortCodeTranslate(UNS32 abortCode, char *buffer)
+{
+  switch(abortCode)
+  {
+    case 0x05030000:
+      sprintf(buffer, "Toggle bit not altered");
+      break;
+    case 0x05040000:
+      sprintf(buffer, "SDO protocol timed out");
+      break;
+    case 0x05040001:
+      sprintf(buffer, "Command specified not valid");
+      break;
+    case 0x05040002:
+      sprintf(buffer, "Invalid block size (block mode only, see DS301)");
+      break;
+    case 0x05040003:
+      sprintf(buffer, "Invalid sequence number (block mode only, see DS301)");
+      break;
+    case 0x05040004:
+      sprintf(buffer, "CRC error (block mode only, see DS301)");
+      break;
+    case 0x05040005:
+      sprintf(buffer, "Out of memory");
+      break;
+    case 0x06010000:
+      sprintf(buffer, "Unsupported access to an object");
+      break;
+    case 0x06010001:
+      sprintf(buffer, "Attempt to read a write only object");
+      break;
+    case 0x06010002:
+      sprintf(buffer, "Attempt to write a read only object");
+      break;
+    case 0x06020000:
+      sprintf(buffer, "Object does not exist in object dictionary");
+      break;
+    case 0x06040041:
+      sprintf(buffer, "Object cannot be mapped to the PDO");
+      break;
+    case 0x06040042:
+      sprintf(buffer, "The number and length of the object to be mapped would exceed PDO length");
+      break;
+    case 0x06040043:
+      sprintf(buffer, "General parameter incompatibility reason");
+      break;
+    case 0x06040047:
+      sprintf(buffer, "General internal incompatibility in the device");
+      break;
+    case 0x06060000:
+      sprintf(buffer, "Access failed due to a hardware error");
+      break;
+    case 0x06070010:
+      sprintf(buffer, "Data type does not match, length of service parameter does not match");
+      break;
+    case 0x06070012:
+      sprintf(buffer, "Data type does not match, length of service parameter too high");
+      break;
+    case 0x06070013:
+      sprintf(buffer, "Data type does not match, length of service parameter too low");
+      break;
+    case 0x06090011:
+      sprintf(buffer, "Sub-index does not exist");
+      break;
+    case 0x06090030:
+      sprintf(buffer, "Value range of parameter exceeded (only for write access)");
+      break;
+    case 0x06090031:
+      sprintf(buffer, "Value of parameter written too high");
+      break;
+    case 0x06090032:
+      sprintf(buffer, "Value of parameter written too low");
+      break;
+    case 0x06090036:
+      sprintf(buffer, "Maximum value is less than minimum value");
+      break;
+    case 0x08000000:
+      sprintf(buffer, "General error");
+      break;
+    case 0x08000020:
+      sprintf(buffer, "Data cannot be transferred or stored to the application");
+      break;
+    case 0x08000021:
+      sprintf(buffer,
+          "Data cannot be transferred or stored to the application because of local control");
+      break;
+    case 0x08000022:
+      sprintf(buffer,
+          "Data cannot be transferred or stored to the application because of present device state");
+      break;
+    case 0x08000023:
+      sprintf(buffer,
+          "Object dictionary dynamic generation fails or no object dictionary is present");
+      break;
+
+    default:
+      buffer[0] = '\0';
+      break;
+  }
+}
+
 /* Callback function that check the read SDO demand */
 void CheckReadInfoSDO(CO_Data* d, UNS8 nodeid)
 {
@@ -2543,8 +2716,14 @@ void CheckReadInfoSDO(CO_Data* d, UNS8 nodeid)
   UNS32 size = 64;
 
   if(getReadResultNetworkDict(CANOpenShellOD_Data, nodeid, &data, &size, &abortCode) != SDO_FINISHED)
+  {
     printf("Master : Failed in getting information for slave %2.2x, AbortCode :%4.4x \n", nodeid,
         abortCode);
+
+    char error_text[100];
+    AbortCodeTranslate(abortCode, error_text);
+    printf("Reason: %s\n", error_text);
+  }
   else
   {
     /* Display data received */
@@ -2634,8 +2813,13 @@ void CheckReadSDO(CO_Data* d, UNS8 nodeid)
   UNS32 size = 64;
 
   if(getReadResultNetworkDict(CANOpenShellOD_Data, nodeid, &data, &size, &abortCode) != SDO_FINISHED)
+  {
     printf("\nResult : Failed in getting information for slave %2.2x, AbortCode :%4.4x \n", nodeid,
         abortCode);
+    char error_text[100];
+    AbortCodeTranslate(abortCode, error_text);
+    printf("Reason: %s\n", error_text);
+  }
   else
     printf("\nResult : %x\n", data);
 
@@ -2653,6 +2837,10 @@ void CheckWriteSDO(CO_Data* d, UNS8 nodeid)
 #ifdef CANOPENSHELL_VERBOSE
     printf("\nResult : Failed in getting information for slave %2.2x, AbortCode :%4.4x \n", nodeid,
         abortCode);
+
+    char error_text[100];
+    AbortCodeTranslate(abortCode, error_text);
+    printf("Reason: %s\n", error_text);
 #endif
     add_event(InternalError, nodeid, 0, NULL);
   }
@@ -2820,7 +3008,7 @@ UNS32 return_value)
     pthread_mutex_unlock(&exit_from_limit_mux);
 
     pthread_mutex_lock(&robot_state_mux);
-    if(robot_state == ACCESO)
+    if((robot_state == ACCESO) || (robot_state == EMERGENZA))
     {
       robot_state = INIZIALIZZATO;
       pthread_mutex_unlock(&robot_state_mux);
@@ -2878,7 +3066,6 @@ UNS32 return_value)
 
 void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
 {
-  SmartClear(nodeid);
   _machine_reset(d, nodeid);
 
   if(motor_active[nodeid] == 0)
@@ -3077,6 +3264,8 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
     fake_jump: motor_active[nodeid] = 1;
   }
 
+  SmartClear(nodeid);
+
   pthread_mutex_init(&interpolator_mux[nodeid], NULL);
 
 // Controllo se una tabella sia stata già assegnata, altrimenti ne
@@ -3140,6 +3329,11 @@ void CheckReadProgramUpload(CO_Data* d, UNS8 nodeid)
   {
     printf("\nResult : Failed in getting information for slave %2.2x, AbortCode :%4.4x \n", nodeid,
         abortCode);
+
+    char error_text[100];
+    AbortCodeTranslate(abortCode, error_text);
+    printf("Reason: %s\n", error_text);
+
     fflush(stdout);
     raw_response_flag = -1;
     machine_state = -1;
@@ -3171,6 +3365,11 @@ void CheckReadProgramDownload(CO_Data* d, UNS8 nodeid)
   {
     printf("\nResult : Failed in getting information for slave %2.2x, AbortCode :%4.4x \n", nodeid,
         abortCode);
+
+    char error_text[100];
+    AbortCodeTranslate(abortCode, error_text);
+    printf("Reason: %s\n", error_text);
+
     fflush(stdout);
     raw_response_flag = -1;
     machine_state = -1;
@@ -3203,6 +3402,10 @@ void CheckReadRaw(CO_Data* d, UNS8 nodeid)
   {
     printf("\nResult : Failed in getting information for slave %2.2x, AbortCode :%4.4x \n", nodeid,
         abortCode);
+
+    char error_text[100];
+    AbortCodeTranslate(abortCode, error_text);
+    printf("Reason: %s\n", error_text);
     fflush(stdout);
     raw_response_flag = -1;
     machine_state = -1;
@@ -3235,6 +3438,10 @@ void CheckReadStringRaw(CO_Data* d, UNS8 nodeid)
   {
     printf("\nResult : Failed in getting information for slave %2.2x, AbortCode :%x \n", nodeid,
         abortCode);
+
+    char error_text[100];
+    AbortCodeTranslate(abortCode, error_text);
+    printf("Reason: %s\n", error_text);
     fflush(stdout);
     raw_response_flag = -1;
     machine_state = -1;
@@ -3261,6 +3468,10 @@ void CheckWriteProgramUpload(CO_Data* d, UNS8 nodeid)
   if(getWriteResultNetworkDict(d, nodeid, &abortCode) != SDO_FINISHED)
   {
     printf("Error: %d", abortCode);
+
+    char error_text[100];
+    AbortCodeTranslate(abortCode, error_text);
+    printf("Reason: %s\n", error_text);
     fflush(stdout);
     machine_state = -1;
   }
@@ -3280,6 +3491,10 @@ void CheckWriteProgramDownload(CO_Data* d, UNS8 nodeid)
   if(getWriteResultNetworkDict(d, nodeid, &abortCode) != SDO_FINISHED)
   {
     printf("Error: %d", abortCode);
+
+    char error_text[100];
+    AbortCodeTranslate(abortCode, error_text);
+    printf("Reason: %s\n", error_text);
     fflush(stdout);
     machine_state = -1;
   }
@@ -3298,6 +3513,10 @@ void CheckWriteRaw(CO_Data* d, UNS8 nodeid)
   if(getWriteResultNetworkDict(d, nodeid, &abortCode) != SDO_FINISHED)
   {
     printf("Error: %d", abortCode);
+
+    char error_text[100];
+    AbortCodeTranslate(abortCode, error_text);
+    printf("Reason: %s\n", error_text);
     fflush(stdout);
     machine_state = -1;
   }
@@ -4013,7 +4232,11 @@ int ProcessCommandTripode(char* command)
 
     case 4:
       pthread_mutex_lock(&robot_state_mux);
+#ifdef CBRN
+      if((robot_state != CENTRATO) && (robot_state != INIZIALIZZATO) && (robot_state != FERMO))
+#else
       if(robot_state != CENTRATO)
+#endif
       {
         pthread_mutex_unlock(&robot_state_mux);
         goto permission_denied;
@@ -4053,7 +4276,26 @@ int ProcessCommandTripode(char* command)
       }
 
       pthread_mutex_unlock(&robot_state_mux);
-      return QUIT;
+
+      printf("motor active: %d\n", motor_active_number);
+      if(motor_active_number > 0 )
+      {
+        if(SmartStop(0, 0) == 0)
+        {
+          pthread_mutex_lock(&robot_state_mux);
+          robot_state = CHIUSURA;
+          pthread_mutex_unlock(&robot_state_mux);
+        }
+      }
+      else
+      {
+        pthread_mutex_lock(&robot_state_mux);
+        robot_state = CHIUSURA;
+        pthread_mutex_unlock(&robot_state_mux);
+
+        printf("quit\n");
+        return QUIT;
+      }
       break;
 
     default:
@@ -4348,6 +4590,10 @@ int ProcessParameterTripode(char* command)
           sprintf(parse_str, "PR1: %d, Movimento libero", robot_state);
           break;
 
+        case CHIUSURA:
+          sprintf(parse_str, "PR1: %d, Chiusura", robot_state);
+          break;
+
         default:
           sprintf(parse_str, "PR1: %d, Sconosciuto", robot_state);
           break;
@@ -4543,36 +4789,9 @@ void signal_handler(int signum)
       if(verbose_flag)
       {
         printf("Terminating program...\n");
-
-        printf("Finishing.\n");
       }
 #endif
 
-      if(position_fp > 0)
-        fclose(position_fp);
-
-      if(fake_flag == 0)
-        remove(POSITION_FIFO_FILE);
-      else
-        remove(FAKE_POSITION_FIFO_FILE);
-
-      _machine_destroy();
-
-      if(fake_flag == 0)
-      {
-        stopSYNC(CANOpenShellOD_Data);
-//heartbeatStop(CANOpenShellOD_Data);
-
-// Stop timer thread
-        StopTimerLoop(&Exit);
-
-        /* Close CAN board */
-        canClose(CANOpenShellOD_Data);
-      }
-
-      TimerCleanup();
-
-      exit(signum);
       break;
 
     case SIGPIPE:
@@ -4773,6 +4992,89 @@ int open_pipe(char *pipe_name, pthread_t *open_proc_handler, void *open_proc_fun
   return 0;
 }
 
+void closing()
+{
+#ifdef CANOPENSHELL_VERBOSE
+  if(verbose_flag)
+  {
+    printf("Finishing. . .\n");
+    printf("Free file. . .\n");
+  }
+#endif
+
+  if(position_fp > 0)
+    fclose(position_fp);
+
+  /*if(fake_flag == 0)
+    remove(POSITION_FIFO_FILE);
+  else
+    remove(FAKE_POSITION_FIFO_FILE);*/
+
+  if(fake_flag == 0)
+    unlink(POSITION_FIFO_FILE);
+  else
+    unlink(FAKE_POSITION_FIFO_FILE);
+
+  _machine_destroy();
+
+  if(fake_flag == 0)
+  {
+#ifdef CANOPENSHELL_VERBOSE
+    if(verbose_flag)
+    {
+      printf("Stop Sync. . .\n");
+    }
+#endif
+    stopSYNC(CANOpenShellOD_Data);
+    //heartbeatStop(CANOpenShellOD_Data);
+
+    // Stop timer thread
+#ifdef CANOPENSHELL_VERBOSE
+    if(verbose_flag)
+    {
+      printf("Stop Timer Loop. . .\n");
+    }
+#endif
+
+    StopTimerLoop(&Exit);
+
+    // Close CAN board
+#ifdef CANOPENSHELL_VERBOSE
+    if(verbose_flag)
+    {
+      printf("can Close. . .\n");
+    }
+#endif
+    canClose(CANOpenShellOD_Data);
+
+  }
+  else if(fake_update_timer)
+    timer_delete(fake_update_timer);
+
+#ifdef CANOPENSHELL_VERBOSE
+  if(verbose_flag)
+  {
+    printf("machine destroy. . . \n");
+  }
+#endif
+
+#ifdef CANOPENSHELL_VERBOSE
+  if(verbose_flag)
+  {
+    printf("Timer Cleanup. . .\n");
+  }
+#endif
+
+  TimerCleanup();
+
+#ifdef CANOPENSHELL_VERBOSE
+  if(verbose_flag)
+  {
+    printf("Exit. . .\n");
+  }
+#endif
+}
+
 /****************************************************************************/
 /***************************  MAIN  *****************************************/
 /****************************************************************************/
@@ -4782,7 +5084,7 @@ int main(int argc, char** argv)
   extern char *optarg;
   char command[200];
   char* res;
-  int ret = 0;
+
 //int sysret = 0;
   int i = 0;
 
@@ -4793,7 +5095,7 @@ int main(int argc, char** argv)
     exit(1);
   }
 
-  signal(SIGINT, signal_handler);
+  //signal(SIGINT, signal_handler);
 //signal(SIGTERM, signal_handler);
 
 //load#libcanfestival_can_socket.so,0,1M,8
@@ -4808,7 +5110,10 @@ int main(int argc, char** argv)
   for(i = 1; i < argc; i++)
   {
     if(ProcessCommand(argv[i]) == INIT_ERR)
-      goto init_fail;
+    {
+      TimerCleanup();
+      return 1;
+    }
   }
 
   if(fake_flag == 0)
@@ -4846,56 +5151,82 @@ int main(int argc, char** argv)
     PDOInit(CANOpenShellOD_Data);
   }
 
+  int select_result = -1; // value returned frome select()
+  int nfds = 0; // fd to pass to select()
+  fd_set rd, wr, er; // structure for select()
+  sigset_t mask;
+  sigset_t orig_mask;
+  struct sigaction act;
+
+  memset(&act, 0, sizeof(act));
+  act.sa_handler = signal_handler;
+  sigemptyset(&act.sa_mask);
+  act.sa_flags = 0;
+
+  if(sigaction(SIGINT, &act, NULL))
+  {
+    perror("sigaction");
+    return 1;
+  }
+
+  sigemptyset(&mask);
+  sigaddset(&mask, SIGINT);
+
+  if(sigprocmask(SIG_BLOCK, &mask, &orig_mask) < 0)
+  {
+    perror("sigprocmask");
+    return 1;
+  }
+
+  struct timespec select_timeout;
+
+  select_timeout.tv_sec = 1;
+  select_timeout.tv_nsec = 0;
+
   /* Enter in a loop to read stdin command until "quit" is called */
-  while(ret != QUIT)
+  while(quit_flag != QUIT)
   {
-    // wait on stdin for string command
-    res = fgets(command, sizeof(command), stdin);
+    FD_ZERO(&rd);
+    FD_ZERO(&wr);
+    FD_ZERO(&er);
 
-    if((res != NULL) && (strlen(command) > 1))
+    FD_SET(STDIN_FILENO, &rd);
+    nfds = max(nfds, STDIN_FILENO);
+
+    select_result = pselect(nfds + 1, &rd, NULL, NULL, &select_timeout, &orig_mask);
+
+    if(quit_flag == QUIT)
+      break;
+    else if(select_result == 0)
+      continue;
+
+    if(FD_ISSET(STDIN_FILENO, &rd))
     {
+      // wait on stdin for string command
+      res = fgets(command, sizeof(command), stdin);
+
+      if((res != NULL))
+      {
+        if(strlen(command) > 1)
+        {
 //sysret = system(CLEARSCREEN);
-      command[strlen(command) - 1] = '\0';
-      if(command[strlen(command) - 1] == '\r')
-        command[strlen(command) - 1] = '\0';
+          command[strlen(command) - 1] = '\0';
+          if(command[strlen(command) - 1] == '\r')
+            command[strlen(command) - 1] = '\0';
 
-      ret = ProcessCommand(command);
-      fflush(stdout);
+          quit_flag = ProcessCommand(command);
+
+          fflush(stdout);
+        }
+      }
     }
+
+    select_timeout.tv_sec = 1;
+    select_timeout.tv_nsec = 0;
   }
 
-#ifdef CANOPENSHELL_VERBOSE
-  if(verbose_flag)
-  {
-    printf("Finishing.\n");
-  }
-#endif
-
-  if(fake_flag == 0)
-  {
-    stopSYNC(CANOpenShellOD_Data);
-    //heartbeatStop(CANOpenShellOD_Data);
-
-    // Stop timer thread
-    StopTimerLoop(&Exit);
-
-    /* Close CAN board */
-    canClose(CANOpenShellOD_Data);
-  }
-  else if(fake_update_timer)
-    timer_delete(fake_update_timer);
-
-  _machine_destroy();
-
-  if(position_fp > 0)
-    fclose(position_fp);
-
-  if(fake_flag == 0)
-    unlink(POSITION_FIFO_FILE);
-  else
-    unlink(FAKE_POSITION_FIFO_FILE);
-
-  init_fail: TimerCleanup();
+  closing();
+  OK("CT6");
   return 0;
 }
 
