@@ -31,7 +31,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 //****************************************************************************
 // DEFINES
-#define CBRN
+//#define CBRN
 //#define NO_LIMITS
 
 extern int fake_flag;

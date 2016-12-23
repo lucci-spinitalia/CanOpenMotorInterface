@@ -80,5 +80,6 @@ extern UNS32 canopen_abort_code;  /**< Codice dell'ultimo errore del tipo CANOpe
 
 void add_event(int error, int nodeid, int type, char *message);
 void return_event();
+void AbortCodeTranslate(UNS32 abortCode, char *buffer);
 
 #endif /* CANOPENSHELLMASTERERROR_H_ */

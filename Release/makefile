@@ -8,9 +8,6 @@ RM := rm -rf
 
 # All of the sources participating in the build are defined here
 -include sources.mk
--include Mongo-canfestival-3-asc-e07f8b94110e/src/subdir.mk
--include Mongo-canfestival-3-asc-e07f8b94110e/drivers/unix/subdir.mk
--include Mongo-canfestival-3-asc-e07f8b94110e/drivers/timers_unix/subdir.mk
 -include subdir.mk
 -include objects.mk
 
@@ -31,7 +28,7 @@ all: SW.33.05.02.0.0
 SW.33.05.02.0.0: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: Cross GCC Linker'
-	arm-linux-gnueabihf-gcc  -o "SW.33.05.02.0.0" $(OBJS) $(USER_OBJS) $(LIBS)
+	arm-linux-gnueabihf-gcc -L/home/lucciu/canfestival-3-asc/src -L/home/lucciu/canfestival-3-asc/drivers/unix -o "SW.33.05.02.0.0" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 

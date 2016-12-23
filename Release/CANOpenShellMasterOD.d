@@ -1,61 +1,60 @@
 CANOpenShellMasterOD.o: ../CANOpenShellMasterOD.c \
- ../CANOpenShellMasterOD.h \
- /home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/data.h \
- /home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/unix/applicfg.h \
- /home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/def.h \
- /home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/config.h \
- /home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/can.h \
- /home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/objdictdef.h \
- /home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/objacces.h \
- /home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/sdo.h \
- /home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/timer.h \
- /home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/timers_unix/timerscfg.h \
- /home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/data.h \
- /home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/pdo.h \
- /home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/def.h \
- /home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/states.h \
- /home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/lifegrd.h \
- /home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/sync.h \
- /home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/nmtSlave.h \
- /home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/nmtMaster.h \
- /home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/emcy.h
+ ../CANOpenShellMasterOD.h /home/lucciu/canfestival-3-asc/include/data.h \
+ /home/lucciu/canfestival-3-asc/include/unix/applicfg.h \
+ /home/lucciu/canfestival-3-asc/include/def.h \
+ /home/lucciu/canfestival-3-asc/include/config.h \
+ /home/lucciu/canfestival-3-asc/include/can.h \
+ /home/lucciu/canfestival-3-asc/include/objdictdef.h \
+ /home/lucciu/canfestival-3-asc/include/objacces.h \
+ /home/lucciu/canfestival-3-asc/include/sdo.h \
+ /home/lucciu/canfestival-3-asc/include/timer.h \
+ /home/lucciu/canfestival-3-asc/include/timers_unix/timerscfg.h \
+ /home/lucciu/canfestival-3-asc/include/data.h \
+ /home/lucciu/canfestival-3-asc/include/pdo.h \
+ /home/lucciu/canfestival-3-asc/include/def.h \
+ /home/lucciu/canfestival-3-asc/include/states.h \
+ /home/lucciu/canfestival-3-asc/include/lifegrd.h \
+ /home/lucciu/canfestival-3-asc/include/sync.h \
+ /home/lucciu/canfestival-3-asc/include/nmtSlave.h \
+ /home/lucciu/canfestival-3-asc/include/nmtMaster.h \
+ /home/lucciu/canfestival-3-asc/include/emcy.h
 
 ../CANOpenShellMasterOD.h:
 
-/home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/data.h:
+/home/lucciu/canfestival-3-asc/include/data.h:
 
-/home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/unix/applicfg.h:
+/home/lucciu/canfestival-3-asc/include/unix/applicfg.h:
 
-/home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/def.h:
+/home/lucciu/canfestival-3-asc/include/def.h:
 
-/home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/config.h:
+/home/lucciu/canfestival-3-asc/include/config.h:
 
-/home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/can.h:
+/home/lucciu/canfestival-3-asc/include/can.h:
 
-/home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/objdictdef.h:
+/home/lucciu/canfestival-3-asc/include/objdictdef.h:
 
-/home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/objacces.h:
+/home/lucciu/canfestival-3-asc/include/objacces.h:
 
-/home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/sdo.h:
+/home/lucciu/canfestival-3-asc/include/sdo.h:
 
-/home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/timer.h:
+/home/lucciu/canfestival-3-asc/include/timer.h:
 
-/home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/timers_unix/timerscfg.h:
+/home/lucciu/canfestival-3-asc/include/timers_unix/timerscfg.h:
 
-/home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/data.h:
+/home/lucciu/canfestival-3-asc/include/data.h:
 
-/home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/pdo.h:
+/home/lucciu/canfestival-3-asc/include/pdo.h:
 
-/home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/def.h:
+/home/lucciu/canfestival-3-asc/include/def.h:
 
-/home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/states.h:
+/home/lucciu/canfestival-3-asc/include/states.h:
 
-/home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/lifegrd.h:
+/home/lucciu/canfestival-3-asc/include/lifegrd.h:
 
-/home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/sync.h:
+/home/lucciu/canfestival-3-asc/include/sync.h:
 
-/home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/nmtSlave.h:
+/home/lucciu/canfestival-3-asc/include/nmtSlave.h:
 
-/home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/nmtMaster.h:
+/home/lucciu/canfestival-3-asc/include/nmtMaster.h:
 
-/home/lucciu/Mongo-canfestival-3-asc-e07f8b94110e/include/emcy.h:
+/home/lucciu/canfestival-3-asc/include/emcy.h:

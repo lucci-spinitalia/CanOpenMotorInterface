@@ -25,6 +25,7 @@
 #define CLEARSCREEN "cls"
 #define SLEEP(time) Sleep(time * 1000)
 #else
+#include <stddef.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
@@ -691,11 +692,99 @@ UNS32 OnStatusUpdate(CO_Data* d, const indextable * indextable_curr, UNS8 bSubin
 {
   UNS8 nodeid = NodeId;
 
+  int status_word_change = 0;
+  int status_word_index = 0;
+
   /** Fault management **/
 
   if(fake_flag == 0)
   {
+    if(motor_status[nodeid] != Statusword)
+    {
+      printf("INFO[%d]: StatusWord %x\n", nodeid, Statusword);
+
+      status_word_change = motor_status[nodeid] ^ Statusword;
+
+      for(status_word_index = 0; status_word_index < 16; status_word_index++)
+      {
+        if((status_word_change >> status_word_index) & 0x01)
+        {
+          switch(status_word_index)
+          {
+            case 0:
+              printf("          Ready to switch on = %d\n", (Statusword >> status_word_index) & 0x01);
+              break;
+
+            case 1:
+              printf("          Switched on = %d\n", (Statusword >> status_word_index) & 0x01);
+              break;
+
+            case 2:
+              printf("          Operation enabled = %d\n", (Statusword >> status_word_index) & 0x01);
+              break;
+
+            case 3:
+              printf("          Fault = %d\n", (Statusword >> status_word_index) & 0x01);
+              break;
+
+            case 4:
+              printf("          Voltage enabled = %d\n", (Statusword >> status_word_index) & 0x01);
+              break;
+
+            case 5:
+              printf("          Quick stop = %d\n", (Statusword >> status_word_index) & 0x01);
+              break;
+
+            case 6:
+              printf("          Switch on disabled = %d\n", (Statusword >> status_word_index) & 0x01);
+              break;
+
+            case 7:
+              printf("          Warning = %d\n", (Statusword >> status_word_index) & 0x01);
+              break;
+
+            case 8:
+              printf("          subroutine is busy = %d\n", (Statusword >> status_word_index) & 0x01);
+              break;
+
+            case 9:
+              printf("          Remote = %d\n", (Statusword >> status_word_index) & 0x01);
+              break;
+
+            case 10:
+              printf("          Target reached = %d\n", (Statusword >> status_word_index) & 0x01);
+              break;
+
+            case 11:
+              printf("          Internal limit active = %d\n", (Statusword >> status_word_index) & 0x01);
+              break;
+
+            case 12:
+              printf("          Setpoint acknowledgment = %d\n", (Statusword >> status_word_index) & 0x01);
+              break;
+
+            case 13:
+              printf("          Move error = %d\n", (Statusword >> status_word_index) & 0x01);
+              break;
+
+            case 14:
+              printf("          User-controlled bit through CANCTL(12,x) = %d\n", (Statusword >> status_word_index) & 0x01);
+              break;
+
+            case 15:
+              printf("          Not used = %d\n", (Statusword >> status_word_index) & 0x01);
+              break;
+
+          }
+        }
+      }
+    }
     motor_status[nodeid] = Statusword;
+
+    if(motor_mode[nodeid] != Modes_of_operation_display)
+    {
+      printf("INFO[%d]: Mode %x\n", nodeid, Modes_of_operation_display);
+    }
     motor_mode[nodeid] = Modes_of_operation_display;
   }
 
@@ -931,7 +1020,12 @@ UNS32 OnStatusUpdate(CO_Data* d, const indextable * indextable_curr, UNS8 bSubin
 UNS32 OnInterpUpdate(CO_Data* d, UNS8 nodeid)
 {
   if(fake_flag == 0)
+  {
+    if(motor_interp_status[nodeid] != Interpolation_Mode_Status)
+      printf("INFO[%d]: Interpolation status: %x\n", nodeid, Interpolation_Mode_Status);
+
     motor_interp_status[nodeid] = Interpolation_Mode_Status;
+  }
 
   // confronto lo stato precedente dell'interpolazione con quello attuale
   // per capire se ci sono stati cambiamenti
@@ -2573,7 +2667,10 @@ void StartNode(UNS8 nodeid)
 /* Ask a slave node to reset */
 void ResetNode(UNS8 nodeid)
 {
-  motor_active_number = 0;
+  int motor_index = 0;
+
+  for(motor_index = 0; motor_index < motor_active_number; motor_index++)
+    motor_started[motor_table[motor_index].nodeId] = 0;
 
   if(fake_flag == 0)
     masterSendNMTstateChange(CANOpenShellOD_Data, nodeid, NMT_Reset_Node);
@@ -2603,110 +2700,6 @@ void StopNode(UNS8 nodeid)
 }
 
 int get_info_step = 0;
-
-/**
- * buffer must be 80 characte minimum
- */
-void AbortCodeTranslate(UNS32 abortCode, char *buffer)
-{
-  switch(abortCode)
-  {
-    case 0x05030000:
-      sprintf(buffer, "Toggle bit not altered");
-      break;
-    case 0x05040000:
-      sprintf(buffer, "SDO protocol timed out");
-      break;
-    case 0x05040001:
-      sprintf(buffer, "Command specified not valid");
-      break;
-    case 0x05040002:
-      sprintf(buffer, "Invalid block size (block mode only, see DS301)");
-      break;
-    case 0x05040003:
-      sprintf(buffer, "Invalid sequence number (block mode only, see DS301)");
-      break;
-    case 0x05040004:
-      sprintf(buffer, "CRC error (block mode only, see DS301)");
-      break;
-    case 0x05040005:
-      sprintf(buffer, "Out of memory");
-      break;
-    case 0x06010000:
-      sprintf(buffer, "Unsupported access to an object");
-      break;
-    case 0x06010001:
-      sprintf(buffer, "Attempt to read a write only object");
-      break;
-    case 0x06010002:
-      sprintf(buffer, "Attempt to write a read only object");
-      break;
-    case 0x06020000:
-      sprintf(buffer, "Object does not exist in object dictionary");
-      break;
-    case 0x06040041:
-      sprintf(buffer, "Object cannot be mapped to the PDO");
-      break;
-    case 0x06040042:
-      sprintf(buffer, "The number and length of the object to be mapped would exceed PDO length");
-      break;
-    case 0x06040043:
-      sprintf(buffer, "General parameter incompatibility reason");
-      break;
-    case 0x06040047:
-      sprintf(buffer, "General internal incompatibility in the device");
-      break;
-    case 0x06060000:
-      sprintf(buffer, "Access failed due to a hardware error");
-      break;
-    case 0x06070010:
-      sprintf(buffer, "Data type does not match, length of service parameter does not match");
-      break;
-    case 0x06070012:
-      sprintf(buffer, "Data type does not match, length of service parameter too high");
-      break;
-    case 0x06070013:
-      sprintf(buffer, "Data type does not match, length of service parameter too low");
-      break;
-    case 0x06090011:
-      sprintf(buffer, "Sub-index does not exist");
-      break;
-    case 0x06090030:
-      sprintf(buffer, "Value range of parameter exceeded (only for write access)");
-      break;
-    case 0x06090031:
-      sprintf(buffer, "Value of parameter written too high");
-      break;
-    case 0x06090032:
-      sprintf(buffer, "Value of parameter written too low");
-      break;
-    case 0x06090036:
-      sprintf(buffer, "Maximum value is less than minimum value");
-      break;
-    case 0x08000000:
-      sprintf(buffer, "General error");
-      break;
-    case 0x08000020:
-      sprintf(buffer, "Data cannot be transferred or stored to the application");
-      break;
-    case 0x08000021:
-      sprintf(buffer,
-          "Data cannot be transferred or stored to the application because of local control");
-      break;
-    case 0x08000022:
-      sprintf(buffer,
-          "Data cannot be transferred or stored to the application because of present device state");
-      break;
-    case 0x08000023:
-      sprintf(buffer,
-          "Object dictionary dynamic generation fails or no object dictionary is present");
-      break;
-
-    default:
-      buffer[0] = '\0';
-      break;
-  }
-}
 
 /* Callback function that check the read SDO demand */
 void CheckReadInfoSDO(CO_Data* d, UNS8 nodeid)
@@ -3059,7 +3052,11 @@ void ConfigureSlaveNodeCallback(CO_Data* d, UNS8 nodeId, int machine_state, int 
 UNS32 return_value)
 {
   if(return_value)
+  {
     CERR("CT0", CERR_InternalError);
+    motor_active[nodeId] = 0;
+    motor_active_number--;
+  }
   else
     printf("@M A%d\n", nodeId);
 }
@@ -3905,6 +3902,12 @@ void DiscoverTimeout(sigval_t val)
   {
     pthread_mutex_unlock(&motor_active_number_mutex);
 
+#ifdef CANOPENSHELL_VERBOSE
+    if(verbose_flag)
+    {
+      printf("ERR: only %d smartmotor found\n", motor_active_number);
+    }
+#endif
     CERR("CT0", CERR_ConfigError);
   }
   else
