@@ -25,7 +25,7 @@ int var_count_total[CANOPEN_NODE_NUMBER];
 UNS32 *args_ptr[CANOPEN_NODE_NUMBER];
 UNS32 *next_args[CANOPEN_NODE_NUMBER];
 
-int machine_state_index[CANOPEN_NODE_NUMBER];
+volatile int machine_state_index[CANOPEN_NODE_NUMBER];
 int machine_state_param_index[CANOPEN_NODE_NUMBER];
 
 MachineCallback_t callback_user[CANOPEN_NODE_NUMBER];
@@ -702,7 +702,7 @@ void *smart_message_function[1] =
 
 UNS32 smart_message_param[5] =
 {
-0x2500, 0x1, 0xFFFFFFFF, visible_string, 0xFFFFFFFF
+0x2500, 0x01, 0xFFFFFFFF, visible_string, 0xFFFFFFFF
 };
 
 char *smart_message_error[2] =
@@ -1504,6 +1504,33 @@ struct state_machine_struct smart_velocity_pp_set_machine =
 smart_velocity_pp_set_function, 1, smart_velocity_pp_set_param, 5, smart_velocity_pp_set_error
 };
 
+void *smart_read_function[1] =
+{
+&readNetworkDictCallback
+// Read smartmotor status word 0
+    };
+
+/*param
+ * object id
+ * sub-object
+ * type: 0 or visible_string
+ */
+UNS32 smart_read_param[3] =
+{
+0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF
+// Read smartmotor status word 0
+    };
+
+char *smart_read_error[2] =
+{
+"Reg read", "Cannot read register"
+};
+
+struct state_machine_struct smart_read_machine =
+{
+smart_read_function, 1, smart_read_param, 3, smart_read_error
+};
+
 void *smart_statusword_function[1] =
 {
 &readNetworkDictCallback
@@ -1694,6 +1721,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 {
   void *last_function = NULL;
   UNS32 readNetworkDictCallback_result = 0;
+
   int result_value = 0;
 
   int lock_value;
@@ -1723,6 +1751,8 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
         lock_value = pthread_mutex_unlock(&machine_mux[nodeId]);
 
         fflush(stdout);
+
+        machine_callback(d, nodeId, 0, 0, 1);
         return 1;
       }
     }
@@ -1764,6 +1794,7 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
             lock_value = pthread_mutex_unlock(&machine_mux[i]);
 
             fflush(stdout);
+            machine_callback(d, i, 0, 0, 1);
             return 1;
           }
 
@@ -1795,7 +1826,12 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
             nodeId, machine_state_index[nodeId]);
       }
 #endif
+
+#ifndef SDO_SYNC
       lock_value = pthread_mutex_unlock(&machine_mux[nodeId]);
+#else
+      lock_value = pthread_mutex_unlock(&machine_mux);
+#endif
       return -1;
     }
 
@@ -2070,7 +2106,8 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
 #endif
 
       fflush(stdout);
-      return 1;
+      result_value = 1;
+      goto finalize;
     }
     else
     {
@@ -2227,6 +2264,9 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                       InternalError, nodeId, machine_state_index[nodeId],
                       next_machine[nodeId][0]->error[1], sdo_result);
                 }
+
+                AbortCodeTranslate(d->transfers[line].abortCode, error_text);
+                printf("Reason: %s\n", error_text);
 #endif
 
                 sdo_result = closeSDOtransfer(d, nodeId, SDO_CLIENT);
@@ -2257,6 +2297,9 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                       InternalError, nodeId, machine_state_index[nodeId],
                       next_machine[nodeId][0]->error[1], sdo_result);
 
+                  AbortCodeTranslate(d->transfers[line].abortCode, error_text);
+                  printf("Reason: %s\n", error_text);
+
                   printf("Il numero di chiamate a questa funzione è: %d\n",
                       function_call_number[nodeId]);
 
@@ -2274,6 +2317,8 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                       InternalError, nodeId, machine_state_index[nodeId],
                       next_machine[nodeId][0]->error[1], sdo_result);
 
+                  AbortCodeTranslate(d->transfers[line].abortCode, error_text);
+                  printf("Reason: %s\n", error_text);
                   printf("Il numero 2 di chiamate a questa funzione è: %d\n",
                       function_call_number[nodeId]);
                 }
@@ -2304,21 +2349,50 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
             function_call_number[nodeId]--;
             last_function = &readNetworkDictCallback;
 
-            UNS32 size = 64;
+            if(args_ptr[nodeId][2] == 9)
+            {
+              char readNetworkDictCallback_result_string[64];
 
-            sdo_result = getReadResultNetworkDict(d, nodeId, &readNetworkDictCallback_result, &size,
-                &canopen_abort_code);
+              UNS32 size = sizeof(readNetworkDictCallback_result_string);
+              sdo_result = getReadResultNetworkDict(d, nodeId, readNetworkDictCallback_result_string, &size,
+                                &canopen_abort_code);
+
+              readNetworkDictCallback_result = atol(readNetworkDictCallback_result_string);
+            }
+            else
+            {
+              UNS32 size = 64;
+
+              sdo_result = getReadResultNetworkDict(d, nodeId, &readNetworkDictCallback_result, &size,
+                  &canopen_abort_code);
+            }
 
             switch(sdo_result)
             {
               case SDO_DOWNLOAD_IN_PROGRESS:
               case SDO_UPLOAD_IN_PROGRESS:
-                while((sdo_result = getReadResultNetworkDict(d, nodeId,
-                    &readNetworkDictCallback_result, &size, &canopen_abort_code))
-                    != SDO_DOWNLOAD_IN_PROGRESS)
-                  printf("ERR[%d on node %x state %d]: Download in progress (getRead)\n",
-                      InternalError, nodeId, machine_state_index[nodeId]);
-                ;
+                if(args_ptr[nodeId][2] == 9)
+                {
+                  char readNetworkDictCallback_result_string[64];
+
+                  UNS32 size = sizeof(readNetworkDictCallback_result_string);
+
+                  while((sdo_result = getReadResultNetworkDict(d, nodeId,
+                      readNetworkDictCallback_result_string, &size, &canopen_abort_code)) != SDO_DOWNLOAD_IN_PROGRESS)
+                    printf("ERR[%d on node %x state %d]: Download in progress (getRead)\n",
+                        InternalError, nodeId, machine_state_index[nodeId]);
+
+                  readNetworkDictCallback_result = atol(readNetworkDictCallback_result_string);
+                }
+                else
+                {
+                  UNS32 size = 64;
+
+                  while((sdo_result = getReadResultNetworkDict(d, nodeId,
+                      &readNetworkDictCallback_result, &size, &canopen_abort_code)) != SDO_DOWNLOAD_IN_PROGRESS)
+                    printf("ERR[%d on node %x state %d]: Download in progress (getRead)\n",
+                        InternalError, nodeId, machine_state_index[nodeId]);
+                }
                 break;
 
               case SDO_FINISHED:
@@ -2539,13 +2613,21 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
         // delle volte vengono ricevuti degli SDO timeout. Lo sleep serve ad evitare
         // il sovraccarico del bus dovuta ai molti messaggi. Non è un problema di banda,
         // ma del numero di messaggi continui di tipo SDO che un motore può sostenere
-        usleep(2000);
+        //usleep(2000);
         // chimao EnterMutex e LeaveMutex solo se non sono in un callback
         if(!from_callback)
           EnterMutex();
 
-        machine_function_return = machine_function(d, nodeId, user_param[0], user_param[1],
-            user_param[2], user_param[3], &user_param[4], _machine_callback, 0);
+        if(user_param[3] == visible_string)
+        {
+          machine_function_return = machine_function(d, nodeId, user_param[0], user_param[1],
+              user_param[2], user_param[3], (char *)user_param[4], _machine_callback, 0);
+        }
+        else
+        {
+          machine_function_return = machine_function(d, nodeId, user_param[0], user_param[1],
+              user_param[2], user_param[3], &user_param[4], _machine_callback, 0);
+        }
 
         // chiamo EnterMutex e LeaveMutex solo se non sono in un callback
         if(!from_callback)
@@ -2601,9 +2683,9 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
               lock_value = pthread_mutex_lock(&machine_mux);
 
               if(machine_run == 1)
-              pthread_cond_wait(&machine_run_cond, &machine_mux);
+                pthread_cond_wait(&machine_run_cond, &machine_mux);
               else
-              machine_run = 1;
+                machine_run = 1;
 
               printf("writenetworkdick machine %d\n", nodeId);
 
@@ -2650,9 +2732,11 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
                     machine_state_index[i], next_machine[i][0]->error[1]);
               }
 #endif
+              result_value = 1;
+              goto finalize;
             }
-          }
 #ifndef SDO_SYNC
+          }
           else
             lock_value = pthread_mutex_unlock(&machine_mux[i]);
 #endif
@@ -2769,9 +2853,9 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
               lock_value = pthread_mutex_lock(&machine_mux);
 
               if(machine_run == 1)
-              pthread_cond_wait(&machine_run_cond, &machine_mux);
+                pthread_cond_wait(&machine_run_cond, &machine_mux);
               else
-              machine_run = 1;
+                machine_run = 1;
 
               printf("writenetworkdick machine %d\n", nodeId);
 
@@ -2966,12 +3050,12 @@ int _machine_exe(CO_Data *d, UNS8 nodeId, MachineCallback_t machine_callback,
     printf("end machine %d\n", nodeId);
     pthread_cond_signal(&machine_run_cond);
     lock_value = pthread_mutex_unlock(&machine_mux);
-#endif
-
+#else
     // se non ci sono stati problemi, posso considerare chiusa la
     // richiesta broadcast
     if(result_value == 0)
       machine_run[0] = 0;
+#endif
   }
   else
   {

@@ -58,6 +58,7 @@ extern struct state_machine_struct stop_interpolation_machine;
 extern struct state_machine_struct start_interpolation_machine;
 extern struct state_machine_struct init_interpolation_machine;
 extern struct state_machine_struct smart_homing_machine;
+extern struct state_machine_struct smart_read_machine;
 extern struct state_machine_struct smart_statusword_machine;
 extern struct state_machine_struct smart_reset_statusword_machine;
 extern struct state_machine_struct smart_origin_machine;

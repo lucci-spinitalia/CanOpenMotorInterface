@@ -26,7 +26,7 @@ extern UNS16 Bus_Voltage;		/* Mapped at index 0x2300, subindex 0x00*/
 extern UNS16 RMS_Current;		/* Mapped at index 0x2301, subindex 0x00*/
 extern UNS8 Internal_Temperature;		/* Mapped at index 0x2302, subindex 0x00*/
 extern UNS32 Internal_Clock;		/* Mapped at index 0x2303, subindex 0x00*/
-extern UNS16 Motor_Status;		/* Mapped at index 0x2304, subindex 0x00*/
+extern UNS16 Motor_Status[18];		/* Mapped at index 0x2304, subindex 0x01 - 0x12 */
 extern UNS16 Motor_Control;		/* Mapped at index 0x2305, subindex 0x00*/
 extern INTEGER16 Motor_Subroutine_Index;		/* Mapped at index 0x2306, subindex 0x00*/
 extern UNS16 Sample_Period;		/* Mapped at index 0x2307, subindex 0x00*/

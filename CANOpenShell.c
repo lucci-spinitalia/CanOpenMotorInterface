@@ -246,6 +246,7 @@ void SmartPosition(UNS8 nodeid, long position, long velocity, long acceleration,
 void CANOpenShellOD_post_sync(CO_Data* d);
 void closing();
 void Exit(CO_Data* d, UNS32 nodeid);
+void RawCmdMotor(char* sdo);
 
 //****************************************************************************
 // GLOBALS
@@ -291,12 +292,11 @@ char LibraryPath[512];
 e_nodeState node_state;
 
 int machine_state = -1;
-float angle_actual_rad[CANOPEN_NODE_NUMBER];
-float angle_step_rad[CANOPEN_NODE_NUMBER];
 
 struct table_data motor_table[TABLE_MAX_NUM + 1]; // numero di elementi pari al numero dei motori più l'elemento di broadcast
 
 static int simulation_first_start[CANOPEN_NODE_NUMBER];
+static int can_error[CANOPEN_NODE_NUMBER];
 
 FILE *position_fp = NULL;
 
@@ -582,6 +582,20 @@ UNS32 return_value)
   }
 }
 
+
+void SmartCANFaultCallback(CO_Data* d, UNS8 nodeId, int machine_state, int is_register,
+UNS32 return_value)
+{
+  if(is_register)
+  {
+    printf("[%d] CAN STATUS: %x", nodeId, return_value);
+  }
+  else
+  {
+    SmartStopCallback(d, nodeId, machine_state, is_register, return_value);
+  }
+}
+
 UNS32 OnPositionUpdate(CO_Data* d, const indextable * indextable_curr,
 UNS8 bSubindex)
 {
@@ -688,6 +702,129 @@ UNS32 return_value)
     pthread_mutex_unlock(&exit_from_limit_mux);
 }
 
+void OnCanStatusReset(CO_Data* d, UNS8 nodeId, int machine_state, int is_register,
+UNS32 return_value)
+{
+  can_error[nodeId] = 0;
+}
+
+void OnSDORead(CO_Data* d, UNS8 nodeId, int machine_state, int is_register,
+UNS32 return_value)
+{
+  printf("INFO[%d] CAN ERROR: %d\n", nodeId, return_value);
+
+  struct state_machine_struct *fault_machine[] =
+  {
+  &smart_message_machine
+  };
+
+  _machine_exe(d, nodeId, &OnCanStatusReset, fault_machine, 1, 1, 2, strlen("ZS"), "ZS");
+  /*struct state_machine_struct *fault_machine[] =
+  {
+  &smart_reset_statusword_machine
+  };
+
+  _machine_exe(d, nodeId, NULL, fault_machine, 1, 1, 0);*/
+}
+
+void OnSDOWrite(CO_Data* d, UNS8 nodeId, int machine_state, int is_register,
+UNS32 return_value)
+{
+  if(is_register)
+  {
+    if((return_value & 0x2) == 2)
+    {
+      struct state_machine_struct *fault_machine[] =
+      {
+      &smart_read_machine
+      };
+
+      _machine_exe(d, nodeId, &OnSDORead, fault_machine, 1, 1, 3, 0x2500, 0x02, visible_string);
+
+      return;
+    }
+  }
+  else
+  {
+    if(return_value)
+    {
+      can_error[nodeId] = 0;
+      return;
+    }
+  }
+
+  struct state_machine_struct *fault_machine[] =
+  {
+  &smart_read_machine
+  };
+
+  _machine_exe(d, nodeId, &OnSDOWrite, fault_machine, 1, 1, 3, 0x2500, 0x03, 0);
+
+}
+
+void OnSDOCheck(CO_Data* d, UNS8 nodeId, int machine_state, int is_register,
+UNS32 return_value)
+{
+  static char sdo_request[32];
+  if(is_register)
+  {
+    if((return_value & 0x1) != 0)
+    {
+      struct state_machine_struct *fault_machine[] =
+      {
+      &smart_read_machine
+      };
+
+      _machine_exe(d, nodeId, &OnSDOCheck, fault_machine, 1, 1, 3, 0x2500, 0x03, 0);
+
+      return;
+    }
+    else
+    {
+      struct state_machine_struct *fault_machine[] =
+      {
+      &smart_message_machine
+      };
+
+      sprintf(sdo_request, "RCAN");
+      _machine_exe(d, nodeId, &OnSDOWrite, fault_machine, 1, 1, 2, strlen(sdo_request), sdo_request);
+    }
+  }
+  else
+  {
+    if(return_value)
+    {
+      printf("reset can_error\n");
+      can_error[nodeId] = 0;
+      return;
+    }
+  }
+
+}
+
+UNS32 OnCanStatusUpdate(CO_Data* d, const indextable * indextable_curr, UNS8 bSubindex)
+{
+  UNS8 nodeid = NodeId;
+
+  if(Motor_Status[2] & 0x10)
+  {
+    if((can_error[nodeid] == 0) && (nodeid == 0x7b))
+    {
+      //printf("INFO[%d]: CAN error %x\n",nodeid, Motor_Status[2]);
+      can_error[nodeid] = 1;
+
+      struct state_machine_struct *fault_machine[] =
+      {
+      &smart_read_machine
+      };
+
+      _machine_exe(d, nodeid, &OnSDOCheck, fault_machine, 1, 1, 3, 0x2500, 0x03, 0);
+    }
+  }
+
+  return 0;
+}
+
 UNS32 OnStatusUpdate(CO_Data* d, const indextable * indextable_curr, UNS8 bSubindex)
 {
   UNS8 nodeid = NodeId;
@@ -779,12 +916,14 @@ UNS32 OnStatusUpdate(CO_Data* d, const indextable * indextable_curr, UNS8 bSubin
         }
       }
     }
+
     motor_status[nodeid] = Statusword;
 
     if(motor_mode[nodeid] != Modes_of_operation_display)
     {
       printf("INFO[%d]: Mode %x\n", nodeid, Modes_of_operation_display);
     }
+
     motor_mode[nodeid] = Modes_of_operation_display;
   }
 
@@ -1021,7 +1160,7 @@ UNS32 OnInterpUpdate(CO_Data* d, UNS8 nodeid)
 {
   if(fake_flag == 0)
   {
-    if(motor_interp_status[nodeid] != Interpolation_Mode_Status)
+    if((motor_interp_status[nodeid] & 0xFFFFFFE0) != (Interpolation_Mode_Status & 0xFFFFFFE0))
       printf("INFO[%d]: Interpolation status: %x\n", nodeid, Interpolation_Mode_Status);
 
     motor_interp_status[nodeid] = Interpolation_Mode_Status;
@@ -1171,11 +1310,14 @@ UNS32 OnInterpUpdate(CO_Data* d, UNS8 nodeid)
 void SimulationInitCallback(CO_Data* d, UNS8 nodeid, int machine_state, int is_register,
 UNS32 return_value)
 {
+  //char sdo_request[32];
   if(is_register == 0)
   {
     if(return_value)
     {
-      CERR("CT4", InternalError);
+      //CERR("CT4", InternalError);
+
+      SmartStop(0, 1);
       return;
     }
   }
@@ -1193,7 +1335,9 @@ UNS32 return_value)
 
   if(return_value)
   {
-    CERR("CT4", CERR_InternalError);
+    //CERR("CT4", CERR_InternalError);
+
+    SmartStop(0, 1);
 
     return;
   }
@@ -1269,6 +1413,7 @@ void SimulationTableStart(CO_Data* d)
   {
     if(fake_flag == 0)
     {
+      printf("Simulation start\n");
       InterpolationStart = 0x1f;
 
 //d->PDO_status[0].last_message.cob_id = 0;
@@ -1465,6 +1610,8 @@ void SimulationTableUpdate(CO_Data* d, UNS8 nodeid, UNS16 interpolation_status, 
     if(((interpolation_status & 0b1000000000000000) == 0))
     {
       int motor_table_index = MotorTableIndexFromNodeId(nodeid);
+
+      printf("[%d] ready\n", nodeid);
       simulation_ready[motor_table_index] = 1;
     }
   }
@@ -2049,6 +2196,7 @@ UNS32 return_value)
 
   if(return_value)
   {
+    pthread_mutex_lock(&robot_state_mux);
     if(robot_state == SIMULAZIONE)
       CERR("CT5", CERR_InternalError);
     else if(robot_state == INIZIALIZZATO)
@@ -2059,6 +2207,7 @@ UNS32 return_value)
       CERR("CT6", CERR_InternalError);
     else
       add_event(InternalError, nodeId, 0, NULL);
+    pthread_mutex_unlock(&robot_state_mux);
 
     stop_message = 0;
     return;
@@ -2070,6 +2219,7 @@ UNS32 return_value)
   if((robot_state != SIMULAZIONE) && (robot_state != MOVIMENTO_LIBERO)
       && (robot_state != RICERCA_CENTRO) && (robot_state != CENTRAGGIO))
   {
+
     if(robot_state == CHIUSURA)
     {
       pthread_mutex_unlock(&robot_state_mux);
@@ -2084,7 +2234,11 @@ UNS32 return_value)
       }
     }
     else
+    {
+      SmartClear(nodeId);
+
       pthread_mutex_unlock(&robot_state_mux);
+    }
 
     return;
   }
@@ -2807,7 +2961,7 @@ void CheckReadSDO(CO_Data* d, UNS8 nodeid)
 
   if(getReadResultNetworkDict(CANOpenShellOD_Data, nodeid, &data, &size, &abortCode) != SDO_FINISHED)
   {
-    printf("\nResult : Failed in getting information for slave %2.2x, AbortCode :%4.4x \n", nodeid,
+    printf("\nResult : Failed in reading sdo for slave %2.2x, AbortCode :%4.4x \n", nodeid,
         abortCode);
     char error_text[100];
     AbortCodeTranslate(abortCode, error_text);
@@ -2828,7 +2982,7 @@ void CheckWriteSDO(CO_Data* d, UNS8 nodeid)
   if(getWriteResultNetworkDict(CANOpenShellOD_Data, nodeid, &abortCode) != SDO_FINISHED)
   {
 #ifdef CANOPENSHELL_VERBOSE
-    printf("\nResult : Failed in getting information for slave %2.2x, AbortCode :%4.4x \n", nodeid,
+    printf("\nResult : Failed in writing sdo for slave %2.2x, AbortCode :%4.4x \n", nodeid,
         abortCode);
 
     char error_text[100];
@@ -2967,6 +3121,8 @@ UNS32 return_value)
   if((is_register == 0) && (return_value == 1))
   {
     CERR("CT0", CERR_InternalError);
+    motor_active[nodeId] = 0;
+    motor_active_number--;
     return;
   }
 
@@ -3117,7 +3273,8 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
 // CONFIGURE HEARTBEAT TO 100 ms
 // MAP TPDO 1 (COB-ID 180) to transmit "node id" (8-bit), "status word" (16-bit), "interpolation mode status" (16-bit), "modes of operation" (8-bit)
 // MAP TPDO 2 (COB-ID 280) to transmit "node id" (8-bit), "position actual value" (32-bit)
-// MAP TPDO 3 (COB-ID 380) to receive high resolution timestamp
+// MAP TPDO 3 (COB-ID 380) to transmit "node id" (8-bit), "status word 2" (16-bit)
+// MAP TPDO 4 (COB-ID 480) to transmit high resolution timestamp
 
 // MAP RPDO 1 (COB-ID 200 + nodeid) to receive "Interpolation Time Index" (8-bit)" (0x60c2 sub2) "Interpolation Time Units" (8-bit)" (0x60c2 sub1)
 // MAP RPDO 2 (COB-ID 300 + nodeid) to receive "Profile Velocity" (32-bit) (0x6081 sub0), "Target Position" (32-bit) (0x607a sub0)
@@ -3129,6 +3286,7 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
           &heart_start_machine,
           &map4_pdo_machine,
           &map2_pdo_machine,
+          &map2_pdo_machine,
           &map1_pdo_machine,
           &map2_pdo_machine,
           &map2_pdo_machine,
@@ -3137,30 +3295,33 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
           &smart_start_machine
       };
 
-      _machine_exe(d, nodeid, &ConfigureSlaveNodeCallback, configure_pdo_machine, 9, 1, 97,
+      _machine_exe(d, nodeid, &ConfigureSlaveNodeCallback, configure_pdo_machine, 10, 1, 111,
 
       100,
 
-      0x1800, 0xC0000180, 0x1A00, 0x1A00, 0x20000008, 0x1A00, 0x60410010, 0x1A00, 0x24000010,
-          0x1A00, 0x60610008, 0x1A00, 0x1800, 0x40000180, 0x1800, SYNC_DIVIDER_STATUS, 0x1800, 0, /*19*/
+      0x1800, 0xC0000180 + nodeid, 0x1A00, 0x1A00, 0x20000008, 0x1A00, 0x60410010, 0x1A00, 0x24000010,
+          0x1A00, 0x60610008, 0x1A00, 0x1800, 0x40000180 + nodeid, 0x1800, SYNC_DIVIDER_STATUS, 0x1800, 0, /*19*/
 
-          0x1801, 0xC0000280, 0x1A01, 0x1A01, 0x20000008, 0x1A01, 0x60630020, 0x1A01, 0x1801,
-          0x40000280, 0x1801, 0xfe, 0x1801, 10, /*33*/
+          0x1801, 0xC0000280 + nodeid, 0x1A01, 0x1A01, 0x20000008, 0x1A01, 0x60630020, 0x1A01, 0x1801,
+          0x40000280 + nodeid, 0x1801, 0xfe, 0x1801, 10, /*33*/
 
-          0x1802, 0xC0000380, 0x1A02, 0x1A02, 0x10130020, 0x1A02, 0x1802, 0x40000380, 0x1802,
-          SYNC_DIVIDER_TIMESTAMP, 0x1802, 0, /*45*/
+          0x1802, 0xC0000380 + nodeid, 0x1A02, 0x1A02, 0x20000008, 0x1A02, 0x23040310, 0x1A02, 0x1802,
+          0x40000380 + nodeid, 0x1802, SYNC_DIVIDER_STATUS, 0x1802, 0, /*59*/
+
+          0x1803, 0xC0000480, 0x1A03, 0x1A03, 0x10130020, 0x1A03, 0x1803, 0x40000480, 0x1803,
+          SYNC_DIVIDER_TIMESTAMP, 0x1803, 0, /*45*/
 
           0x1400, 0xC0000200 + nodeid, 0x1600, 0x1600, 0x60c20208, 0x1600, 0x60c20108, 0x1600,
-          0x1400, 0x40000200 + nodeid, 0x1400, 0xFE, 0x1400, 0,/*59*/
+          0x1400, 0x40000200 + nodeid, 0x1400, 0xFE, 0x1400, 0,/*73*/
 
           0x1401, 0xC0000300 + nodeid, 0x1601, 0x1601, 0x60810020, 0x1601, 0x607a0020, 0x1601,
-          0x1401, 0x40000300 + nodeid, 0x1401, 0xfe, 0x1401, 0, /*73*/
+          0x1401, 0x40000300 + nodeid, 0x1401, 0xfe, 0x1401, 0, /*87*/
 
           0x1402, 0xC0000400 + nodeid, 0x1602, 0x1602, 0x60c10120, 0x1602, 0x1402,
-          0x40000400 + nodeid, 0x1402, 0xFE, 0x1402, 0, /*85*/
+          0x40000400 + nodeid, 0x1402, 0xFE, 0x1402, 0, /*99*/
 
           0x1403, 0xC0000400, 0x1603, 0x1603, 0x60400010, 0x1603, 0x1403, 0x40000400, 0x1403, 0xFE,
-          0x1403, 0 /*97*/
+          0x1403, 0 /*111*/
           );
 
       canopen_abort_code = RegisterSetODentryCallBack(d, 0x6061, 0, &OnStatusUpdate);
@@ -3176,6 +3337,8 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
         }
 #endif
         CERR("CT0", CERR_InternalError);
+        motor_active[nodeid] = 0;
+        motor_active_number--;
       }
 
       canopen_abort_code = RegisterSetODentryCallBack(d, 0x6063, 0, &OnPositionUpdate);
@@ -3191,6 +3354,25 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
         }
 #endif
         CERR("CT0", CERR_InternalError);
+        motor_active[nodeid] = 0;
+        motor_active_number--;
+      }
+
+      canopen_abort_code = RegisterSetODentryCallBack(d, 0x2304, 3, &OnCanStatusUpdate);
+
+      if(canopen_abort_code)
+      {
+#ifdef CANOPENSHELL_VERBOSE
+        if(verbose_flag)
+        {
+          printf(
+              "Error[%d on node %x]: Impossibile registrare il callback per l'oggetto 0x2400 (Canopen abort code %x)\n",
+              CANOpenError, nodeid, canopen_abort_code);
+        }
+#endif
+        CERR("CT0", CERR_InternalError);
+        motor_active[nodeid] = 0;
+        motor_active_number--;
       }
 
       fflush(stdout);
@@ -3210,8 +3392,9 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
       }
 
 // CONFIGURE HEARTBEAT TO 100 ms
-// MAP TPDO 1 (COB-ID 180) to transmit "node id" (8-bit), "status word" (16-bit), "interpolation mode status" (16-bit)
+// MAP TPDO 1 (COB-ID 180) to transmit "node id" (8-bit), "status word" (16-bit), "interpolation mode status" (16-bit), "modes of operation" (8-bit), "status word 2" (16-bit)
 // MAP TPDO 2 (COB-ID 280) to transmit "node id" (8-bit), "position actual value" (32-bit)
+// MAP TPDO 3 (COB-ID 380) to transmit "node id" (8-bit), "status word 2" (16-bit)
 
 // MAP RPDO 1 (COB-ID 200 + nodeid) to receive "Interpolation Time Index" (8-bit)" (0x60c2 sub2) "Interpolation Time Units" (8-bit)" (0x60c2 sub1)
 // MAP RPDO 2 (COB-ID 300 + nodeid) to receive "Profile Velocity" (32-bit) (0x6081 sub0), "Target Position" (32-bit) (0x607a sub0)
@@ -3226,36 +3409,42 @@ void ConfigureSlaveNode(CO_Data* d, UNS8 nodeid)
           &map2_pdo_machine,
           &map2_pdo_machine,
           &map2_pdo_machine,
+          &map2_pdo_machine,
           &map1_pdo_machine,
           &map1_pdo_machine,
           &map1_pdo_machine,
           &smart_start_machine
       };
 
-      _machine_exe(d, nodeid, &ConfigureSlaveNodeCallback, configure_slave_machine, 9, 1, 97, 100,
+      //if((motor_active_number ==  2) || (motor_active_number ==  3)) {
+      _machine_exe(d, nodeid, &ConfigureSlaveNodeCallback, configure_slave_machine, 10, 1, 111, 100,
 
-      0x1800, 0xC0000180, 0x1A00, 0x1A00, 0x20000008, 0x1A00, 0x60410010, 0x1A00, 0x24000010,
-          0x1A00, 0x60610008, 0x1A00, 0x1800, 0x40000180, 0x1800, 15, 0x1800, 0, /*19*/
+      0x1800, 0xC0000180 + nodeid, 0x1A00, 0x1A00, 0x20000008, 0x1A00, 0x60410010, 0x1A00, 0x24000010,
+         0x1A00, 0x60610008, 0x1A00, 0x1800, 0x40000180 + nodeid, 0x1800, SYNC_DIVIDER_STATUS, 0x1800, 0, /*19*/
 
-          0x1801, 0xC0000280, 0x1A01, 0x1A01, 0x20000008, 0x1A01, 0x60630020, 0x1A01, 0x1801,
-          0x40000280, 0x1801, 0xFE, 0x1801, 10, /*33*/
+          0x1801, 0xC0000280 + nodeid, 0x1A01, 0x1A01, 0x20000008, 0x1A01, 0x60630020, 0x1A01, 0x1801,
+          0x40000280 + nodeid, 0x1801, 0xFE, 0x1801, 10, /*33*/
+
+          0x1802, 0xC0000380 + nodeid, 0x1A02, 0x1A02, 0x20000008, 0x1A02, 0x23040310, 0x1A02, 0x1802,
+          0x40000380 + nodeid, 0x1802, SYNC_DIVIDER_STATUS, 0x1802, 0, /*47*/
 
           0x1400, 0xC0000200 + nodeid, 0x1600, 0x1600, 0x60c20208, 0x1600, 0x60c20108, 0x1600,
-          0x1400, 0x40000200 + nodeid, 0x1400, 0xFE, 0x1400, 0, /*47*/
+          0x1400, 0x40000200 + nodeid, 0x1400, 0xFE, 0x1400, 0, /*61*/
 
           0x1401, 0xC0000300 + nodeid, 0x1601, 0x1601, 0x60810020, 0x1601, 0x607a0020, 0x1601,
-          0x1401, 0x40000300 + nodeid, 0x1401, 0xfe, 0x1401, 0, /*61*/
+          0x1401, 0x40000300 + nodeid, 0x1401, 0xfe, 0x1401, 0, /*75*/
 
           0x1402, 0xC0000400 + nodeid, 0x1602, 0x1602, 0x60c10120, 0x1602, 0x1402,
-          0x40000400 + nodeid, 0x1402, 0xFE, 0x1402, 0, /*73*/
+          0x40000400 + nodeid, 0x1402, 0xFE, 0x1402, 0, /*87*/
 
           0x1403, 0xC0000400, 0x1603, 0x1603, 0x60400010, 0x1603, 0x1403, 0x40000400, 0x1403, 0xFE,
-          0x1403, 0, /*85*/
+          0x1403, 0, /*99*/
 
           0x1404, 0xC0000380, 0x1604, 0x1604, 0x10130020, 0x1604, 0x1404, 0x40000380, 0x1404, 0xFE,
-          0x1404, 0 /*97*/
+          0x1404, 0 /*111*/
 
           );
+      //}
     }
 
     fake_jump: motor_active[nodeid] = 1;
@@ -3324,7 +3513,7 @@ void CheckReadProgramUpload(CO_Data* d, UNS8 nodeid)
 
   if(getReadResultNetworkDict(CANOpenShellOD_Data, nodeid, &data, &size, &abortCode) != SDO_FINISHED)
   {
-    printf("\nResult : Failed in getting information for slave %2.2x, AbortCode :%4.4x \n", nodeid,
+    printf("\nResult : Failed in reading program upload for slave %2.2x, AbortCode :%4.4x \n", nodeid,
         abortCode);
 
     char error_text[100];
@@ -3360,7 +3549,7 @@ void CheckReadProgramDownload(CO_Data* d, UNS8 nodeid)
 
   if(getReadResultNetworkDict(CANOpenShellOD_Data, nodeid, &data, &size, &abortCode) != SDO_FINISHED)
   {
-    printf("\nResult : Failed in getting information for slave %2.2x, AbortCode :%4.4x \n", nodeid,
+    printf("\nResult : Failed in reading program download for slave %2.2x, AbortCode :%4.4x \n", nodeid,
         abortCode);
 
     char error_text[100];
@@ -3397,7 +3586,7 @@ void CheckReadRaw(CO_Data* d, UNS8 nodeid)
 
   if(getReadResultNetworkDict(CANOpenShellOD_Data, nodeid, &data, &size, &abortCode) != SDO_FINISHED)
   {
-    printf("\nResult : Failed in getting information for slave %2.2x, AbortCode :%4.4x \n", nodeid,
+    printf("\nResult : Failed in reading raw for slave %2.2x, AbortCode :%4.4x \n", nodeid,
         abortCode);
 
     char error_text[100];
@@ -3433,7 +3622,7 @@ void CheckReadStringRaw(CO_Data* d, UNS8 nodeid)
   if(getReadResultNetworkDict(CANOpenShellOD_Data, nodeid, raw_report, &size,
       &abortCode) != SDO_FINISHED)
   {
-    printf("\nResult : Failed in getting information for slave %2.2x, AbortCode :%x \n", nodeid,
+    printf("\nResult : Failed in reading string raw for slave %2.2x, AbortCode :%x \n", nodeid,
         abortCode);
 
     char error_text[100];
@@ -3445,6 +3634,7 @@ void CheckReadStringRaw(CO_Data* d, UNS8 nodeid)
   }
   else
   {
+    printf("size %d\n", size);
     raw_response[0] = 1;
     raw_response_size = 1;
     raw_response_flag = 1;
@@ -3897,6 +4087,7 @@ void ExitFromLimit(int nodeid, int from_callback)
 
 void DiscoverTimeout(sigval_t val)
 {
+  printf("Found %d motors of %d\n", motor_active_number, val.sival_int);
   pthread_mutex_lock(&motor_active_number_mutex);
   if(motor_active_number != val.sival_int)
   {
@@ -3909,6 +4100,7 @@ void DiscoverTimeout(sigval_t val)
     }
 #endif
     CERR("CT0", CERR_ConfigError);
+    motor_active_number = 0;
   }
   else
   {
@@ -5150,7 +5342,7 @@ int main(int argc, char** argv)
   if(fake_flag == 0)
   {
 //heartbeatInit(CANOpenShellOD_Data);
-    startSYNC(CANOpenShellOD_Data);
+    //startSYNC(CANOpenShellOD_Data);
     PDOInit(CANOpenShellOD_Data);
   }
 
