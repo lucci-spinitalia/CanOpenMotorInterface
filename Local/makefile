@@ -8,9 +8,6 @@ RM := rm -rf
 
 # All of the sources participating in the build are defined here
 -include sources.mk
--include Mongo-canfestival-3-asc-e07f8b94110e/src/subdir.mk
--include Mongo-canfestival-3-asc-e07f8b94110e/drivers/unix/subdir.mk
--include Mongo-canfestival-3-asc-e07f8b94110e/drivers/timers_unix/subdir.mk
 -include subdir.mk
 -include objects.mk
 

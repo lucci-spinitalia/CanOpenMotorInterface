@@ -12,7 +12,9 @@ volatile int motor_started[CANOPEN_NODE_NUMBER];
 int motor_active_number; /**< tiene conto di quanti motori sono presenti */
 long motor_position[CANOPEN_NODE_NUMBER]; /**< ultima posizione del motore */
 UNS32 motor_interp_status[CANOPEN_NODE_NUMBER]; /**< ultimo stato del registro di interpolazione del motore*/
-UNS16 motor_status[CANOPEN_NODE_NUMBER]; /**< ultimo stato del motore */
+volatile UNS16 motor_status[CANOPEN_NODE_NUMBER]; /**< ultimo stato del motore */
+volatile UNS16 motor_statusword0[CANOPEN_NODE_NUMBER]; /**< ultimo valore della statusword0 del motore */
+
 UNS8 motor_mode[CANOPEN_NODE_NUMBER]; /**< ultimo stato del motore */
 
 int verbose_flag_state = 1;
@@ -687,7 +689,7 @@ UNS32 smart_set_mode_param[25] =
 
 char *smart_set_mode_error[2] =
 {
-"smart motor go to target point. . .", "cannot begin motion"
+"smart motor go to target point. . .", "cannot set mode"
 };
 
 struct state_machine_struct smart_set_mode_machine =

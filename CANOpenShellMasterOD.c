@@ -2515,87 +2515,99 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
                      };
 
 /* index 0x160C :   Receive PDO 13 Mapping. */
-                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj160C = 2; /* number of subindex - 1*/
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj160C = 3; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj160C[] = 
                     {
                       0x20000008,	/* 536870920 */
+                      0x23040110,	/* 587464976 */
                       0x23040310	/* 587465488 */
                     };
                     subindex CANOpenShellMasterOD_Index160C[] = 
                      {
                        { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj160C, NULL },
                        { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj160C[0], NULL },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj160C[1], NULL }
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj160C[1], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj160C[2], NULL }
                      };
 
 /* index 0x160D :   Receive PDO 14 Mapping. */
-                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj160D = 2; /* number of subindex - 1*/
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj160D = 3; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj160D[] = 
                     {
                       0x20000008,	/* 536870920 */
+                      0x23040110,	/* 587464976 */
                       0x23040310	/* 587465488 */
                     };
                     subindex CANOpenShellMasterOD_Index160D[] = 
                      {
                        { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj160D, NULL },
                        { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj160D[0], NULL },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj160D[1], NULL }
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj160D[1], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj160D[2], NULL }
                      };
 
 /* index 0x160E :   Receive PDO 15 Mapping. */
-                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj160E = 2; /* number of subindex - 1*/
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj160E = 3; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj160E[] = 
                     {
                       0x20000008,	/* 536870920 */
+                      0x23040110,	/* 587464976 */
                       0x23040310	/* 587465488 */
                     };
                     subindex CANOpenShellMasterOD_Index160E[] = 
                      {
                        { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj160E, NULL },
                        { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj160E[0], NULL },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj160E[1], NULL }
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj160E[1], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj160E[2], NULL }
                      };
 
 /* index 0x160F :   Receive PDO 16 Mapping. */
-                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj160F = 2; /* number of subindex - 1*/
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj160F = 3; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj160F[] = 
                     {
                       0x20000008,	/* 536870920 */
+                      0x23040110,	/* 587464976 */
                       0x23040310	/* 587465488 */
                     };
                     subindex CANOpenShellMasterOD_Index160F[] = 
                      {
                        { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj160F, NULL },
                        { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj160F[0], NULL },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj160F[1], NULL }
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj160F[1], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj160F[2], NULL }
                      };
 
 /* index 0x1610 :   Receive PDO 17 Mapping. */
-                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1610 = 2; /* number of subindex - 1*/
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1610 = 3; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj1610[] = 
                     {
                       0x20000008,	/* 536870920 */
+                      0x23040110,	/* 587464976 */
                       0x23040310	/* 587465488 */
                     };
                     subindex CANOpenShellMasterOD_Index1610[] = 
                      {
                        { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1610, NULL },
                        { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1610[0], NULL },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1610[1], NULL }
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1610[1], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1610[2], NULL }
                      };
 
 /* index 0x1611 :   Receive PDO 18 Mapping. */
-                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1611 = 2; /* number of subindex - 1*/
+                    UNS8 CANOpenShellMasterOD_highestSubIndex_obj1611 = 3; /* number of subindex - 1*/
                     UNS32 CANOpenShellMasterOD_obj1611[] = 
                     {
                       0x20000008,	/* 536870920 */
+                      0x23040110,	/* 587464976 */
                       0x23040310	/* 587465488 */
                     };
                     subindex CANOpenShellMasterOD_Index1611[] = 
                      {
                        { RW, uint8, sizeof (UNS8), (void*)&CANOpenShellMasterOD_highestSubIndex_obj1611, NULL },
                        { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1611[0], NULL },
-                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1611[1], NULL }
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1611[1], NULL },
+                       { RW, uint32, sizeof (UNS32), (void*)&CANOpenShellMasterOD_obj1611[2], NULL }
                      };
 
 /* index 0x1800 :   Transmit PDO 1 Parameter. */

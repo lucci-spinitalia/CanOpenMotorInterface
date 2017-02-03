@@ -30,7 +30,8 @@ extern int motor_homing[CANOPEN_NODE_NUMBER];
 extern volatile int motor_started[CANOPEN_NODE_NUMBER];
 extern long motor_position[CANOPEN_NODE_NUMBER];
 extern UNS32 motor_interp_status[CANOPEN_NODE_NUMBER];
-extern UNS16 motor_status[CANOPEN_NODE_NUMBER];
+extern volatile UNS16 motor_status[CANOPEN_NODE_NUMBER];
+extern volatile UNS16 motor_statusword0[CANOPEN_NODE_NUMBER];
 extern UNS8 motor_mode[CANOPEN_NODE_NUMBER];
 
 extern void **sin_interpolation_function;
